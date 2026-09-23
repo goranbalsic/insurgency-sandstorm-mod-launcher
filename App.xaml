@@ -1,0 +1,25 @@
+<Application x:Class="SandstormModLauncher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:SandstormModLauncher.Views"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <v:VisibleIf x:Key="Vis" />
+            <v:VisibleIf x:Key="VisNot" Invert="True" />
+            <v:EqualsConverter x:Key="Eq" />
+            <v:InverseBool x:Key="Not" />
+            <v:ImageFromPath x:Key="Img" DecodeWidth="480" />
+            <v:ImageFromPath x:Key="ImgSmall" DecodeWidth="128" />
+            <v:StepIcon x:Key="StepIcon" />
+            <v:StepBrush x:Key="StepBrush" />
+            <v:Bytes x:Key="Bytes" />
+            <v:ColumnsFor x:Key="ColumnsFor" />
+            <v:Upper x:Key="Upper" />
+            <v:StatusBrush x:Key="Status" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,25 @@
+<UserControl x:Class="SandstormModLauncher.Views.Controls.Stepper"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="root">
+    <Grid Margin="0,4">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel VerticalAlignment="Center" Margin="0,0,10,0">
+            <TextBlock Text="{Binding Label, ElementName=root}" FontSize="14" Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Hint, ElementName=root}" FontSize="11" Foreground="{StaticResource TextFaint}" TextTrimming="CharacterEllipsis"
+                       Visibility="{Binding Hint, ElementName=root, Converter={StaticResource Vis}}" />
+        </StackPanel>
+        <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE738;" Click="Minus_Click" ToolTip="Decrease"
+                Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" />
+        <TextBox x:Name="box" Grid.Column="2" Width="52" Margin="6,0" Padding="2,5" HorizontalContentAlignment="Center" FontFamily="{StaticResource Mono}" FontSize="15"
+                 Background="Transparent" BorderBrush="Transparent" KeyDown="Box_KeyDown" LostKeyboardFocus="Box_LostFocus" PreviewMouseWheel="Box_Wheel"
+                 ToolTip="Type a number, use the mouse wheel, or the - and + buttons" />
+        <Button Grid.Column="3" Style="{StaticResource IconButton}" Content="&#xE710;" Click="Plus_Click" ToolTip="Increase"
+                Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,62 @@
+name: Release
+
+# Every release zip is built here from the tagged source. Nothing is uploaded by hand.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build SandstormModLauncher.csproj -c Release -o out
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $zip = "SandstormModLauncher-$version.zip"
+          New-Item -ItemType Directory -Path pkg | Out-Null
+          Copy-Item out/SandstormModLauncher.exe, out/SandstormModLauncher.exe.config -Destination pkg/
+          Copy-Item packaging/readme.txt -Destination pkg/readme.txt
+          Copy-Item LICENSE -Destination pkg/LICENSE.txt
+          Copy-Item Assets/OFL.txt -Destination pkg/OFL-Oswald-font.txt
+          Compress-Archive -Path pkg/* -DestinationPath $zip
+          Copy-Item packaging/readme.txt -Destination readme.txt
+          $files = @($zip, "pkg/SandstormModLauncher.exe")
+          $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), (Split-Path $_ -Leaf) } |
+            Set-Content -Path SHA256SUMS.txt -Encoding ascii
+          Get-Content SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            SandstormModLauncher-*.zip
+            pkg/SandstormModLauncher.exe
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ github.ref_name }}"
+          $run = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $notes = Get-Content packaging/release-notes.md -Raw
+          $notes = $notes.Replace("{VERSION}", $version).Replace("{REPO}", "${{ github.repository }}").Replace("{RUN_URL}", $run)
+          $notes = $notes.Replace("{SHA256}", (Get-Content SHA256SUMS.txt -Raw).Trim())
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+          gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --title "Sandstorm Mod Launcher $version" --notes-file notes.md

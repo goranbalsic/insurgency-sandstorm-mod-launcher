@@ -1,0 +1,5860 @@
+{
+ "version": 1,
+ "gameBuild": "CL-369806",
+ "modes": [
+  {
+   "cls": "INSCheckpointGameMode",
+   "alias": "Checkpoint",
+   "name": "Checkpoint",
+   "coop": true,
+   "defaults": {
+    "AIDifficulty": "0.5",
+    "FriendlyBotQuota": "4",
+    "bBots": "False",
+    "BotQuota": "0",
+    "bBotsUseHumanLoadouts": "False",
+    "BotWanderRadius": "10000",
+    "BotTerritoryRadius": "12000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "BotAmbushRatioCheckpointMinDeaths": "0.2",
+    "BotAmbushRatioCheckpointMaxDeaths": "0.6",
+    "SoloEnemies": "6",
+    "MinimumEnemies": "3",
+    "MaximumEnemies": "12",
+    "MaxPlayersToScaleEnemyCount": "8",
+    "ObjectiveTotalEnemyRespawnMultiplierMin": "0.6",
+    "ObjectiveTotalEnemyRespawnMultiplierMax": "0.8",
+    "FinalCacheBotQuotaMultiplier": "1.5",
+    "bForceSoloWaves": "False",
+    "bSupportsSoloWaves": "True",
+    "SoloWaves": "1",
+    "SoloWaveIncrementOnObjectiveCapture": "1",
+    "SoloReinforcementTime": "10",
+    "SoloRoundTime": "420",
+    "bLoseWhenAllPlayersDead": "True",
+    "RoundTime": "300",
+    "RoundLimit": "3",
+    "WinLimit": "1",
+    "PreRoundTime": "15",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "False",
+    "DefendTimer": "90",
+    "DefendTimerFinal": "180",
+    "RetreatTimer": "10",
+    "PostCaptureRushTimer": "30",
+    "bCounterAttackReinforce": "False",
+    "CounterAttackRespawnDPR": "0.2",
+    "CounterAttackRespawnDelay": "20",
+    "AlarmDuration": "15",
+    "RespawnDelay": "20",
+    "RespawnDPR": "0.1",
+    "bUseObjectiveCaptureGraceRespawn": "True",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "20",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "False",
+    "bAutoBalanceTeams": "False",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bUseVehicleInsertion": "True",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "False",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSCheckpointHardcoreGameMode",
+   "alias": "CheckpointHardcore",
+   "name": "Hardcore Checkpoint",
+   "coop": true,
+   "defaults": {
+    "AIDifficulty": "0.5",
+    "FriendlyBotQuota": "4",
+    "bBots": "False",
+    "BotQuota": "0",
+    "bBotsUseHumanLoadouts": "False",
+    "BotWanderRadius": "10000",
+    "BotTerritoryRadius": "12000",
+    "BotAmbushRadius": "4000",
+    "BotAmbushRatio": "0.25",
+    "BotAmbushRatioCheckpointMinDeaths": "0.4",
+    "BotAmbushRatioCheckpointMaxDeaths": "0.8",
+    "SoloEnemies": "6",
+    "MinimumEnemies": "4",
+    "MaximumEnemies": "12",
+    "MaxPlayersToScaleEnemyCount": "8",
+    "ObjectiveTotalEnemyRespawnMultiplierMin": "1",
+    "ObjectiveTotalEnemyRespawnMultiplierMax": "0.8",
+    "FinalCacheBotQuotaMultiplier": "1.5",
+    "bForceSoloWaves": "False",
+    "bSupportsSoloWaves": "True",
+    "SoloWaves": "1",
+    "SoloWaveIncrementOnObjectiveCapture": "1",
+    "SoloReinforcementTime": "10",
+    "SoloRoundTime": "600",
+    "bLoseWhenAllPlayersDead": "True",
+    "RoundTime": "600",
+    "RoundLimit": "3",
+    "WinLimit": "1",
+    "PreRoundTime": "15",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "HideAll",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "False",
+    "DefendTimer": "90",
+    "DefendTimerFinal": "180",
+    "RetreatTimer": "10",
+    "PostCaptureRushTimer": "30",
+    "bCounterAttackReinforce": "True",
+    "CounterAttackRespawnDPR": "0.2",
+    "CounterAttackRespawnDelay": "20",
+    "AlarmDuration": "15",
+    "RespawnDelay": "25",
+    "RespawnDPR": "0.2",
+    "bUseObjectiveCaptureGraceRespawn": "True",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "bStripWeaponsOnRespawn": "True",
+    "InitialSupply": "20",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "AmmoBoxSpawnChance": "1",
+    "MinAmmoPerObjective": "4",
+    "MaxAmmoPerObjective": "6",
+    "MinObjectiveForCrate": "1",
+    "MaxObjectiveForCrate": "3",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "300",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "False",
+    "bAutoBalanceTeams": "False",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bUseVehicleInsertion": "True",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "False",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "False",
+    "bAllowThirdPersonSpectate": "False",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSOutpostGameMode",
+   "alias": "Outpost",
+   "name": "Outpost",
+   "coop": true,
+   "defaults": {
+    "AIDifficulty": "0.5",
+    "FriendlyBotQuota": "4",
+    "bBots": "False",
+    "BotQuota": "0",
+    "bBotsUseHumanLoadouts": "False",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "SoloEnemies": "6",
+    "MinimumEnemies": "10",
+    "MaximumEnemies": "16",
+    "MaxPlayersToScaleEnemyCount": "8",
+    "bForceSoloWaves": "False",
+    "bSupportsSoloWaves": "False",
+    "SoloWaves": "1",
+    "SoloWaveIncrementOnObjectiveCapture": "1",
+    "SoloReinforcementTime": "10",
+    "SoloRoundTime": "0",
+    "bLoseWhenAllPlayersDead": "True",
+    "RoundTime": "600",
+    "RoundLimit": "1",
+    "WinLimit": "1",
+    "PreRoundTime": "30",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bContestedObjective": "False",
+    "bUsesPointsScoring": "False",
+    "DefendTimer": "120",
+    "FinalDefendTimer": "180",
+    "RetreatTimer": "0",
+    "AlarmDuration": "15",
+    "PrepareTimer": "45",
+    "InitialPrepareTimer": "15",
+    "bRetreatOnElimination": "True",
+    "EliminationRetreatDelay": "2",
+    "bForceRespawnOnRetreat": "True",
+    "bAllowRetreatOnFinalWave": "True",
+    "bResetWavesOnRetreat": "False",
+    "bDeductWaveAfterRetreat": "False",
+    "NumWaves": "7",
+    "bUseSpecialWaves": "True",
+    "SpecialWaveFrequency": "2",
+    "WaveSurvivalSupplyAward": "2",
+    "MinimumBotsPerCompletedWave": "0.5",
+    "MaximumBotsPerCompletedWave": "1",
+    "BotDPRRespawnFirst": "0.3",
+    "BotDPRRespawnFinal": "0.1",
+    "BotDPRMinimumTimeRemaining": "15",
+    "MaximumBotFireSupportPerWave": "1",
+    "MaximumBotFireSupportFinalWave": "2",
+    "BotFireSupportCooldown": "0",
+    "BotFireSupportFinalWaveCooldown": "45",
+    "FireSupportMinimumTimeRemaining": "20",
+    "FireSupportMinimumTimeRemainingFinalWave": "10",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "bResetLoadoutOnNewRound": "True",
+    "InitialSupply": "2",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "False",
+    "bAutoBalanceTeams": "False",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bUseVehicleInsertion": "True",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "False",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSSurvivalGameMode",
+   "alias": "Survival",
+   "name": "Survival",
+   "coop": true,
+   "defaults": {
+    "AIDifficulty": "0.5",
+    "FriendlyBotQuota": "4",
+    "bBots": "False",
+    "BotQuota": "0",
+    "bBotsUseHumanLoadouts": "False",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "SoloEnemies": "6",
+    "MinimumEnemies": "4",
+    "MaximumEnemies": "11",
+    "MaxPlayersToScaleEnemyCount": "8",
+    "bForceSoloWaves": "False",
+    "bSupportsSoloWaves": "False",
+    "SoloWaves": "1",
+    "SoloWaveIncrementOnObjectiveCapture": "1",
+    "SoloReinforcementTime": "10",
+    "SoloRoundTime": "420",
+    "bLoseWhenAllPlayersDead": "True",
+    "RoundTime": "420",
+    "RoundLimit": "3",
+    "WinLimit": "1",
+    "PreRoundTime": "20",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "RoundTimeExtension": "0",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "ExtractionObjectiveHoldTime": "150",
+    "bEnableExtractionObjective": "True",
+    "ObjectiveDefendDistance": "2000",
+    "bUsesPointsScoring": "False",
+    "AlarmDuration": "15",
+    "NumWaves": "7",
+    "bUseSpecialWaves": "True",
+    "SpecialWaveFrequency": "2",
+    "MinimumBotsPerCompletedObjective": "0.5",
+    "MaximumBotsPerCompletedObjective": "1",
+    "BotSpawnDelay": "10",
+    "BotRespawnDelay": "1",
+    "BotRespawnDistance": "10000",
+    "BotMinimumSpawnRange": "3000",
+    "BotMaximumSpawnRange": "5000",
+    "BotFleeDuration": "7",
+    "BotRepositionDelay": "1",
+    "BotDPRRespawnFirst": "0.3",
+    "BotDPRRespawnFinal": "0.1",
+    "bUseObjectiveCaptureGraceRespawn": "True",
+    "ObjectiveCaptureGraceRespawnTime": "6",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "bResetLoadoutOnNewRound": "False",
+    "InitialSupply": "10",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "False",
+    "bAutoBalanceTeams": "False",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bUseVehicleInsertion": "True",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "False",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSPushGameMode",
+   "alias": "Push",
+   "name": "Push",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "12",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "600",
+    "RoundLimit": "3",
+    "WinLimit": "2",
+    "PreRoundTime": "20",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "1",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "RoundTimeExtension": "300",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "True",
+    "bUsesPointsScoring": "False",
+    "AttackerWavesPerObjective": "5",
+    "AttackerWaveDPR": "0.25",
+    "AttackerWaveTimer": "20",
+    "DefenderWavesPerObjective": "5",
+    "DefenderWaveDPR": "0.25",
+    "DefenderWaveTimer": "35",
+    "LastStandSetupDelay": "10",
+    "AdvanceAttackerSpawnsDelay": "30",
+    "bUseObjectiveCaptureGraceRespawn": "True",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "60",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSFirefightGameMode",
+   "alias": "Firefight",
+   "name": "Firefight",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "5",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "300",
+    "RoundLimit": "6",
+    "WinLimit": "4",
+    "PreRoundTime": "20",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "3",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "False",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "False",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "True",
+    "bVoiceEnemyHearsLocal": "False",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "False"
+   }
+  },
+  {
+   "cls": "INSFrontlineGameMode",
+   "alias": "Frontline",
+   "name": "Frontline",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "12",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "900",
+    "RoundLimit": "3",
+    "WinLimit": "2",
+    "PreRoundTime": "10",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "1",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "23",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.35",
+    "ObjectiveMaxSpeedupPlayers": "6",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "True",
+    "bDisableRestrictedAreasOnWaveDepletion": "True",
+    "bUsesPointsScoring": "False",
+    "DefaultLastStandDrainRate": "20",
+    "LastStandDisableSpawnsDelay": "10",
+    "RegressSpawnsTimer": "20",
+    "bUseObjectiveCaptureGraceRespawn": "True",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "60",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "DominationGameMode",
+   "alias": "",
+   "name": "Domination",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "12",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "900",
+    "RoundLimit": "1",
+    "WinLimit": "200",
+    "PreRoundTime": "10",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "False",
+    "bCheckLastPersonStanding": "False",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "15",
+    "ObjectiveResetTime": "15",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "NearWinLimitThreshold": "20",
+    "bScoreKills": "False",
+    "bUsesPointsScoring": "True",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "DeathmatchSpawnPointDelay": "10",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "0",
+    "InitialSupply": "20",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "30",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "400",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "True",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSAmbushGameMode",
+   "alias": "Ambush",
+   "name": "Ambush",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "0",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "180",
+    "RoundLimit": "8",
+    "WinLimit": "5",
+    "PreRoundTime": "15",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "4",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "5",
+    "ObjectiveResetTime": "5",
+    "ObjectiveSpeedup": "0.05",
+    "ObjectiveMaxSpeedupPlayers": "3",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "False",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "2",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "False",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "True",
+    "bVoiceEnemyHearsLocal": "False",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "False"
+   }
+  },
+  {
+   "cls": "INSDefuseGameMode",
+   "alias": "Defuse",
+   "name": "Defusal",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "0",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "300",
+    "RoundLimit": "2",
+    "WinLimit": "4",
+    "PreRoundTime": "15",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "1",
+    "TeamSwitchTime": "0",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "10",
+    "ObjectiveSpeedup": "0.05",
+    "ObjectiveMaxSpeedupPlayers": "3",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "True",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "True",
+    "bVoiceEnemyHearsLocal": "False",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "False"
+   }
+  },
+  {
+   "cls": "INSTeamDeathmatchGameMode",
+   "alias": "TDM",
+   "name": "Team Deathmatch",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "12",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "900",
+    "RoundLimit": "1",
+    "WinLimit": "150",
+    "PreRoundTime": "10",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "60",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "False",
+    "bCheckLastPersonStanding": "False",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "NearWinLimitThreshold": "10",
+    "bScoreKills": "True",
+    "bUsesPointsScoring": "True",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "DeathmatchSpawnPointDelay": "10",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "20",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "30",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "400",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "True",
+    "bKillFeed": "True",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSFreeForAllMode",
+   "alias": "FFA",
+   "name": "Free For All",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "0",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "600",
+    "RoundLimit": "-1",
+    "WinLimit": "1",
+    "PreRoundTime": "10",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "10",
+    "OvertimeTime": "30",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "False",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "bUsesPointsScoring": "False",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "0",
+    "LoseSpawnProtectionOnMoveGrace": "0",
+    "InitialSupply": "20",
+    "MaximumSupply": "20",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "1",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "False",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "2",
+    "MinimumPlayersInProgress": "2",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "False",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "True",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "False",
+    "bDynamicInGameLessonsAllowed": "False",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  },
+  {
+   "cls": "INSSkirmishGameMode",
+   "alias": "Skirmish",
+   "name": "Skirmish",
+   "coop": false,
+   "defaults": {
+    "bBots": "False",
+    "BotQuota": "10",
+    "BotWanderRadius": "5000",
+    "BotTerritoryRadius": "10000",
+    "BotAmbushRadius": "5000",
+    "BotAmbushRatio": "0.25",
+    "RoundTime": "900",
+    "RoundLimit": "3",
+    "WinLimit": "2",
+    "PreRoundTime": "20",
+    "PostRoundTime": "15",
+    "PostGameTime": "20",
+    "GameTimeLimit": "-1",
+    "OvertimeTime": "120",
+    "bGamemodeHasOvertime": "False",
+    "GamemodeOvertimeAdditionalRounds": "0",
+    "GamemodeOvertimeAdditionalWins": "0",
+    "SwitchTeamsEveryRound": "0",
+    "TeamSwitchTime": "10",
+    "bRedoRoundOnDraw": "False",
+    "WinTime": "5",
+    "GameStartingIntermissionTime": "5",
+    "bUseEliminationRules": "True",
+    "bCheckLastPersonStanding": "True",
+    "bIgnoreRoundOver": "False",
+    "ObjectiveCaptureTime": "30",
+    "ObjectiveResetTime": "-1",
+    "ObjectiveSpeedup": "0.25",
+    "ObjectiveMaxSpeedupPlayers": "4",
+    "ObjectiveRadioSpeedup": "0",
+    "FloatingObjectiveVisibility": "ShowActiveOnly",
+    "bAllowRestrictedAreas": "True",
+    "bShowRestrictedAreaBothTeam": "False",
+    "bDisableRestrictedAreasOnWaveDepletion": "False",
+    "ExplosivePlantTime": "15",
+    "bUsesPointsScoring": "False",
+    "DefaultReinforcementWaves": "10",
+    "CaptureBonusWaves": "1",
+    "WaveTimer": "10",
+    "bUseObjectiveCaptureGraceRespawn": "False",
+    "ObjectiveCaptureGraceRespawnTime": "3",
+    "SpawnProtectionTime": "30",
+    "LoseSpawnProtectionOnMoveGrace": "5",
+    "InitialSupply": "15",
+    "MaximumSupply": "15",
+    "bSupplyGainEnabled": "False",
+    "SupplyGainFrequency": "150",
+    "bAwardSupplyInstantly": "False",
+    "bRestrictClassByPlayerLevel": "False",
+    "DroppedWeaponLifespan": "90",
+    "bAllowFriendlyFire": "True",
+    "FriendlyFireModifier": "0.2",
+    "FriendlyFireReflect": "0",
+    "bEnforceFriendlyFireReflect": "True",
+    "MinimumTotalFriendlyFireDamageToReflect": "200",
+    "TeamKillLimit": "3",
+    "TeamKillGrace": "0.2",
+    "TeamKillReduceTime": "90",
+    "MinimumPlayers": "1",
+    "MinimumPlayersInProgress": "1",
+    "bAutoAssignTeams": "True",
+    "bAllowPlayerTeamSelect": "True",
+    "bAutoBalanceTeams": "True",
+    "AutoBalanceDelay": "10",
+    "bAllowUnbalancedTeams": "False",
+    "bAutoAssignClass": "False",
+    "IdleLimit": "150",
+    "bDisableVehicles": "False",
+    "bIsArcadeMode": "False",
+    "bKillFeed": "False",
+    "bKillFeedSpectator": "True",
+    "bKillerInfo": "True",
+    "bKillerInfoRevealDistance": "False",
+    "bAllowDeathCamera": "True",
+    "bAllowThirdPersonSpectate": "True",
+    "bDynamicInGameLessonsAllowed": "True",
+    "bDeadSay": "False",
+    "bDeadSayTeam": "True",
+    "bVoiceAllowDeadChat": "False",
+    "bVoiceEnemyHearsLocal": "True",
+    "bVoiceIntermissionAllowAll": "True",
+    "bVoiceRadioBroadcastLocal": "True"
+   }
+  }
+ ],
+ "properties": [
+  {
+   "key": "AIDifficulty",
+   "label": "AI difficulty",
+   "cat": "Bots & AI",
+   "desc": "Skill of every bot: aim, reaction time and awareness. 0 is easiest, 1 is hardest.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "FriendlyBotQuota",
+   "label": "AI teammates",
+   "cat": "Bots & AI",
+   "desc": "Friendly bots that join your team. 0 plays Lone Wolf.",
+   "type": "int",
+   "min": 0,
+   "max": 32,
+   "step": 1
+  },
+  {
+   "key": "bBots",
+   "label": "Fill teams with bots",
+   "cat": "Bots & AI",
+   "desc": "Versus modes: add bots so both teams are populated.",
+   "type": "bool"
+  },
+  {
+   "key": "BotQuota",
+   "label": "Bot count (versus)",
+   "cat": "Bots & AI",
+   "desc": "Versus modes: how many bots fill the match.",
+   "type": "int",
+   "min": 0,
+   "max": 64,
+   "step": 1
+  },
+  {
+   "key": "bBotsUseHumanLoadouts",
+   "label": "Bots use player loadouts",
+   "cat": "Bots & AI",
+   "desc": "Friendly bots pick loadouts like human players instead of bot kits.",
+   "type": "bool"
+  },
+  {
+   "key": "BotWanderRadius",
+   "label": "Bot wander radius",
+   "cat": "Bots & AI",
+   "desc": "How far idle bots roam from their post (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 50000,
+   "step": 500
+  },
+  {
+   "key": "BotTerritoryRadius",
+   "label": "Bot territory radius",
+   "cat": "Bots & AI",
+   "desc": "Area bots defend around their objective (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 50000,
+   "step": 500
+  },
+  {
+   "key": "BotAmbushRadius",
+   "label": "Bot ambush radius",
+   "cat": "Bots & AI",
+   "desc": "Distance at which bots set up ambushes (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 30000,
+   "step": 250
+  },
+  {
+   "key": "BotAmbushRatio",
+   "label": "Bot ambush ratio",
+   "cat": "Bots & AI",
+   "desc": "Share of bots that lie in ambush instead of patrolling.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "BotAmbushRatioCheckpointMinDeaths",
+   "label": "Ambush ratio at few losses",
+   "cat": "Bots & AI",
+   "desc": "Checkpoint: ambushing share while the enemy has lost few soldiers.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "BotAmbushRatioCheckpointMaxDeaths",
+   "label": "Ambush ratio at heavy losses",
+   "cat": "Bots & AI",
+   "desc": "Checkpoint: ambushing share once the enemy has lost many soldiers.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "SoloEnemies",
+   "label": "Enemies when playing solo",
+   "cat": "Enemy forces",
+   "desc": "Enemy count per wave when you are the only human player.",
+   "type": "int",
+   "min": 0,
+   "max": 64,
+   "step": 1
+  },
+  {
+   "key": "MinimumEnemies",
+   "label": "Minimum enemies",
+   "cat": "Enemy forces",
+   "desc": "Enemy count at the lowest player count.",
+   "type": "int",
+   "min": 0,
+   "max": 64,
+   "step": 1
+  },
+  {
+   "key": "MaximumEnemies",
+   "label": "Maximum enemies",
+   "cat": "Enemy forces",
+   "desc": "Enemy count once enough players have joined.",
+   "type": "int",
+   "min": 0,
+   "max": 64,
+   "step": 1
+  },
+  {
+   "key": "MaxPlayersToScaleEnemyCount",
+   "label": "Players to reach maximum",
+   "cat": "Enemy forces",
+   "desc": "Human players needed before the maximum enemy count is used.",
+   "type": "int",
+   "min": 1,
+   "max": 32,
+   "step": 1
+  },
+  {
+   "key": "ObjectiveTotalEnemyRespawnMultiplierMin",
+   "label": "Enemy respawns per objective (min)",
+   "cat": "Enemy forces",
+   "desc": "Multiplier on enemy reinforcements for early objectives.",
+   "type": "float",
+   "min": 0,
+   "max": 5,
+   "step": 0.05
+  },
+  {
+   "key": "ObjectiveTotalEnemyRespawnMultiplierMax",
+   "label": "Enemy respawns per objective (max)",
+   "cat": "Enemy forces",
+   "desc": "Multiplier on enemy reinforcements for late objectives.",
+   "type": "float",
+   "min": 0,
+   "max": 5,
+   "step": 0.05
+  },
+  {
+   "key": "FinalCacheBotQuotaMultiplier",
+   "label": "Final cache enemy multiplier",
+   "cat": "Enemy forces",
+   "desc": "Extra enemies defending the last weapons cache.",
+   "type": "float",
+   "min": 0,
+   "max": 5,
+   "step": 0.1
+  },
+  {
+   "key": "bForceSoloWaves",
+   "label": "Force solo wave rules",
+   "cat": "Enemy forces",
+   "desc": "Use the solo reinforcement wave rules even with several players.",
+   "type": "bool"
+  },
+  {
+   "key": "bSupportsSoloWaves",
+   "label": "Solo waves enabled",
+   "cat": "Enemy forces",
+   "desc": "This mode uses separate reinforcement waves for solo play.",
+   "type": "bool"
+  },
+  {
+   "key": "SoloWaves",
+   "label": "Solo reinforcement waves",
+   "cat": "Tickets & waves",
+   "desc": "Respawn waves you get when playing solo (your tickets).",
+   "type": "int",
+   "min": 0,
+   "max": 50,
+   "step": 1
+  },
+  {
+   "key": "SoloWaveIncrementOnObjectiveCapture",
+   "label": "Waves gained per capture (solo)",
+   "cat": "Tickets & waves",
+   "desc": "Extra solo waves awarded for each captured objective.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "SoloReinforcementTime",
+   "label": "Solo reinforcement time",
+   "cat": "Tickets & waves",
+   "desc": "Seconds before a solo reinforcement wave arrives.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "SoloRoundTime",
+   "label": "Solo round time",
+   "cat": "Rounds & time",
+   "desc": "Round length in seconds when playing solo.",
+   "type": "int",
+   "min": 0,
+   "max": 7200,
+   "step": 30
+  },
+  {
+   "key": "bLoseWhenAllPlayersDead",
+   "label": "Lose when all players are dead",
+   "cat": "Rounds & time",
+   "desc": "Co-op: the round is lost once every human is down with no waves left.",
+   "type": "bool"
+  },
+  {
+   "key": "RoundTime",
+   "label": "Round time",
+   "cat": "Rounds & time",
+   "desc": "Seconds per round.",
+   "type": "int",
+   "min": 30,
+   "max": 7200,
+   "step": 30
+  },
+  {
+   "key": "RoundLimit",
+   "label": "Round limit",
+   "cat": "Rounds & time",
+   "desc": "Rounds played per match (-1 for no limit).",
+   "type": "int",
+   "min": -1,
+   "max": 50,
+   "step": 1
+  },
+  {
+   "key": "WinLimit",
+   "label": "Rounds to win",
+   "cat": "Rounds & time",
+   "desc": "Round wins (or points) needed to win the match.",
+   "type": "int",
+   "min": 1,
+   "max": 1000,
+   "step": 1
+  },
+  {
+   "key": "PreRoundTime",
+   "label": "Pre-round time",
+   "cat": "Rounds & time",
+   "desc": "Freeze time before each round starts (seconds).",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "PostRoundTime",
+   "label": "Post-round time",
+   "cat": "Rounds & time",
+   "desc": "Pause after a round ends (seconds).",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "PostGameTime",
+   "label": "Post-match time",
+   "cat": "Rounds & time",
+   "desc": "Scoreboard time after the match ends (seconds).",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "GameTimeLimit",
+   "label": "Match time limit",
+   "cat": "Rounds & time",
+   "desc": "Minutes for the whole match (-1 for none).",
+   "type": "int",
+   "min": -1,
+   "max": 600,
+   "step": 1
+  },
+  {
+   "key": "OvertimeTime",
+   "label": "Overtime length",
+   "cat": "Rounds & time",
+   "desc": "Seconds of overtime when an objective is contested at the buzzer.",
+   "type": "int",
+   "min": 0,
+   "max": 600,
+   "step": 5
+  },
+  {
+   "key": "bGamemodeHasOvertime",
+   "label": "Extra overtime rounds",
+   "cat": "Rounds & time",
+   "desc": "Play extra rounds when the match is tied.",
+   "type": "bool"
+  },
+  {
+   "key": "GamemodeOvertimeAdditionalRounds",
+   "label": "Overtime rounds",
+   "cat": "Rounds & time",
+   "desc": "Extra rounds played in overtime.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "GamemodeOvertimeAdditionalWins",
+   "label": "Overtime wins needed",
+   "cat": "Rounds & time",
+   "desc": "Wins needed to take the overtime.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "SwitchTeamsEveryRound",
+   "label": "Switch sides every N rounds",
+   "cat": "Rounds & time",
+   "desc": "Teams swap sides after this many rounds (0 never).",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "TeamSwitchTime",
+   "label": "Side switch delay",
+   "cat": "Rounds & time",
+   "desc": "Seconds given when teams swap sides.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "bRedoRoundOnDraw",
+   "label": "Replay drawn rounds",
+   "cat": "Rounds & time",
+   "desc": "Replay a round that ends in a draw.",
+   "type": "bool"
+  },
+  {
+   "key": "WinTime",
+   "label": "Win announcement time",
+   "cat": "Rounds & time",
+   "desc": "Seconds the round result stays on screen.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 1
+  },
+  {
+   "key": "RoundTimeExtension",
+   "label": "Time added per capture",
+   "cat": "Rounds & time",
+   "desc": "Seconds added to the round clock when an objective falls.",
+   "type": "int",
+   "min": 0,
+   "max": 1800,
+   "step": 30
+  },
+  {
+   "key": "GameStartingIntermissionTime",
+   "label": "Match start countdown",
+   "cat": "Rounds & time",
+   "desc": "Seconds before the first round begins.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "bUseEliminationRules",
+   "label": "Elimination rules",
+   "cat": "Rounds & time",
+   "desc": "A team loses the round when it is wiped out.",
+   "type": "bool"
+  },
+  {
+   "key": "bCheckLastPersonStanding",
+   "label": "Last person standing check",
+   "cat": "Rounds & time",
+   "desc": "Detect when only one player remains alive.",
+   "type": "bool"
+  },
+  {
+   "key": "bIgnoreRoundOver",
+   "label": "Never end rounds",
+   "cat": "Rounds & time",
+   "desc": "Rounds keep going even after a win condition (sandbox).",
+   "type": "bool"
+  },
+  {
+   "key": "ObjectiveCaptureTime",
+   "label": "Capture time",
+   "cat": "Objectives",
+   "desc": "Seconds for one player to capture an objective.",
+   "type": "int",
+   "min": 1,
+   "max": 600,
+   "step": 1
+  },
+  {
+   "key": "ObjectiveResetTime",
+   "label": "Capture reset time",
+   "cat": "Objectives",
+   "desc": "Seconds before an abandoned capture resets (-1 never).",
+   "type": "int",
+   "min": -1,
+   "max": 600,
+   "step": 1
+  },
+  {
+   "key": "ObjectiveSpeedup",
+   "label": "Extra capture speed per player",
+   "cat": "Objectives",
+   "desc": "Capture speed added by each extra player on the point.",
+   "type": "float",
+   "min": 0,
+   "max": 5,
+   "step": 0.05
+  },
+  {
+   "key": "ObjectiveMaxSpeedupPlayers",
+   "label": "Players that speed capture",
+   "cat": "Objectives",
+   "desc": "Most players that add capture speed.",
+   "type": "int",
+   "min": 1,
+   "max": 32,
+   "step": 1
+  },
+  {
+   "key": "ObjectiveRadioSpeedup",
+   "label": "Radio capture bonus",
+   "cat": "Objectives",
+   "desc": "Extra capture speed from a nearby radio operator.",
+   "type": "int",
+   "min": 0,
+   "max": 5,
+   "step": 0.05
+  },
+  {
+   "key": "FloatingObjectiveVisibility",
+   "label": "Objective markers",
+   "cat": "HUD & spectating",
+   "desc": "Which objective markers float on screen.",
+   "type": "enum",
+   "options": [
+    "ShowActiveOnly",
+    "ShowAll",
+    "HideAll"
+   ]
+  },
+  {
+   "key": "bAllowRestrictedAreas",
+   "label": "Restricted areas",
+   "cat": "Objectives",
+   "desc": "Out-of-bounds zones damage players who stay inside.",
+   "type": "bool"
+  },
+  {
+   "key": "bShowRestrictedAreaBothTeam",
+   "label": "Show restricted areas to both teams",
+   "cat": "Objectives",
+   "desc": "Both teams see the out-of-bounds zones.",
+   "type": "bool"
+  },
+  {
+   "key": "bDisableRestrictedAreasOnWaveDepletion",
+   "label": "Open map when out of waves",
+   "cat": "Objectives",
+   "desc": "Remove restricted zones when a team runs out of waves.",
+   "type": "bool"
+  },
+  {
+   "key": "ExplosivePlantTime",
+   "label": "Explosive plant time",
+   "cat": "Objectives",
+   "desc": "Seconds to plant charges on a cache.",
+   "type": "int",
+   "min": 1,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "ExtractionObjectiveHoldTime",
+   "label": "Extraction hold time",
+   "cat": "Objectives",
+   "desc": "Survival: seconds to hold the extraction zone.",
+   "type": "int",
+   "min": 10,
+   "max": 1200,
+   "step": 10
+  },
+  {
+   "key": "bEnableExtractionObjective",
+   "label": "Extraction finale",
+   "cat": "Objectives",
+   "desc": "Survival ends with an extraction objective.",
+   "type": "bool"
+  },
+  {
+   "key": "ObjectiveDefendDistance",
+   "label": "Objective defend distance",
+   "cat": "Objectives",
+   "desc": "Radius bots defend around the objective (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 20000,
+   "step": 100
+  },
+  {
+   "key": "bContestedObjective",
+   "label": "Contested objectives",
+   "cat": "Objectives",
+   "desc": "Outpost: objectives can be contested.",
+   "type": "bool"
+  },
+  {
+   "key": "NearWinLimitThreshold",
+   "label": "Near-win warning",
+   "cat": "Objectives",
+   "desc": "Score gap that triggers the near-win announcement.",
+   "type": "int",
+   "min": 0,
+   "max": 500,
+   "step": 1
+  },
+  {
+   "key": "bScoreKills",
+   "label": "Kills score points",
+   "cat": "Objectives",
+   "desc": "Kills count toward the team score.",
+   "type": "bool"
+  },
+  {
+   "key": "bUsesPointsScoring",
+   "label": "Points-based scoring",
+   "cat": "Objectives",
+   "desc": "Winner is decided by points instead of rounds.",
+   "type": "bool"
+  },
+  {
+   "key": "DefendTimer",
+   "label": "Counter-attack length",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds you must hold after a capture.",
+   "type": "int",
+   "min": 0,
+   "max": 900,
+   "step": 5
+  },
+  {
+   "key": "DefendTimerFinal",
+   "label": "Final counter-attack length",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds you must hold after the last capture.",
+   "type": "int",
+   "min": 0,
+   "max": 1800,
+   "step": 5
+  },
+  {
+   "key": "FinalDefendTimer",
+   "label": "Final wave defend time",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: seconds to survive the final wave.",
+   "type": "int",
+   "min": 0,
+   "max": 1800,
+   "step": 5
+  },
+  {
+   "key": "RetreatTimer",
+   "label": "Retreat timer",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds attackers have to fall back after a counter-attack.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "PostCaptureRushTimer",
+   "label": "Post-capture rush",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds before enemies rush a freshly captured objective.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "bCounterAttackReinforce",
+   "label": "Reinforced counter-attacks",
+   "cat": "Defense & counter-attacks",
+   "desc": "Enemies keep sending reinforcements during counter-attacks.",
+   "type": "bool"
+  },
+  {
+   "key": "CounterAttackRespawnDPR",
+   "label": "Counter-attack respawn rate",
+   "cat": "Defense & counter-attacks",
+   "desc": "Fraction of enemies that respawn during counter-attacks.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "CounterAttackRespawnDelay",
+   "label": "Counter-attack respawn delay",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds between enemy respawns during counter-attacks.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "AlarmDuration",
+   "label": "Alarm duration",
+   "cat": "Defense & counter-attacks",
+   "desc": "Seconds the enemy alarm plays when a cache is attacked.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "PrepareTimer",
+   "label": "Preparation time",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: seconds to prepare between waves.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 5
+  },
+  {
+   "key": "InitialPrepareTimer",
+   "label": "First preparation time",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: seconds to prepare before the first wave.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 5
+  },
+  {
+   "key": "bRetreatOnElimination",
+   "label": "Retreat when wiped out",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: fall back to the next position when eliminated.",
+   "type": "bool"
+  },
+  {
+   "key": "EliminationRetreatDelay",
+   "label": "Elimination retreat delay",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: seconds before retreating after elimination.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 1
+  },
+  {
+   "key": "bForceRespawnOnRetreat",
+   "label": "Respawn on retreat",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: everyone respawns when the team retreats.",
+   "type": "bool"
+  },
+  {
+   "key": "bAllowRetreatOnFinalWave",
+   "label": "Retreat on final wave",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: allow retreating during the final wave.",
+   "type": "bool"
+  },
+  {
+   "key": "bResetWavesOnRetreat",
+   "label": "Reset waves on retreat",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: wave counter restarts after a retreat.",
+   "type": "bool"
+  },
+  {
+   "key": "bDeductWaveAfterRetreat",
+   "label": "Lose a wave on retreat",
+   "cat": "Defense & counter-attacks",
+   "desc": "Outpost: retreating costs one wave.",
+   "type": "bool"
+  },
+  {
+   "key": "AttackerWavesPerObjective",
+   "label": "Attacker waves per objective",
+   "cat": "Tickets & waves",
+   "desc": "Push: reinforcement waves the attackers get for each objective.",
+   "type": "int",
+   "min": 0,
+   "max": 100,
+   "step": 1
+  },
+  {
+   "key": "AttackerWaveDPR",
+   "label": "Attacker wave trigger",
+   "cat": "Tickets & waves",
+   "desc": "Push: share of attackers that must be dead before a wave can be called.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "AttackerWaveTimer",
+   "label": "Attacker wave timer",
+   "cat": "Tickets & waves",
+   "desc": "Push: seconds between attacker waves.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "DefenderWavesPerObjective",
+   "label": "Defender waves per objective",
+   "cat": "Tickets & waves",
+   "desc": "Push: reinforcement waves the defenders get for each objective.",
+   "type": "int",
+   "min": 0,
+   "max": 100,
+   "step": 1
+  },
+  {
+   "key": "DefenderWaveDPR",
+   "label": "Defender wave trigger",
+   "cat": "Tickets & waves",
+   "desc": "Push: share of defenders that must be dead before a wave can be called.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "DefenderWaveTimer",
+   "label": "Defender wave timer",
+   "cat": "Tickets & waves",
+   "desc": "Push: seconds between defender waves.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "LastStandSetupDelay",
+   "label": "Last stand setup delay",
+   "cat": "Tickets & waves",
+   "desc": "Push: seconds before the last stand starts.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "AdvanceAttackerSpawnsDelay",
+   "label": "Advance attacker spawns",
+   "cat": "Tickets & waves",
+   "desc": "Push: seconds before attacker spawns move up after a capture.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "DefaultReinforcementWaves",
+   "label": "Reinforcement waves",
+   "cat": "Tickets & waves",
+   "desc": "Skirmish: waves each team starts with.",
+   "type": "int",
+   "min": 0,
+   "max": 100,
+   "step": 1
+  },
+  {
+   "key": "CaptureBonusWaves",
+   "label": "Bonus waves per capture",
+   "cat": "Tickets & waves",
+   "desc": "Skirmish: waves gained for capturing an objective.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "WaveTimer",
+   "label": "Wave timer",
+   "cat": "Tickets & waves",
+   "desc": "Skirmish: seconds between reinforcement waves.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "DefaultLastStandDrainRate",
+   "label": "Last stand drain rate",
+   "cat": "Tickets & waves",
+   "desc": "Frontline: how fast the losing side drains in last stand.",
+   "type": "int",
+   "min": 0,
+   "max": 200,
+   "step": 1
+  },
+  {
+   "key": "LastStandDisableSpawnsDelay",
+   "label": "Last stand spawn lockout",
+   "cat": "Tickets & waves",
+   "desc": "Frontline: seconds before spawns close in last stand.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "RegressSpawnsTimer",
+   "label": "Spawn regress timer",
+   "cat": "Tickets & waves",
+   "desc": "Frontline: seconds before spawns fall back.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "NumWaves",
+   "label": "Number of waves",
+   "cat": "Tickets & waves",
+   "desc": "Outpost and Survival: waves you must survive.",
+   "type": "int",
+   "min": 1,
+   "max": 50,
+   "step": 1
+  },
+  {
+   "key": "bUseSpecialWaves",
+   "label": "Special waves",
+   "cat": "Tickets & waves",
+   "desc": "Include special enemy waves (bombers, heavies).",
+   "type": "bool"
+  },
+  {
+   "key": "SpecialWaveFrequency",
+   "label": "Special wave frequency",
+   "cat": "Tickets & waves",
+   "desc": "Every Nth wave is a special wave.",
+   "type": "int",
+   "min": 1,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "WaveSurvivalSupplyAward",
+   "label": "Supply per survived wave",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: supply points earned for surviving a wave.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "MinimumBotsPerCompletedWave",
+   "label": "Enemy growth per wave (min)",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: extra enemies added per completed wave (low players).",
+   "type": "float",
+   "min": 0,
+   "max": 10,
+   "step": 0.1
+  },
+  {
+   "key": "MaximumBotsPerCompletedWave",
+   "label": "Enemy growth per wave (max)",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: extra enemies added per completed wave (full server).",
+   "type": "int",
+   "min": 0,
+   "max": 10,
+   "step": 0.1
+  },
+  {
+   "key": "MinimumBotsPerCompletedObjective",
+   "label": "Enemy growth per objective (min)",
+   "cat": "Tickets & waves",
+   "desc": "Survival: extra enemies per completed objective (low players).",
+   "type": "float",
+   "min": 0,
+   "max": 10,
+   "step": 0.1
+  },
+  {
+   "key": "MaximumBotsPerCompletedObjective",
+   "label": "Enemy growth per objective (max)",
+   "cat": "Tickets & waves",
+   "desc": "Survival: extra enemies per completed objective (full server).",
+   "type": "int",
+   "min": 0,
+   "max": 10,
+   "step": 0.1
+  },
+  {
+   "key": "BotSpawnDelay",
+   "label": "Enemy spawn delay",
+   "cat": "Tickets & waves",
+   "desc": "Survival: seconds between enemy spawn groups.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "BotRespawnDelay",
+   "label": "Enemy respawn delay",
+   "cat": "Tickets & waves",
+   "desc": "Survival: seconds before a dead enemy respawns.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 0.5
+  },
+  {
+   "key": "BotRespawnDistance",
+   "label": "Enemy respawn distance",
+   "cat": "Tickets & waves",
+   "desc": "Survival: minimum distance of enemy respawns (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 50000,
+   "step": 500
+  },
+  {
+   "key": "BotMinimumSpawnRange",
+   "label": "Enemy spawn range (min)",
+   "cat": "Tickets & waves",
+   "desc": "Survival: closest enemy spawn distance (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 30000,
+   "step": 250
+  },
+  {
+   "key": "BotMaximumSpawnRange",
+   "label": "Enemy spawn range (max)",
+   "cat": "Tickets & waves",
+   "desc": "Survival: farthest enemy spawn distance (cm).",
+   "type": "int",
+   "min": 0,
+   "max": 50000,
+   "step": 250
+  },
+  {
+   "key": "BotFleeDuration",
+   "label": "Enemy flee duration",
+   "cat": "Tickets & waves",
+   "desc": "Survival: seconds enemies flee before regrouping.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 1
+  },
+  {
+   "key": "BotRepositionDelay",
+   "label": "Enemy reposition delay",
+   "cat": "Tickets & waves",
+   "desc": "Survival: seconds between enemy repositioning.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 0.5
+  },
+  {
+   "key": "BotDPRRespawnFirst",
+   "label": "Enemy respawn rate (first wave)",
+   "cat": "Tickets & waves",
+   "desc": "Share of enemies respawning early in a wave.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "BotDPRRespawnFinal",
+   "label": "Enemy respawn rate (final wave)",
+   "cat": "Tickets & waves",
+   "desc": "Share of enemies respawning in the final wave.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "BotDPRMinimumTimeRemaining",
+   "label": "Stop enemy respawns at",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: seconds left on the clock when enemy respawns stop.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "MaximumBotFireSupportPerWave",
+   "label": "Enemy fire support per wave",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: artillery calls enemies may use per wave.",
+   "type": "int",
+   "min": 0,
+   "max": 10,
+   "step": 1
+  },
+  {
+   "key": "MaximumBotFireSupportFinalWave",
+   "label": "Enemy fire support in final wave",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: artillery calls in the final wave.",
+   "type": "int",
+   "min": 0,
+   "max": 10,
+   "step": 1
+  },
+  {
+   "key": "BotFireSupportCooldown",
+   "label": "Enemy fire support cooldown",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: seconds between enemy artillery calls.",
+   "type": "int",
+   "min": 0,
+   "max": 600,
+   "step": 5
+  },
+  {
+   "key": "BotFireSupportFinalWaveCooldown",
+   "label": "Final wave fire support cooldown",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: artillery cooldown during the final wave.",
+   "type": "int",
+   "min": 0,
+   "max": 600,
+   "step": 5
+  },
+  {
+   "key": "FireSupportMinimumTimeRemaining",
+   "label": "No fire support after",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: no artillery with fewer seconds than this left.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "FireSupportMinimumTimeRemainingFinalWave",
+   "label": "No final-wave fire support after",
+   "cat": "Tickets & waves",
+   "desc": "Outpost: same limit for the final wave.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "RespawnDelay",
+   "label": "Respawn delay",
+   "cat": "Respawning",
+   "desc": "Checkpoint: seconds before your team respawns.",
+   "type": "int",
+   "min": 0,
+   "max": 300,
+   "step": 1
+  },
+  {
+   "key": "RespawnDPR",
+   "label": "Team respawn trigger",
+   "cat": "Respawning",
+   "desc": "Checkpoint: share of the team that must be dead before a respawn.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "bUseObjectiveCaptureGraceRespawn",
+   "label": "Respawn on capture",
+   "cat": "Respawning",
+   "desc": "Dead teammates respawn when an objective is captured.",
+   "type": "bool"
+  },
+  {
+   "key": "ObjectiveCaptureGraceRespawnTime",
+   "label": "Capture respawn grace",
+   "cat": "Respawning",
+   "desc": "Seconds after a capture during which dead players respawn.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 1
+  },
+  {
+   "key": "DeathmatchSpawnPointDelay",
+   "label": "Spawn point cooldown",
+   "cat": "Respawning",
+   "desc": "Seconds before a spawn point can be reused.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "SpawnProtectionTime",
+   "label": "Spawn protection",
+   "cat": "Respawning",
+   "desc": "Seconds of spawn protection.",
+   "type": "int",
+   "min": 0,
+   "max": 120,
+   "step": 1
+  },
+  {
+   "key": "LoseSpawnProtectionOnMoveGrace",
+   "label": "Spawn protection move grace",
+   "cat": "Respawning",
+   "desc": "Seconds you can move before spawn protection drops.",
+   "type": "int",
+   "min": 0,
+   "max": 60,
+   "step": 1
+  },
+  {
+   "key": "bResetLoadoutOnNewRound",
+   "label": "Reset loadout each round",
+   "cat": "Respawning",
+   "desc": "Loadouts reset when a new round starts.",
+   "type": "bool"
+  },
+  {
+   "key": "bStripWeaponsOnRespawn",
+   "label": "Respawn with basic kit",
+   "cat": "Respawning",
+   "desc": "Hardcore: respawn without your previous weapons.",
+   "type": "bool"
+  },
+  {
+   "key": "InitialSupply",
+   "label": "Starting supply points",
+   "cat": "Supply & loadout",
+   "desc": "Supply points to spend on your loadout (the supply mutators change this).",
+   "type": "int",
+   "min": 0,
+   "max": 100,
+   "step": 1
+  },
+  {
+   "key": "MaximumSupply",
+   "label": "Maximum supply points",
+   "cat": "Supply & loadout",
+   "desc": "Highest supply you can reach.",
+   "type": "int",
+   "min": 0,
+   "max": 100,
+   "step": 1
+  },
+  {
+   "key": "bSupplyGainEnabled",
+   "label": "Earn supply from score",
+   "cat": "Supply & loadout",
+   "desc": "Gain supply points as you score (Soldier of Fortune style).",
+   "type": "bool"
+  },
+  {
+   "key": "SupplyGainFrequency",
+   "label": "Score per supply point",
+   "cat": "Supply & loadout",
+   "desc": "Score needed to earn one extra supply point.",
+   "type": "int",
+   "min": 1,
+   "max": 1000,
+   "step": 5
+  },
+  {
+   "key": "bAwardSupplyInstantly",
+   "label": "Instant supply awards",
+   "cat": "Supply & loadout",
+   "desc": "Earned supply is usable immediately instead of next respawn.",
+   "type": "bool"
+  },
+  {
+   "key": "AmmoBoxSpawnChance",
+   "label": "Ammo crate chance",
+   "cat": "Supply & loadout",
+   "desc": "Hardcore: chance an ammo crate spawns at an objective.",
+   "type": "int",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "MinAmmoPerObjective",
+   "label": "Ammo crates per objective (min)",
+   "cat": "Supply & loadout",
+   "desc": "Hardcore: fewest ammo crates per objective.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "MaxAmmoPerObjective",
+   "label": "Ammo crates per objective (max)",
+   "cat": "Supply & loadout",
+   "desc": "Hardcore: most ammo crates per objective.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "MinObjectiveForCrate",
+   "label": "First objective with a crate",
+   "cat": "Supply & loadout",
+   "desc": "Hardcore: earliest objective that gets a supply crate.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "MaxObjectiveForCrate",
+   "label": "Last objective with a crate",
+   "cat": "Supply & loadout",
+   "desc": "Hardcore: latest objective that gets a supply crate.",
+   "type": "int",
+   "min": 0,
+   "max": 20,
+   "step": 1
+  },
+  {
+   "key": "bRestrictClassByPlayerLevel",
+   "label": "Class level restrictions",
+   "cat": "Supply & loadout",
+   "desc": "Lock classes behind player level.",
+   "type": "bool"
+  },
+  {
+   "key": "DroppedWeaponLifespan",
+   "label": "Dropped weapon lifespan",
+   "cat": "Supply & loadout",
+   "desc": "Seconds dropped weapons stay on the ground.",
+   "type": "int",
+   "min": 0,
+   "max": 3600,
+   "step": 5
+  },
+  {
+   "key": "bAllowFriendlyFire",
+   "label": "Friendly fire",
+   "cat": "Friendly fire",
+   "desc": "Your shots can hurt teammates.",
+   "type": "bool"
+  },
+  {
+   "key": "FriendlyFireModifier",
+   "label": "Friendly fire damage",
+   "cat": "Friendly fire",
+   "desc": "Share of damage dealt to teammates.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "FriendlyFireReflect",
+   "label": "Reflect friendly fire",
+   "cat": "Friendly fire",
+   "desc": "Share of team damage reflected back to the shooter.",
+   "type": "int",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "bEnforceFriendlyFireReflect",
+   "label": "Force reflection",
+   "cat": "Friendly fire",
+   "desc": "Always reflect team damage once the threshold is passed.",
+   "type": "bool"
+  },
+  {
+   "key": "MinimumTotalFriendlyFireDamageToReflect",
+   "label": "Reflection threshold",
+   "cat": "Friendly fire",
+   "desc": "Team damage dealt before reflection kicks in.",
+   "type": "int",
+   "min": 0,
+   "max": 2000,
+   "step": 25
+  },
+  {
+   "key": "TeamKillLimit",
+   "label": "Team kill limit",
+   "cat": "Friendly fire",
+   "desc": "Team kills before a player is kicked.",
+   "type": "int",
+   "min": 0,
+   "max": 50,
+   "step": 1
+  },
+  {
+   "key": "TeamKillGrace",
+   "label": "Team kill grace",
+   "cat": "Friendly fire",
+   "desc": "Grace factor for accidental team kills.",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05
+  },
+  {
+   "key": "TeamKillReduceTime",
+   "label": "Team kill forgiveness time",
+   "cat": "Friendly fire",
+   "desc": "Seconds before a team kill is forgiven.",
+   "type": "int",
+   "min": 0,
+   "max": 3600,
+   "step": 10
+  },
+  {
+   "key": "MinimumPlayers",
+   "label": "Players needed to start",
+   "cat": "Teams & players",
+   "desc": "Humans needed before the match starts.",
+   "type": "int",
+   "min": 0,
+   "max": 32,
+   "step": 1
+  },
+  {
+   "key": "MinimumPlayersInProgress",
+   "label": "Players needed to continue",
+   "cat": "Teams & players",
+   "desc": "Humans needed to keep the match running.",
+   "type": "int",
+   "min": 0,
+   "max": 32,
+   "step": 1
+  },
+  {
+   "key": "bAutoAssignTeams",
+   "label": "Auto-assign teams",
+   "cat": "Teams & players",
+   "desc": "Put players on a team automatically.",
+   "type": "bool"
+  },
+  {
+   "key": "bAllowPlayerTeamSelect",
+   "label": "Allow team select",
+   "cat": "Teams & players",
+   "desc": "Players may choose their team.",
+   "type": "bool"
+  },
+  {
+   "key": "bAutoBalanceTeams",
+   "label": "Auto-balance teams",
+   "cat": "Teams & players",
+   "desc": "Move players to keep teams even.",
+   "type": "bool"
+  },
+  {
+   "key": "AutoBalanceDelay",
+   "label": "Auto-balance delay",
+   "cat": "Teams & players",
+   "desc": "Seconds before teams are re-balanced.",
+   "type": "int",
+   "min": 0,
+   "max": 600,
+   "step": 5
+  },
+  {
+   "key": "bAllowUnbalancedTeams",
+   "label": "Allow unbalanced teams",
+   "cat": "Teams & players",
+   "desc": "Teams may be uneven.",
+   "type": "bool"
+  },
+  {
+   "key": "bAutoAssignClass",
+   "label": "Auto-assign class",
+   "cat": "Teams & players",
+   "desc": "Skip class selection and assign one automatically.",
+   "type": "bool"
+  },
+  {
+   "key": "IdleLimit",
+   "label": "Idle kick time",
+   "cat": "Teams & players",
+   "desc": "Seconds idle before being kicked.",
+   "type": "int",
+   "min": 0,
+   "max": 3600,
+   "step": 10
+  },
+  {
+   "key": "bDisableVehicles",
+   "label": "Disable vehicles",
+   "cat": "Teams & players",
+   "desc": "Remove vehicles from the match.",
+   "type": "bool"
+  },
+  {
+   "key": "bUseVehicleInsertion",
+   "label": "Vehicle insertion",
+   "cat": "Teams & players",
+   "desc": "Co-op: arrive by vehicle at the start of the round.",
+   "type": "bool"
+  },
+  {
+   "key": "bIsArcadeMode",
+   "label": "Arcade presentation",
+   "cat": "Teams & players",
+   "desc": "Use arcade mode naming and rules text.",
+   "type": "bool"
+  },
+  {
+   "key": "bKillFeed",
+   "label": "Kill feed",
+   "cat": "HUD & spectating",
+   "desc": "Show the kill feed.",
+   "type": "bool"
+  },
+  {
+   "key": "bKillFeedSpectator",
+   "label": "Kill feed for spectators",
+   "cat": "HUD & spectating",
+   "desc": "Spectators see the kill feed.",
+   "type": "bool"
+  },
+  {
+   "key": "bKillerInfo",
+   "label": "Killer info",
+   "cat": "HUD & spectating",
+   "desc": "Show who killed you.",
+   "type": "bool"
+  },
+  {
+   "key": "bKillerInfoRevealDistance",
+   "label": "Killer distance",
+   "cat": "HUD & spectating",
+   "desc": "Show how far away your killer was.",
+   "type": "bool"
+  },
+  {
+   "key": "bAllowDeathCamera",
+   "label": "Death camera",
+   "cat": "HUD & spectating",
+   "desc": "Show the death camera after you die.",
+   "type": "bool"
+  },
+  {
+   "key": "bAllowThirdPersonSpectate",
+   "label": "Third-person spectating",
+   "cat": "HUD & spectating",
+   "desc": "Spectate teammates in third person.",
+   "type": "bool"
+  },
+  {
+   "key": "bDynamicInGameLessonsAllowed",
+   "label": "In-game hints",
+   "cat": "HUD & spectating",
+   "desc": "Show gameplay tips during the match.",
+   "type": "bool"
+  },
+  {
+   "key": "bDeadSay",
+   "label": "Dead can chat to all",
+   "cat": "Voice & chat",
+   "desc": "Dead players can use all-chat.",
+   "type": "bool"
+  },
+  {
+   "key": "bDeadSayTeam",
+   "label": "Dead can chat to team",
+   "cat": "Voice & chat",
+   "desc": "Dead players can use team chat.",
+   "type": "bool"
+  },
+  {
+   "key": "bVoiceAllowDeadChat",
+   "label": "Dead voice chat",
+   "cat": "Voice & chat",
+   "desc": "Dead players can talk to the living.",
+   "type": "bool"
+  },
+  {
+   "key": "bVoiceEnemyHearsLocal",
+   "label": "Enemies hear local voice",
+   "cat": "Voice & chat",
+   "desc": "Enemies nearby hear your local voice chat.",
+   "type": "bool"
+  },
+  {
+   "key": "bVoiceIntermissionAllowAll",
+   "label": "Voice between rounds",
+   "cat": "Voice & chat",
+   "desc": "Everyone can talk between rounds.",
+   "type": "bool"
+  },
+  {
+   "key": "bVoiceRadioBroadcastLocal",
+   "label": "Radio heard locally",
+   "cat": "Voice & chat",
+   "desc": "Radio chatter is also heard in local voice.",
+   "type": "bool"
+  }
+ ],
+ "rulesets": [
+  {
+   "id": "RS_CheckpointFrenzy",
+   "name": "Frenzy Checkpoint",
+   "rules": {
+    "INSCheckpointGameMode": {
+     "MinimumEnemies": "8",
+     "MaximumEnemies": "20",
+     "SoloEnemies": "8",
+     "bDisableVehicles": "true",
+     "RespawnDelay": "10",
+     "ObjectiveTotalEnemyRespawnMultiplierMin": "1.2",
+     "ObjectiveTotalEnemyRespawnMultiplierMax": "1.5",
+     "MaxPlayersToScaleEnemyCount": "12",
+     "bIsArcadeMode": "true",
+     "bCounterAttackReinforce": "true"
+    }
+   },
+   "notes": [
+    "Frenzy enemy squads come from the Frenzy mutator, which this preset enables."
+   ],
+   "mutators": [
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "RS_CompetitiveFirefight",
+   "name": "Competitive Firefight",
+   "rules": {
+    "INSFirefightGameMode": {
+     "WinLimit": "5",
+     "RoundLimit": "8",
+     "ObjectiveCaptureTime": "25",
+     "ObjectiveSpeedup": "0.33",
+     "SwitchTeamsEveryRound": "4",
+     "PreRoundTime": "10",
+     "RoundTime": "150",
+     "TeamSwitchTime": "20",
+     "bAllowThirdPersonSpectate": "false",
+     "GamemodeOvertimeAdditionalRounds": "2",
+     "GamemodeOvertimeAdditionalWins": "1",
+     "bGamemodeHasOvertime": "true",
+     "bRedoRoundOnDraw": "true",
+     "bAllowDeathCamera": "False",
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSCheckpointGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSCheckpointHardcoreGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSOutpostGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSSurvivalGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSPushGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSFrontlineGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "DominationGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSAmbushGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSDefuseGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSTeamDeathmatchGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSFreeForAllMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    },
+    "INSSkirmishGameMode": {
+     "bVoiceAllowDeadChat": "true",
+     "bVoiceEnemyHearsLocal": "false",
+     "bVoiceIntermissionAllowAll": "false"
+    }
+   },
+   "notes": [],
+   "mutators": []
+  },
+  {
+   "id": "RS_CompetitiveTheater",
+   "name": "Competitive Theater",
+   "rules": {},
+   "notes": [],
+   "mutators": []
+  },
+  {
+   "id": "RS_Hardcore",
+   "name": "Hardcore",
+   "rules": {
+    "INSCheckpointGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSCheckpointHardcoreGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSOutpostGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSSurvivalGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSPushGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSFirefightGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSFrontlineGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "DominationGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSAmbushGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSDefuseGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSTeamDeathmatchGameMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSFreeForAllMode": {
+     "ObjectiveCaptureTime": "60"
+    },
+    "INSSkirmishGameMode": {
+     "ObjectiveCaptureTime": "60"
+    }
+   },
+   "notes": [
+    "Movement speed x0.60 and hardcore animations come from the Hardcore mutator."
+   ],
+   "mutators": [
+    "Hardcore"
+   ]
+  },
+  {
+   "id": "RS_MatchmakingCasual",
+   "name": "Matchmaking Casual",
+   "rules": {
+    "INSCheckpointGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSCheckpointHardcoreGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSOutpostGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSSurvivalGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSPushGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSFirefightGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSFrontlineGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "DominationGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSAmbushGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSDefuseGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSTeamDeathmatchGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSFreeForAllMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    },
+    "INSSkirmishGameMode": {
+     "WinLimit": "1",
+     "bAllowPlayerTeamSelect": "false"
+    }
+   },
+   "notes": [],
+   "mutators": []
+  },
+  {
+   "id": "RS_OfficialRules",
+   "name": "Official Rules",
+   "rules": {
+    "INSCheckpointGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bUseVehicleInsertion": "True",
+     "FriendlyBotQuota": "4",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "12",
+     "DefendTimer": "90",
+     "DefendTimerFinal": "180",
+     "RetreatTimer": "10",
+     "RespawnDPR": "0.1",
+     "RespawnDelay": "20",
+     "PostCaptureRushTimer": "30",
+     "CounterAttackRespawnDPR": "0.2",
+     "CounterAttackRespawnDelay": "20",
+     "ObjectiveTotalEnemyRespawnMultiplierMin": "1",
+     "ObjectiveTotalEnemyRespawnMultiplierMax": "1",
+     "FinalCacheBotQuotaMultiplier": "1.5",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSCheckpointHardcoreGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bUseVehicleInsertion": "True",
+     "FriendlyBotQuota": "4",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "12",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSOutpostGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bUseVehicleInsertion": "True",
+     "FriendlyBotQuota": "4",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "12",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSSurvivalGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bUseVehicleInsertion": "True",
+     "FriendlyBotQuota": "4",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "12",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSPushGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "RoundTimeExtension": "300",
+     "AttackerWavesPerObjective": "5",
+     "AttackerWaveDPR": "0.25",
+     "AttackerWaveTimer": "20",
+     "DefenderWavesPerObjective": "5",
+     "DefenderWaveDPR": "0.25",
+     "DefenderWaveTimer": "35",
+     "LastStandSetupDelay": "10",
+     "AdvanceAttackerSpawnsDelay": "30",
+     "RoundTime": "600",
+     "ObjectiveCaptureTime": "30",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSFirefightGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "RoundTime": "300",
+     "ObjectiveCaptureTime": "30",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSFrontlineGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "DominationGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSAmbushGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSDefuseGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSTeamDeathmatchGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "RoundTime": "900",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSFreeForAllMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    },
+    "INSSkirmishGameMode": {
+     "GameStartingIntermissionTime": "5",
+     "WinTime": "5",
+     "PostRoundTime": "15",
+     "PostGameTime": "15",
+     "bAutoAssignTeams": "True",
+     "bAutoBalanceTeams": "True",
+     "AutoBalanceDelay": "10",
+     "IdleLimit": "150",
+     "MinimumPlayers": "1",
+     "GameTimeLimit": "-1",
+     "PreRoundTime": "10",
+     "TeamSwitchTime": "10",
+     "bAllowPlayerTeamSelect": "True",
+     "bBots": "False",
+     "InitialSupply": "15",
+     "MaximumSupply": "15",
+     "bSupplyGainEnabled": "False",
+     "bAwardSupplyInstantly": "False",
+     "SupplyGainFrequency": "150",
+     "DefaultReinforcementWaves": "5",
+     "CaptureBonusWaves": "1",
+     "RoundTime": "900",
+     "ObjectiveCaptureTime": "30",
+     "bKillerInfo": "True",
+     "bKillerInfoRevealDistance": "False",
+     "TeamKillLimit": "3",
+     "TeamKillGrace": "0.2",
+     "TeamKillReduceTime": "90",
+     "bDeadSay": "False",
+     "bDeadSayTeam": "True",
+     "bVoiceAllowDeadChat": "False",
+     "bVoiceEnemyHearsLocal": "True",
+     "ObjectiveResetTime": "-1",
+     "ObjectiveSpeedup": "0.25",
+     "ObjectiveMaxSpeedupPlayers": "4"
+    }
+   },
+   "notes": [],
+   "mutators": []
+  }
+ ],
+ "playlists": [
+  {
+   "id": "CompFirefight",
+   "key": "PVP_COMPFF",
+   "title": "Competitive Firefight",
+   "desc": "Five versus five high-stakes tactical engagements. Capture and defend all objectives. You only respawn when your team captures an objective.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CompetitiveFirefight"
+   },
+   "features": [
+    "Firefight Mode",
+    "Comp Firefight Rules"
+   ]
+  },
+  {
+   "id": "CompFirefightXP",
+   "key": "COMP_FFXP",
+   "title": "Competitive Firefight (2x XP Boost)",
+   "desc": "Five versus five high-stakes tactical engagements. Capture and defend all objectives. You only respawn when your team captures an objective.",
+   "type": "Competitive",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CompetitiveFirefight"
+   },
+   "features": [
+    "Firefight Mode",
+    "Comp Firefight Rules"
+   ]
+  },
+  {
+   "id": "BigMoney",
+   "key": "COOP_BIGMONEY",
+   "title": "Big Money",
+   "desc": "Capture and destroy objectives one at a time as you move through the area. Get supply points as your score increases.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "SoldierOfFortune",
+    "Broke"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Soldier of Fortune",
+    "Broke"
+   ]
+  },
+  {
+   "id": "BoltActionsOnlyCoop",
+   "key": "COOP_BOLTACTIONCOOP",
+   "title": "Bolt-action Only",
+   "desc": "Capture and destroy objectives one at a time as you move through the area using bolt-action weapons.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "BoltActionsOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Bolt-actions Only"
+   ]
+  },
+  {
+   "id": "BoltActionsOnlyCoopNoDrops",
+   "key": "COOP_BOLTACTIONCOOPNODROPS",
+   "title": "Cycle That Thing (No Drop Remix)",
+   "desc": "Dance to the beat of the bolt-action. Scavenging weapons off enemies is not allowed.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "BoltActionsOnly"
+   ],
+   "missing": [
+    "No Drops"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Bolt-actions Only",
+    "NoDropsTitle"
+   ]
+  },
+  {
+   "id": "ChadTeam6",
+   "key": "COOP_CHADTEAM6",
+   "title": "Chad Team 6",
+   "desc": "Who you call when the alphas in alpha squad aren't cutting it. Fight more enemies with more supply.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "AllYouCanEat"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "*coop": {
+     "SoloEnemies": "10",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "18"
+    }
+   },
+   "features": [
+    "Checkpoint Mode",
+    "All You Can Eat",
+    "Increased Enemies"
+   ]
+  },
+  {
+   "id": "ChadTeam666Night",
+   "key": "COOP_CHADTEAM666NIGHT",
+   "title": "Chad Team666",
+   "desc": "Fully loaded and undead. Your squad of vampiric special forces takes on waves of zombified enemies in this high-intensity checkpoint mode. Operate under cover of darkness against overwhelming opposition.",
+   "type": "Coop",
+   "lighting": "Night",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "ChadTeam666Night"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "*coop": {
+     "SoloEnemies": "10",
+     "MinimumEnemies": "6",
+     "MaximumEnemies": "18"
+    },
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "All You Can Eat",
+    "Increased Enemies",
+    "Slower Movement",
+    "Frenzy",
+    "Vampirism"
+   ]
+  },
+  {
+   "id": "Checkpoint",
+   "key": "COOP_CHECKPOINT",
+   "title": "Checkpoint",
+   "desc": "Capture and destroy objectives one at a time as you move through the area.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode"
+   ]
+  },
+  {
+   "id": "CheckpointFrenzy",
+   "key": "COOP_FRENZY",
+   "title": "Frenzy",
+   "desc": "Fight fast enemies who only attack with melee and Molotovs. Watch out for special enemies.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "CheckpointFrenzyHeadshots",
+   "key": "COOP_FRENZYHEADSHOTS",
+   "title": "Brain ‘em Frenzy",
+   "desc": "Fight fast enemies who only attack with melee and Molotovs. Bullets can only deal damage to the head.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy",
+    "SlowMovement"
+   ],
+   "missing": [
+    "Headshots Only"
+   ],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy",
+    "Headshots Only",
+    "Slower Movement"
+   ]
+  },
+  {
+   "id": "CheckpointFrenzyHillside",
+   "key": "COOP_FRENZYHILLSIDE",
+   "title": "Hillside Only Frenzy",
+   "desc": "Capture and destroy objectives one at a time as you progress through the map on Hillside, a classic level from Insurgency 2014, in Frenzy Checkpoint.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "CheckpointHardcore",
+   "key": "COOP_CHECKPOINTHC",
+   "title": "Hardcore Checkpoint",
+   "desc": "Fight elite enemies with a limited HUD, limited equipment, and slower movement speed.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "CheckpointHardcoreHillside",
+   "key": "COOP_CHECKPOINTHCHILLSIDE",
+   "title": "Hillside Only Hardcore",
+   "desc": "Capture and destroy objectives one at a time as you progress through the map on Hillside, a classic level from Insurgency 2014, in Hardcore Checkpoint.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "CheckpointHillside",
+   "key": "COOP_CHECKPOINTHILLSIDE",
+   "title": "Hillside Co-op",
+   "desc": "Capture and destroy objectives one at a time as you move through the area on snowy mountain map Hillside.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode"
+   ]
+  },
+  {
+   "id": "DoubleHardcore",
+   "key": "COOP_DOUBLEHARDCORE",
+   "title": "Double Hardcore",
+   "desc": "Hardcore, but everyone dies in one shot.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [
+    "Ultralethal"
+   ],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment",
+    "Ultralethal"
+   ]
+  },
+  {
+   "id": "Guerrillas",
+   "key": "COOP_GUERRILLAS",
+   "title": "Guerrillas",
+   "desc": "Capture and destroy objectives one at a time as you move through the area. Make do with fewer supply points.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Guerrillas"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Guerrillas"
+   ]
+  },
+  {
+   "id": "HardcoreLite",
+   "key": "COOP_HARDCORELITE",
+   "title": "Hardcore Lite",
+   "desc": "Hardcore, but fewer calories. Experience Checkpoint mode with slower more tactical movement.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "SlowMovement"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement"
+   ]
+  },
+  {
+   "id": "HotPotatoCoop",
+   "key": "COOP_HOTPOTATO",
+   "title": "Hot Potato",
+   "desc": "Enemies drop grenades on death. Get a headshot to prevent their grenade from dropping.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [
+    "Hot Potato"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Hot Potato"
+   ]
+  },
+  {
+   "id": "HotPotatoFrenzy",
+   "key": "COOP_FRENZYHOTPOTATO",
+   "title": "Hot Potato Frenzy",
+   "desc": "Fight fast enemies who only attack with melee and Molotovs. Everyone who dies drops a live grenade.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [
+    "Hot Potato"
+   ],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy",
+    "Hot Potato"
+   ]
+  },
+  {
+   "id": "LMGOnlyCoop",
+   "key": "COOP_FIRSTBLOOD",
+   "title": "LMGOnly",
+   "desc": "Capture and destroy objectives one at a time as you move through the area using light machine guns.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "LMGOnly"
+   ],
+   "missing": [
+    "No Drops"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "LMG only",
+    "NoDropsTitle"
+   ]
+  },
+  {
+   "id": "Makattack",
+   "key": "COOP_MAKATTACKCOOP",
+   "title": "Makattack",
+   "desc": "Start with a Makarov. Scavenge weapons from the enemy, and tap Use at supply crates to grab ammo.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "MakarovsOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "MakarovsOnlyTitle"
+   ]
+  },
+  {
+   "id": "Outpost",
+   "key": "COOP_OUTPOST",
+   "title": "Outpost",
+   "desc": "Hold your ground against waves of enemies. Gain supply points after each wave.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "OutpostBudgetAntiquing",
+   "key": "COOP_ANTIQUINGOUTPOST",
+   "title": "Budget Antiquing",
+   "desc": "Hold off the hordes with guns from the back of the closet.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSOutpostGameMode"
+   ],
+   "mutators": [
+    "BudgetAntiquing"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Outpost Mode",
+    "BudgetAntiquingTitle"
+   ]
+  },
+  {
+   "id": "OutpostCTE",
+   "key": "COOP_OUTPOSTCTE1",
+   "title": "New Outpost Maps",
+   "desc": "New support for Outpost mode on Tideway, Hideout, and Farmhouse maps.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "OutpostCTE2",
+   "key": "COOP_OUTPOSTCTE2",
+   "title": "Updated Outpost Maps",
+   "desc": "Improved Tell, Crossing, Ministry, and Hillside maps with better AI spawns and objective layouts.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "OutpostCTE3",
+   "key": "COOP_OUTPOSTCTE3",
+   "title": "New Outpost Maps",
+   "desc": "New support for Outpost mode on Summit, Precinct, and Refinery maps.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "PistolsInArms",
+   "key": "COOP_PISTOLSINARMS",
+   "title": "Pistols in Arms",
+   "desc": "Capture and destroy objectives one at a time as you move through the area using pistols.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "PistolsOnly",
+    "Warlords"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Pistols Only",
+    "Warlords"
+   ]
+  },
+  {
+   "id": "QuadrupleHardcore",
+   "key": "COOP_QUADRUPLEHARDCORE",
+   "title": "Quadruple Hardcore",
+   "desc": "Triple Hardcore, and then some.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "SoldierOfFortune",
+    "Guerrillas",
+    "ShotgunsOnly",
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment",
+    "Soldier of Fortune",
+    "Guerrillas",
+    "Shotguns Only"
+   ]
+  },
+  {
+   "id": "RunningInThe90s",
+   "key": "COOP_RUNNINGINTHE90S",
+   "title": "Running in the 90s",
+   "desc": "Move fast, soak hits, don’t aim, and experience Sandstorm co-op with a late 90s FPS twist.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "LockedAim",
+    "NoAim",
+    "BulletSponge",
+    "FastMovement"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Locked Aim",
+    "No Aim Down Sights",
+    "Bullet Sponge",
+    "Fast Movement"
+   ]
+  },
+  {
+   "id": "Survival",
+   "key": "COOP_SURVIVAL",
+   "title": "Survival",
+   "desc": "Stay on the move and survive until extraction. Secure objective locations stashed with random weapons.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "TaskForce666",
+   "key": "COOP_TASKFORCE666",
+   "title": "Task Force 666",
+   "desc": "Fight the Frenzied as a tactical team of special forces vampires.",
+   "type": "Coop",
+   "lighting": "Night",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy",
+    "SpecialOperations",
+    "Hardcore"
+   ],
+   "missing": [
+    "Vampirism"
+   ],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment",
+    "Frenzy",
+    "Vampirism",
+    "Special Operations"
+   ]
+  },
+  {
+   "id": "TripleHardcore",
+   "key": "COOP_TRIPLEHARDCORE",
+   "title": "Triple Hardcore",
+   "desc": "Hardcore, but everyone dies in one shot and you need to earn all your supply points.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "SoldierOfFortune",
+    "Broke",
+    "Hardcore"
+   ],
+   "missing": [
+    "Ultralethal"
+   ],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment",
+    "Ultralethal",
+    "Soldier of Fortune",
+    "Broke"
+   ]
+  },
+  {
+   "id": "BabCoop",
+   "key": "COOP_BAB",
+   "title": "New Map: Bab",
+   "desc": "Hilly rural combat in a rugged snowy environment in Checkpoint and Outpost modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "BabCoopHC",
+   "key": "COOP_BABHC",
+   "title": "New Map: Bab Hardcore",
+   "desc": "Hilly rural combat in a rugged snowy environment in Hardcore Checkpoint mode.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "BabPVP",
+   "key": "PVP_BAB",
+   "title": "New Map: Bab",
+   "desc": "Hilly rural combat in a rugged snowy environment in various Versus modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "CitadelCoop",
+   "key": "COOP_CITADEL",
+   "title": "New Map: Citadel",
+   "desc": "Fight through an ancient structure and abandoned museum in Checkpoint, Outpost, and Survival modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSSurvivalGameMode",
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Survival Mode",
+    "Checkpoint Mode",
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "CitadelPVP",
+   "key": "PVP_CITADEL",
+   "title": "New Map: Citadel",
+   "desc": "Fight through an ancient structure and abandoned museum in various Versus modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "CommunityTestCoop",
+   "key": "MISC_COMMUNITYTESTCOOP",
+   "title": "Community Test",
+   "desc": "Help test new features and levels with other members of the community.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": []
+  },
+  {
+   "id": "CommunityTestPVP",
+   "key": "MISC_COMMUNITYTESTPVP",
+   "title": "Community Test",
+   "desc": "Help test new features and levels with other members of the community.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": []
+  },
+  {
+   "id": "ForestCoop",
+   "key": "COOP_FOREST",
+   "title": "New Map: Forest",
+   "desc": "Fight through an airbase in the heart of a dense forest in various Coop modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "ForestPVP",
+   "key": "PVP_FOREST",
+   "title": "New Map: Forest",
+   "desc": "Fight through an airbase in the heart of a dense forest in various Versus modes.",
+   "type": "PVP",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode",
+    "INSFrontlineGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode",
+    "Frontline Mode",
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "GapCoop",
+   "key": "COOP_GAP",
+   "title": "New Map: Gap",
+   "desc": "Fight through a luxury hotel halls and impovrished slums in Checkpoint, Outpost, and Survival.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "GapPVP",
+   "key": "PVP_GAP",
+   "title": "New Map: Gap",
+   "desc": "Fight through a luxury hotel halls and impovrished slums in Push, Firefight, Domination, and our new Ambush mode.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode"
+   ]
+  },
+  {
+   "id": "HoldCoop",
+   "key": "COOP_HOLD",
+   "title": "New Map: Hold",
+   "desc": "Fight through the ravaged floors of a besieged police station and its surrounding area in various Coop modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "HoldPVP",
+   "key": "PVP_HOLD",
+   "title": "New Map: Hold",
+   "desc": "Fight through the ravaged floors of a besieged police station and its surrounding area in various Versus modes.",
+   "type": "PVP",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode",
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "LastLightCoop",
+   "key": "COOP_LASTLIGHT",
+   "title": "New Map: Last Light",
+   "desc": "Fight through the narrow streets of a coastal town in various Coop modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "LastLightPVP",
+   "key": "PVP_LASTLIGHT",
+   "title": "New Map: Last Light",
+   "desc": "Fight through the narrow streets of a coastal town in various Versus modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode",
+    "INSDefuseGameMode",
+    "INSFrontlineGameMode",
+    "INSTeamDeathmatchGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode",
+    "Defusal Mode",
+    "Frontline Mode",
+    "Team Deathmatch Mode"
+   ]
+  },
+  {
+   "id": "NewAmbush",
+   "key": "PVP_NEWAMB",
+   "title": "New Ambush Scenarios",
+   "desc": "Ambush mode on various maps",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSAmbushGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Ambush Mode"
+   ]
+  },
+  {
+   "id": "NewDomination",
+   "key": "PVP_NEWDOM",
+   "title": "New Domination Scenarios",
+   "desc": "Domination mode on Precinct, Refinery, Outskirts, and Summit.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "NightMapsCoop",
+   "key": "COOP_NIGHT",
+   "title": "Night Maps Normal",
+   "desc": "Night versions of all levels in Normal co-op.",
+   "type": "Coop",
+   "lighting": "Night",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode"
+   ]
+  },
+  {
+   "id": "NightMapsCoopFrenzy",
+   "key": "COOP_NIGHTFRENZY",
+   "title": "Night Maps Frenzy",
+   "desc": "Night versions of all levels in Frenzy co-op.",
+   "type": "Coop",
+   "lighting": "Night",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "NightMapsCoopHC",
+   "key": "COOP_NIGHTHC",
+   "title": "Night Maps Hardcore",
+   "desc": "Night versions of all levels in Hardcore co-op.",
+   "type": "Coop",
+   "lighting": "Night",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "PowerplantCoop",
+   "key": "COOP_POWERPLANT",
+   "title": "New Map: Power Plant Normal",
+   "desc": "Green vegetation and industrial themed map in Normal co-op.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode"
+   ]
+  },
+  {
+   "id": "PowerplantCoopFrenzy",
+   "key": "COOP_POWERPLANTFRENZY",
+   "title": "New Map: Power Plant Frenzy",
+   "desc": "New green vegetation and industrial themed map in Frenzy co-op.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "PowerplantCoopHC",
+   "key": "COOP_POWERPLANTHC",
+   "title": "New Map: Power Plant Hardcore",
+   "desc": "New green vegetation and industrial themed map in Hardcore co-op.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "PowerplantPVP",
+   "key": "PVP_POWERPLANT",
+   "title": "New Map: Power Plant",
+   "desc": "Green vegetation and industrial themed map on Push, Firefight, and Domination modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "PrisonCoop",
+   "key": "COOP_PRISON",
+   "title": "New Map: Prison",
+   "desc": "Fight through prison bars and constraining hallways in various Coop modes",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "PrisonPVP",
+   "key": "PVP_PRISON",
+   "title": "New Map: Prison",
+   "desc": "Fight through prison bars and constraining hallways in various Versus modes",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode"
+   ]
+  },
+  {
+   "id": "TellCoop",
+   "key": "COOP_TELL",
+   "title": "New Map: Tell",
+   "desc": "Tight urban CQB reimagining of a classic Insurgency 2014 map in normal co-op.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode"
+   ]
+  },
+  {
+   "id": "TellCoopFrenzy",
+   "key": "COOP_TELLFRENZY",
+   "title": "New Map: Tell Frenzy",
+   "desc": "Tight urban CQB reimagining of a classic Insurgency 2014 map in Frenzy co-op.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "TellCoopHC",
+   "key": "COOP_TELLHC",
+   "title": "New Map: Tell Hardcore",
+   "desc": "Tight urban CQB reimagining of a classic Insurgency 2014 map on Hardcore Checkpoint.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "TellPVP",
+   "key": "PVP_TELL",
+   "title": "New Map: Tell",
+   "desc": "Tight urban CQB reimagining of a classic Insurgency 2014 map on various Versus modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "TidewayCoop",
+   "key": "COOP_TIDEWAY",
+   "title": "New Map: Tideway Normal",
+   "desc": "Reimagining of desert level Buhriz from Insurgency 2014 in Normal co-op.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode"
+   ]
+  },
+  {
+   "id": "TidewayCoopFrenzy",
+   "key": "COOP_TIDEWAYFRENZY",
+   "title": "New Map: Tideway Frenzy",
+   "desc": "Reimagining of desert level Buhriz from Insurgency 2014 in Frenzy co-op.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Frenzy"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {
+    "ruleset": "RS_CheckpointFrenzy"
+   },
+   "features": [
+    "Checkpoint Mode",
+    "Frenzy"
+   ]
+  },
+  {
+   "id": "TidewayCoopHC",
+   "key": "COOP_TIDEWAYHC",
+   "title": "New Map: Tideway Hardcore",
+   "desc": "Reimagining of desert level Buhriz from Insurgency 2014 in Hardcore co-op.",
+   "type": "Coop",
+   "lighting": "Day",
+   "modes": [
+    "INSCheckpointGameMode"
+   ],
+   "mutators": [
+    "Hardcore"
+   ],
+   "missing": [],
+   "gameAlias": "CheckpointHardcore",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Slower Movement",
+    "Limited HUD",
+    "Limited Equipment"
+   ]
+  },
+  {
+   "id": "TidewayPVP",
+   "key": "PVP_TIDEWAY",
+   "title": "New Map: Tideway",
+   "desc": "Reimagining of desert level Buhriz from Insurgency 2014 on various Versus modes.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Frontline Mode"
+   ]
+  },
+  {
+   "id": "TrainyardCoop",
+   "key": "COOP_TRAINYARD",
+   "title": "New Map: Trainyard",
+   "desc": "Fight through an abandoned trainyard in the middle of the desert in various Coop modes.",
+   "type": "Coop",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSCheckpointGameMode",
+    "INSOutpostGameMode",
+    "INSSurvivalGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Checkpoint Mode",
+    "Outpost Mode",
+    "Survival Mode"
+   ]
+  },
+  {
+   "id": "TrainyardPVP",
+   "key": "PVP_TRAINYARD",
+   "title": "New Map: Trainyard",
+   "desc": "Fight through an abandoned trainyard in the middle of the desert in various Versus modes.",
+   "type": "PVP",
+   "lighting": "DayAndNight",
+   "modes": [
+    "INSPushGameMode",
+    "INSFirefightGameMode",
+    "DominationGameMode",
+    "INSAmbushGameMode",
+    "INSDefuseGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Firefight Mode",
+    "Domination Mode",
+    "Ambush Mode",
+    "Defusal Mode",
+    "Frontline Mode"
+   ]
+  },
+  {
+   "id": "Ambush",
+   "key": "PVP_AMBUSH",
+   "title": "Ambush",
+   "desc": "Single-life elimination. The extracting team needs to escort the VIP to an objective. The ambushing team needs to eliminate the VIP.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSAmbushGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Ambush Mode"
+   ]
+  },
+  {
+   "id": "Battle",
+   "key": "PVP_BATTLE",
+   "title": "Ground Battle",
+   "desc": "Attack or defend the line. Take one objective at a time.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode"
+   ]
+  },
+  {
+   "id": "BattleAMR",
+   "key": "PVP_BATTLEAMR",
+   "title": "AMR Ground Battle",
+   "desc": "Attack or defend the line. Take one objective at a time using anti-materiel rifles.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [
+    "AntiMaterielRiflesOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode",
+    "Anti-materiel Only"
+   ]
+  },
+  {
+   "id": "BattleBoltAction",
+   "key": "PVP_BATTLEBOLTACTION",
+   "title": "Bolt-action Ground Battle",
+   "desc": "Attack or defend the line. Take one objective at a time using bolt-action weapons.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [
+    "BoltActionsOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode",
+    "Bolt-actions Only"
+   ]
+  },
+  {
+   "id": "BattleHardcore",
+   "key": "PVP_BATTLEHC",
+   "title": "Hardcore Ground Battle",
+   "desc": "Attack or defend the line with slower movement speed and slower capture speed. Take one objective at a time.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [
+    "SlowCaptureTimes",
+    "SlowMovement"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode",
+    "Slower Movement",
+    "Slow Capture Times"
+   ]
+  },
+  {
+   "id": "BattleHillside",
+   "key": "PVP_BATTLEHILLSIDE",
+   "title": "Hillside Ground Battle",
+   "desc": "Attack or defend the line and take one objective at a time on snowy mountain map Hillside.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode"
+   ]
+  },
+  {
+   "id": "BattleNight",
+   "key": "PVP_BATTLENIGHT",
+   "title": "Night Battle",
+   "desc": "Take territory and eliminate the enemy under the moonlight. Don't forget your night equipment.",
+   "type": "PVP",
+   "lighting": "Night",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode",
+    "DominationGameMode",
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode",
+    "Domination Mode",
+    "Firefight Mode"
+   ]
+  },
+  {
+   "id": "BigMoneyDomination",
+   "key": "PVP_BIGMONEYDOM",
+   "title": "Big Money Domination",
+   "desc": "Start with low supply, and gain more as your score increases. Objective captures give the most supply.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "Poor",
+    "SoldierOfFortune"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode",
+    "PoorTitle",
+    "Soldier of Fortune"
+   ]
+  },
+  {
+   "id": "BigMoneyTDM",
+   "key": "PVP_BIGMONEYTDM",
+   "title": "Big Money TDM",
+   "desc": "Kill the enemy more than they kill you with whatever weapons you like. Earn supply points as your score increases.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSTeamDeathmatchGameMode"
+   ],
+   "mutators": [
+    "SoldierOfFortune",
+    "Broke"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Team Deathmatch Mode",
+    "Soldier of Fortune",
+    "Broke"
+   ]
+  },
+  {
+   "id": "BrainEm",
+   "key": "PVP_BRAINEM",
+   "title": "Brain 'em",
+   "desc": "Only headshots, knives, and explosives will kill. Learn to juke and protect your dome.",
+   "type": "PVP",
+   "lighting": "DayAndNight",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "PistolsOnly",
+    "Guerrillas"
+   ],
+   "missing": [
+    "Headshots Only"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode",
+    "Headshots Only",
+    "Pistols Only",
+    "Guerrillas"
+   ]
+  },
+  {
+   "id": "BrainEmPointCapture",
+   "key": "PVP_POINTCAPHEADSHOT",
+   "title": "Brain ‘em Point Capture",
+   "desc": "Secure the area. Take all objectives and hold them. Bullets can only deal damage to the head.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [
+    "Headshots Only"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode",
+    "Headshots Only"
+   ]
+  },
+  {
+   "id": "Contact",
+   "key": "PVP_CONTACT",
+   "title": "Contact",
+   "desc": "Secure the area. Take all objectives and hold them.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "DangerClose",
+   "key": "PVP_DANGERCLOSE",
+   "title": "Danger Close",
+   "desc": "Get in close, but be careful. Corpses explode.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "ShotgunsOnly"
+   ],
+   "missing": [
+    "Hot Potato"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode",
+    "Shotguns Only",
+    "Hot Potato"
+   ]
+  },
+  {
+   "id": "Defusal",
+   "key": "PVP_DEFUSAL",
+   "title": "Defusal",
+   "desc": "Insurgents must destroy all the objectives by planting timed explosives. Security must defend the objectives and defuse planted explosives until the time runs out. Spawns are unlimited.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSDefuseGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Defusal Mode"
+   ]
+  },
+  {
+   "id": "DefusalStrike",
+   "key": "PVP_DEFUSAL_STRIKE",
+   "title": "Defusal Mode",
+   "desc": "Insurgents must destroy all the objectives by planting timed explosives. Security must defend the objectives and defuse planted explosives until the time runs out. Spawns are unlimited.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSDefuseGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Defusal Mode"
+   ]
+  },
+  {
+   "id": "Domination",
+   "key": "PVP_DOMINATION",
+   "title": "Domination",
+   "desc": "Capture and hold all objectives. You will gain more score the more objectives your team owns.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode"
+   ]
+  },
+  {
+   "id": "Firefight",
+   "key": "PVP_FIREFIGHT",
+   "title": "Firefight",
+   "desc": "High-stakes tactical engagements. Capture and defend all objectives. You only respawn when your team captures an objective.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode"
+   ]
+  },
+  {
+   "id": "Firefight5v5",
+   "key": "PVP_FIREFIGHT_5V5",
+   "title": "Firefight",
+   "desc": "High-stakes tactical engagements. Capture and defend all objectives. You only respawn when your team captures an objective.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode"
+   ]
+  },
+  {
+   "id": "FirefightGoldenGun",
+   "key": "PVP_FFGOLDENGUN",
+   "title": "Golden Gun Firefight",
+   "desc": "Capture all objectives or eliminate all enemy players to win using pistols that kill in one shot.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [
+    "PistolsOnly",
+    "Guerrillas"
+   ],
+   "missing": [
+    "Ultralethal"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Pistols Only",
+    "Ultralethal",
+    "Guerrillas"
+   ]
+  },
+  {
+   "id": "FirefightXP",
+   "key": "PVP_FIREFIGHTXP",
+   "title": "Firefight (2x XP Boost)",
+   "desc": "High-stakes tactical engagements. Capture and defend all objectives. You only respawn when your team captures an objective.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode"
+   ]
+  },
+  {
+   "id": "FirstBlood",
+   "key": "PVP_FIRSTBLOOD",
+   "title": "LMGOnly",
+   "desc": "Capture and destroy objectives one at a time as you move through the area using light machine guns.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode",
+    "INSFrontlineGameMode",
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "LMGOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Frontline Mode",
+    "Domination Mode",
+    "LMG only"
+   ]
+  },
+  {
+   "id": "FreeForAll",
+   "key": "PVP_FFA",
+   "title": "Free For All",
+   "desc": "FreeForAllRule1",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFreeForAllMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Free-For-All Mode"
+   ]
+  },
+  {
+   "id": "Frontline",
+   "key": "PVP_FRONTLINE",
+   "title": "Frontline",
+   "desc": "Move the line forward, reach the enemy weapon cache, and destroy it. Don’t let the enemy get to yours. Player waves will slowly drain while their cache is exposed. ",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFrontlineGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Frontline Mode"
+   ]
+  },
+  {
+   "id": "GangWar",
+   "key": "PVP_GANGWAR",
+   "title": "Gang War Push",
+   "desc": "Pistol wielding attackers advance through the map while defending pistol people try to stop them.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode"
+   ],
+   "mutators": [
+    "PistolsOnly",
+    "Warlords"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode",
+    "Pistols Only",
+    "Warlords"
+   ]
+  },
+  {
+   "id": "GunslingersTDM",
+   "key": "PVP_GUNSLINGERSTDM",
+   "title": "Gunslingers TDM",
+   "desc": "Kill the enemy more than they kill you with a big stinkin' revolver. And explosives.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSTeamDeathmatchGameMode"
+   ],
+   "mutators": [
+    "Gunslingers"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Team Deathmatch Mode",
+    "GunslingersTitle"
+   ]
+  },
+  {
+   "id": "MakattackDomination",
+   "key": "PVP_MAKATTACKDOM",
+   "title": "Makattack 2: True Mak",
+   "desc": "Use your Makarov, knife, and explosives to capture and hold all objectives.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "MakarovsOnly",
+    "Guerrillas"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode",
+    "MakarovsOnlyTitle",
+    "Guerrillas"
+   ]
+  },
+  {
+   "id": "PointCapture",
+   "key": "PVP_POINTCAP",
+   "title": "Point Capture",
+   "desc": "Secure the area. Take all objectives and hold them.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "PointCaptureGuerrilla",
+   "key": "PVP_POINTCAPGUER",
+   "title": "Guerrilla Point Capture",
+   "desc": "Secure the area. Take all objectives and hold them. Make do with fewer supply points.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [
+    "Guerrillas"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode",
+    "Guerrillas"
+   ]
+  },
+  {
+   "id": "PointCaptureHillside",
+   "key": "PVP_POINTCAPHILLSIDE",
+   "title": "Hillside Point Capture",
+   "desc": "Secure the area. Take all objectives and hold them on snowy mountain map Hillside.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "PointCaptureShotguns",
+   "key": "PVP_POINTCAPSHOTGUN",
+   "title": "Pump It Point Capture",
+   "desc": "Secure the area. Take all objectives and hold them using shotguns.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSFirefightGameMode",
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [
+    "ShotgunsOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Firefight Mode",
+    "Skirmish Mode",
+    "Shotguns Only"
+   ]
+  },
+  {
+   "id": "Push",
+   "key": "PVP_PUSH",
+   "title": "Push",
+   "desc": "Fast high-intensity conflict. Fight for one objective at a time. Attackers advance through the map while defenders try to stop them.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSPushGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Push Mode"
+   ]
+  },
+  {
+   "id": "Skirmish",
+   "key": "PVP_SKIRMISH",
+   "title": "Skirmish",
+   "desc": "Capture all enemy objectives and destroy the enemy weapon cache objective to win.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "SkirmishXP",
+   "key": "PVP_SKIRMISHXP",
+   "title": "Skirmish (2x XP Boost)",
+   "desc": "Open combat with drivable vehicles. Capture and defend all objectives.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSSkirmishGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Skirmish Mode"
+   ]
+  },
+  {
+   "id": "TeamDeathmatch",
+   "key": "PVP_TDM",
+   "title": "Team Deathmatch",
+   "desc": "Kill the enemy more than they kill you with whatever weapons you like.",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [
+    "INSTeamDeathmatchGameMode"
+   ],
+   "mutators": [],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Team Deathmatch Mode"
+   ]
+  },
+  {
+   "id": "TeamDeathmatchArmsRace",
+   "key": "PVP_TDM_AR",
+   "title": "Arms Race",
+   "desc": "",
+   "type": "PVP",
+   "lighting": "Day",
+   "modes": [],
+   "mutators": [
+    "ArmsRace"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "ArmsRaceTitle"
+   ]
+  },
+  {
+   "id": "VampireTDM",
+   "key": "PVP_VAMPIRETDM",
+   "title": "Vampire TDM",
+   "desc": "Kill the enemy more than they kill you with whatever weapons you like. Steal health when you deal damage.",
+   "type": "PVP",
+   "lighting": "Night",
+   "modes": [
+    "INSTeamDeathmatchGameMode"
+   ],
+   "mutators": [],
+   "missing": [
+    "Vampirism"
+   ],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Team Deathmatch Mode",
+    "Vampirism"
+   ]
+  },
+  {
+   "id": "Welrod",
+   "key": "PVP_WELROD",
+   "title": "Welrods!",
+   "desc": "Fight with a bolt-action Welrod pistol.",
+   "type": "PVP",
+   "lighting": "DayAndNight",
+   "modes": [
+    "DominationGameMode"
+   ],
+   "mutators": [
+    "WelrodsOnly"
+   ],
+   "missing": [],
+   "gameAlias": "",
+   "rules": {},
+   "features": [
+    "Domination Mode",
+    "Welrods Only"
+   ]
+  }
+ ]
+}

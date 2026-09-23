@@ -1,0 +1,243 @@
+<UserControl x:Class="SandstormModLauncher.Views.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextMute}" />
+            <Setter Property="Margin" Value="0,14,0,6" />
+        </Style>
+        <Style x:Key="SwitchRow" TargetType="CheckBox" BasedOn="{StaticResource Switch}">
+            <Setter Property="Margin" Value="0,6" />
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+        <Grid Margin="20,18,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,14">
+                <TextBlock Text="SETTINGS" Style="{StaticResource Kicker}" />
+                <TextBlock Text="Set up once, then just play" Style="{StaticResource H1}" FontSize="28" Margin="0,2,0,0" />
+            </StackPanel>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <!-- game -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Border DockPanel.Dock="Right" CornerRadius="10" Padding="9,2" BorderThickness="1"
+                                        Background="{Binding GameFound, Converter={StaticResource Status}, ConverterParameter=bg}"
+                                        BorderBrush="{Binding GameFound, Converter={StaticResource Status}, ConverterParameter=border}">
+                                    <TextBlock FontSize="11" Foreground="{Binding GameFound, Converter={StaticResource Status}}">
+                                        <Run Text="{Binding GameStore, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding GameBuild, Mode=OneWay}" />
+                                    </TextBlock>
+                                </Border>
+                                <TextBlock Text="INSURGENCY: SANDSTORM" Style="{StaticResource H2}" FontSize="16" />
+                            </DockPanel>
+                            <TextBlock Text="GAME FOLDER" Style="{StaticResource Label}" />
+                            <Border Style="{StaticResource Well}" Padding="10,7">
+                                <TextBlock Text="{Binding GameDir}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                            </Border>
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="Change folder..." Margin="0,0,8,6" Command="{Binding ChangeGameDirCommand}" />
+                                <Button Content="Find automatically" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ResetGameDirCommand}" />
+                                <Button Content="Open game folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Game" />
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource Mute}" Text="The launcher never changes game files. It only edits your own Game.ini and Input.ini (with backups), so it is safe with anti-cheat." />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- console key -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="CONSOLE KEY" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" Text="The launcher opens the game console for you to send the match. You never type in it." />
+                            <Border CornerRadius="8" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
+                                    Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
+                                    BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">
+                                <TextBlock Text="{Binding ConsoleKeyStatus}" Foreground="{Binding ConsoleKeyOk, Converter={StaticResource Status}}" TextWrapping="Wrap" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,8,0,0">
+                                <Run Text="Console keys in the game: " /><Run Text="{Binding ConsoleKeysText, Mode=OneWay}" Foreground="{StaticResource Text}" />
+                            </TextBlock>
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Content="Set up F10" Style="{StaticResource AccentButton}" Margin="0,0,8,6" Command="{Binding SetupF10Command}"
+                                        ToolTip="Adds F10 as an extra console key in Input.ini. Works on every keyboard layout." />
+                                <Button Content="Check again" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding RefreshConsoleKeyCommand}" />
+                                <Button Content="Open Input.ini" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="InputIni" />
+                            </WrapPanel>
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="KEY TO USE" Style="{StaticResource Label}" />
+                                    <ComboBox ItemsSource="{Binding ConsoleKeyChoices}" SelectedItem="{Binding ConsoleKeyPreference}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="HOW TO ENTER COMMANDS" Style="{StaticResource Label}" />
+                                    <Border Style="{StaticResource SegmentHost}">
+                                        <UniformGrid Rows="1">
+                                            <RadioButton Style="{StaticResource Segment}" Content="Paste (fast)" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Paste}" />
+                                            <RadioButton Style="{StaticResource Segment}" Content="Type" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Type}" />
+                                        </UniformGrid>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Style="{StaticResource Label}">
+                                <Run Text="KEY DELAY · " /><Run Text="{Binding KeyDelayMs, Mode=OneWay}" /><Run Text=" MS" />
+                            </TextBlock>
+                            <Slider Minimum="30" Maximum="250" Value="{Binding KeyDelayMs}" TickFrequency="10" IsSnapToTickEnabled="True"
+                                    ToolTip="Raise this if commands arrive cut off on a slow PC" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- mods -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="MOD FOLDERS" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="MOD.IO FOLDER (USED BY THE GAME)" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8B7;" ToolTip="Open" Command="{Binding OpenPathCommand}" CommandParameter="Modio" />
+                                <Border Style="{StaticResource Well}" Padding="10,7">
+                                    <TextBlock Text="{Binding ModioRoot}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                                </Border>
+                            </DockPanel>
+                            <TextBlock Text="EXTRA FOLDERS WITH .PAK FILES" Style="{StaticResource Label}" />
+                            <ItemsControl ItemsSource="{Binding ExtraModFolders}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,0,0,4">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Remove"
+                                                    Command="{Binding DataContext.RemoveModFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                            <Border Style="{StaticResource Well}" Padding="10,7">
+                                                <TextBlock Text="{Binding}" FontFamily="{StaticResource Mono}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                            </Border>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ExtraModFolders.Count, Converter={StaticResource VisNot}}"
+                                       Text="None. Only needed for mods you installed by hand." />
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Content="Add folder..." Margin="0,0,8,6" Command="{Binding AddModFolderCommand}" />
+                                <Button Content="Rescan mods" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding RescanModsCommand}" />
+                                <Button Content="Rebuild catalog" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ClearCacheCommand}"
+                                        ToolTip="Re-read every map, mutator and mod from the game files (after a game update)" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <!-- launching -->
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="LAUNCHING" Style="{StaticResource H2}" FontSize="16" />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoStartGame}" Margin="0,12,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="Start the game automatically" FontSize="13.5" />
+                                    <TextBlock Text="Launch starts Insurgency: Sandstorm through Steam when it is not running" Style="{StaticResource Mute}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding MinimizeOnLaunch}">
+                                <StackPanel>
+                                    <TextBlock Text="Minimize the launcher after launching" FontSize="13.5" />
+                                    <TextBlock Text="Gets out of your way once the match has loaded" Style="{StaticResource Mute}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ApplyLiveRules}">
+                                <StackPanel>
+                                    <TextBlock Text="Apply rules again after the map loads" FontSize="13.5" />
+                                    <TextBlock Text="Sends your rule changes as admin commands too, so they apply even without a restart" Style="{StaticResource Mute}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding SoloGameFlag}">
+                                <StackPanel>
+                                    <TextBlock Text="Mark matches as solo games (bSoloGame)" FontSize="13.5" />
+                                    <TextBlock Text="What the game itself uses for offline play. Turn off to host friends over LAN" Style="{StaticResource Mute}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Text="WHEN AI TEAMMATES NEED A GAME RESTART" Style="{StaticResource Label}" />
+                            <Border Style="{StaticResource SegmentHost}">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Style="{StaticResource Segment}" Content="Ask me" IsChecked="{Binding RestartPolicy, Converter={StaticResource Eq}, ConverterParameter=Ask}" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="Restart" IsChecked="{Binding RestartPolicy, Converter={StaticResource Eq}, ConverterParameter=Always}" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="Never" IsChecked="{Binding RestartPolicy, Converter={StaticResource Eq}, ConverterParameter=Never}" />
+                                </UniformGrid>
+                            </Border>
+                            <TextBlock Text="EXTRA GAME START OPTIONS" Style="{StaticResource Label}" />
+                            <TextBox Text="{Binding LaunchArgs, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="e.g. -nomovies" />
+                            <TextBlock Style="{StaticResource Label}">
+                                <Run Text="WAIT FOR THE GAME UP TO · " /><Run Text="{Binding StartTimeoutSec, Mode=OneWay}" /><Run Text=" S" />
+                            </TextBlock>
+                            <Slider Minimum="60" Maximum="900" Value="{Binding StartTimeoutSec}" TickFrequency="30" IsSnapToTickEnabled="True" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- old launcher + files -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="FILES AND TOOLS" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="OLD LOCAL PLAY LAUNCHER" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Import..." Command="{Binding ImportLegacyCommand}" Margin="8,0,0,0" />
+                                <TextBlock Style="{StaticResource Mute}" VerticalAlignment="Center" Text="Bring over profiles, mutator presets, custom maps and settings from v0.11 and earlier." />
+                            </DockPanel>
+                            <TextBlock Text="OPEN" Style="{StaticResource Label}" />
+                            <WrapPanel>
+                                <Button Content="Game.ini" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="GameIni" />
+                                <Button Content="Config folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Config" />
+                                <Button Content="Game logs" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="GameLogs" />
+                                <Button Content="Backups" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Backups" />
+                                <Button Content="Launcher data" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Data" />
+                                <Button Content="Launcher log" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Logs" />
+                            </WrapPanel>
+                            <TextBlock Text="TOOLS" Style="{StaticResource Label}" />
+                            <WrapPanel>
+                                <Button Content="Desktop shortcut" Margin="0,0,8,6" Command="{Binding CreateShortcutCommand}" />
+                                <Button Content="Diagnostics report" Margin="0,0,8,6" Command="{Binding DiagnosticsCommand}" ToolTip="Writes a report of what the launcher found, useful when asking for help" />
+                                <Button Content="Remove launcher rules from Game.ini" Style="{StaticResource DangerButton}" Margin="0,0,8,6" Command="{Binding RemoveIniRulesCommand}" />
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">
+                                <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=". Put an empty file called &quot;portable&quot; next to the exe to keep it beside the exe instead." />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- about -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding AppVersion}" FontFamily="{StaticResource Mono}" Foreground="{StaticResource TextMute}" VerticalAlignment="Bottom" />
+                                <TextBlock Text="ABOUT" Style="{StaticResource H2}" FontSize="16" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0"
+                                       Text="Local play with bots, mods, mutators and full rule control for Insurgency: Sandstorm. Open source under the MIT license. Not affiliated with New World Interactive or Focus Entertainment." />
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Style="{StaticResource LinkButton}" Content="Source code" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher" />
+                                <Button Style="{StaticResource LinkButton}" Content="Updates" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases" />
+                                <Button Style="{StaticResource LinkButton}" Content="Report a problem" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />
+                                <Button Style="{StaticResource LinkButton}" Content="Mods on mod.io" Margin="0,0,16,4" Command="{Binding OpenPathCommand}" CommandParameter="ModioSite" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
