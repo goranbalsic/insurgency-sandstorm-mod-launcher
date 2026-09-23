@@ -49,10 +49,24 @@ namespace SandstormModLauncher.Game
             var g = new GameInstall();
             g.SteamExe = FindSteamExe();
 
-            if (!string.IsNullOrWhiteSpace(overrideDir) && IsGameDir(overrideDir))
+            if (!string.IsNullOrWhiteSpace(overrideDir))
             {
-                g.GameDir = Path.GetFullPath(overrideDir);
-                g.Store = "Manual";
+                if (IsGameDir(overrideDir))
+                {
+                    g.GameDir = Path.GetFullPath(overrideDir);
+                    g.Store = "Manual";
+                    g.ReadSteamManifest();
+                    return g;
+                }
+                AppLog.Warn("The saved game folder is not valid any more (" + overrideDir + "), searching automatically");
+            }
+
+            // A running game tells us exactly where it is.
+            string running = RunningGameDir();
+            if (running != null)
+            {
+                g.GameDir = running;
+                g.Store = running.IndexOf("steamapps", StringComparison.OrdinalIgnoreCase) >= 0 ? "Steam" : "Manual";
                 g.ReadSteamManifest();
                 return g;
             }
@@ -76,6 +90,21 @@ namespace SandstormModLauncher.Game
                 }
             }
 
+            // Steam's own uninstall entry for the game.
+            foreach (var hive in new[] { Registry.LocalMachine, Registry.CurrentUser })
+                foreach (var key in new[] { @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App " + SteamAppId, @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Steam App " + SteamAppId })
+                {
+                    try
+                    {
+                        using (var k = hive.OpenSubKey(key))
+                        {
+                            string dir = k?.GetValue("InstallLocation") as string;
+                            if (IsGameDir(dir)) { g.GameDir = Path.GetFullPath(dir); g.Store = "Steam"; g.ReadSteamManifest(); return g; }
+                        }
+                    }
+                    catch { }
+                }
+
             var epic = FindEpicInstall();
             if (epic.dir != null)
             {
@@ -85,20 +114,56 @@ namespace SandstormModLauncher.Game
                 return g;
             }
 
+            // Last resort: Steam libraries in the usual places on every fixed drive (up to two folders deep).
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Fixed && d.IsReady))
             {
-                foreach (var candidate in new[]
+                string root = drive.RootDirectory.FullName;
+                var candidates = new List<string>
                 {
-                    Path.Combine(drive.RootDirectory.FullName, "SteamLibrary", "steamapps", "common", "sandstorm"),
-                    Path.Combine(drive.RootDirectory.FullName, "Steam", "steamapps", "common", "sandstorm"),
-                    Path.Combine(drive.RootDirectory.FullName, "Program Files (x86)", "Steam", "steamapps", "common", "sandstorm"),
-                    Path.Combine(drive.RootDirectory.FullName, "Games", "sandstorm"),
-                })
+                    Path.Combine(root, "Program Files (x86)", "Steam", "steamapps", "common", "sandstorm"),
+                    Path.Combine(root, "Program Files", "Steam", "steamapps", "common", "sandstorm"),
+                    Path.Combine(root, "Games", "sandstorm"),
+                };
+                foreach (var d1 in SafeDirs(root))
                 {
-                    if (IsGameDir(candidate)) { g.GameDir = candidate; g.Store = "Steam"; return g; }
+                    candidates.Add(Path.Combine(d1, "steamapps", "common", "sandstorm"));
+                    foreach (var d2 in SafeDirs(d1)) candidates.Add(Path.Combine(d2, "steamapps", "common", "sandstorm"));
                 }
+                foreach (var candidate in candidates)
+                    if (IsGameDir(candidate)) { g.GameDir = candidate; g.Store = "Steam"; g.ReadSteamManifest(); return g; }
             }
             return g;
+        }
+
+        private static IEnumerable<string> SafeDirs(string dir)
+        {
+            try
+            {
+                return Directory.GetDirectories(dir).Where(d =>
+                {
+                    string n = Path.GetFileName(d);
+                    return !n.StartsWith("$") && !n.Equals("Windows", StringComparison.OrdinalIgnoreCase) && !n.Equals("ProgramData", StringComparison.OrdinalIgnoreCase)
+                           && !n.Equals("Users", StringComparison.OrdinalIgnoreCase) && !n.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase);
+                }).ToList();
+            }
+            catch { return Enumerable.Empty<string>(); }
+        }
+
+        private static string RunningGameDir()
+        {
+            try
+            {
+                foreach (var p in System.Diagnostics.Process.GetProcessesByName(ClientProcess))
+                {
+                    string exe = p.MainModule?.FileName;
+                    if (exe == null) continue;
+                    // <game>\Insurgency\Binaries\Win64\InsurgencyClient-Win64-Shipping.exe
+                    string dir = Directory.GetParent(exe)?.Parent?.Parent?.Parent?.FullName;
+                    if (IsGameDir(dir)) return dir;
+                }
+            }
+            catch { }
+            return null;
         }
 
         public static bool IsGameDir(string dir)

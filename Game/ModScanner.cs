@@ -87,9 +87,10 @@ namespace SandstormModLauncher.Game
                 {
                     if (paks.Length == 0) continue;
                     mod = new ModInfo { Folder = full, Name = Path.GetFileName(full), State = "Local folder" };
-                    if (long.TryParse(Path.GetFileName(full), out long id)) { mod.Id = id; mod.State = "Not in mod.io state yet"; }
+                    if (long.TryParse(Path.GetFileName(full), out long id)) { mod.Id = id; mod.State = "Not registered by the game yet"; }
                     else ReadLegacyJson(full, mod);
                 }
+                mod.LogoFile = LocalLogo(root, mod.Id, full);
                 progress?.Invoke($"Scanning mods ({n}/{folders.Count}): {mod.Name}");
                 foreach (var pak in paks)
                 {
@@ -110,7 +111,10 @@ namespace SandstormModLauncher.Game
                 Tidy(mod.Mutators);
                 foreach (var mu in mod.Mutators) { mu.ModName = mod.Name; mu.ModId = mod.Id; }
                 foreach (var sc in mod.Scenarios) { sc.ModName = mod.Name; sc.ModId = mod.Id; }
-                if (paks.Length == 0) mod.Warnings.Add("No .pak files found - the mod may still be downloading.");
+                if (paks.Length == 0)
+                    mod.Warnings.Add(Directory.Exists(full)
+                        ? "No .pak files in its folder yet. The game may still be downloading it."
+                        : "Its files are not on this PC. The game downloads them again the next time it starts, as long as you are still subscribed.");
                 mods.Add(mod);
             }
 
@@ -135,6 +139,29 @@ namespace SandstormModLauncher.Game
             return list;
         }
 
+        /// <summary>A logo the game already cached on disk (or an image inside the mod folder). Never downloads anything.</summary>
+        private static string LocalLogo(string modioRoot, long id, string folder)
+        {
+            var dirs = new List<string>();
+            if (id > 0) dirs.Add(Path.Combine(modioRoot, "cache", "mods", id.ToString(), "logos"));
+            dirs.Add(folder);
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    if (!Directory.Exists(dir)) continue;
+                    var files = Directory.GetFiles(dir)
+                        .Where(f => f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+                        .OrderByDescending(f => Path.GetFileName(f).IndexOf("Thumb320", StringComparison.OrdinalIgnoreCase) >= 0)
+                        .ThenByDescending(f => Path.GetFileName(f).IndexOf("logo", StringComparison.OrdinalIgnoreCase) >= 0)
+                        .ToList();
+                    if (files.Count > 0) return files[0];
+                }
+                catch { }
+            }
+            return null;
+        }
+
         private static string ReadShared(string path)
         {
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
@@ -153,10 +180,7 @@ namespace SandstormModLauncher.Game
                 Name = p.Get("name").Str(),
                 Summary = p.Get("summary").Str(),
                 Description = p.Get("description_plaintext").Str(),
-                ProfileUrl = p.Get("profile_url").Str(),
-                LogoUrl = p.Path("logo", "thumb_320x180").Str() ?? p.Path("logo", "original").Str(),
                 Author = p.Path("submitted_by", "username").Str(),
-                AuthorUrl = p.Path("submitted_by", "profile_url").Str(),
                 Version = p.Path("modfile", "version").Str(),
             };
             long updated = p.Get("date_updated").Long();
@@ -190,7 +214,6 @@ namespace SandstormModLauncher.Game
                     mod.Name = j.Get("name").Str();
                     mod.Id = j.Get("id").Long();
                     mod.Summary = j.Get("summary").Str();
-                    mod.ProfileUrl = j.Get("profile_url").Str() ?? j.Get("profileUrl").Str();
                     mod.Author = j.Path("submitted_by", "username").Str() ?? j.Path("submittedBy", "username").Str();
                     foreach (var t in j.Get("tags").Arr()) mod.Tags.Add(t.Get("name").Str());
                     mod.State = "Legacy mod folder";

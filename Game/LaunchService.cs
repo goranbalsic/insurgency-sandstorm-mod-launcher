@@ -79,8 +79,21 @@ namespace SandstormModLauncher.Game
         public async Task<LaunchReport> Run(LaunchPlan plan, LaunchOptions options, IProgress<LaunchUpdate> progress, CancellationToken ct)
         {
             var report = new LaunchReport();
-            void Report(int step, StepState st, string detail = null) => progress?.Report(new LaunchUpdate { Step = step, State = st, Detail = detail });
+            var clock = Stopwatch.StartNew();
+            string lastLogged = null;
+            void Report(int step, StepState st, string detail = null)
+            {
+                progress?.Report(new LaunchUpdate { Step = step, State = st, Detail = detail });
+                string entry = $"Launch step {step + 1} {st}: {detail ?? Steps[step]}";
+                // Waiting loops report every half second; keep the log readable.
+                if (st != StepState.Active || entry != lastLogged) AppLog.Debug($"{entry} ({clock.ElapsedMilliseconds} ms)");
+                lastLogged = entry;
+            }
             int current = 0;
+            AppLog.Info("Launch: " + plan.Title + " | game " + monitor.Phase + (monitor.IsRunning ? " pid " + monitor.ProcessId : "") +
+                        " | restart " + (options.ForceRestart ? "forced" : options.RestartIfNeeded ? "if needed" : "no"));
+            AppLog.Info("Launch command: " + plan.OpenCommand);
+            if (plan.AfterLoad.Count > 0) AppLog.Info("Launch after-load: " + string.Join(" | ", plan.AfterLoad));
             try
             {
                 // 1. Validate
@@ -111,6 +124,7 @@ namespace SandstormModLauncher.Game
                         throw new LaunchException("The game is not running. Start Insurgency: Sandstorm, or turn on \"Start the game automatically\" in Settings.");
                     bool steamCold = state.Install.Store != "Epic" && Process.GetProcessesByName("steam").Length == 0;
                     Report(2, StepState.Active, steamCold ? "Starting Steam, then the game" : "Starting through " + state.Install.Store);
+                    PrepareConsoleKey();
                     StartGame(plan);
                     state.Settings.GameStartedWithRulesHash = plan.RestartKey;
                     var sw = Stopwatch.StartNew();
@@ -149,50 +163,47 @@ namespace SandstormModLauncher.Game
                 if (!keyPlan.Ok) throw new LaunchException(keyPlan.Problem);
                 Report(4, StepState.Active, "Console key " + keyPlan.KeyName + (state.Settings.InputMethod == "Type" ? " · typing" : " · paste"));
                 string scenarioId = plan.Scenario.Id;
+                string level = plan.Scenario.Level.Substring(plan.Scenario.Level.LastIndexOf('/') + 1);
                 Func<string, bool> browsed = l => l.Contains("LogNet: Browse:") && l.IndexOf(scenarioId, StringComparison.OrdinalIgnoreCase) >= 0;
-                CommandResult sent = null;
-                for (int attempt = 0; attempt < 2; attempt++)
-                {
-                    sent = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(9));
-                    if (sent.Verified || !sent.Sent) break;
-                    AppLog.Warn("Open command not confirmed, retrying");
-                    await Task.Delay(700, ct);
-                }
-                if (!sent.Sent) throw new LaunchException(sent.Detail ?? "The command could not be sent.");
-                if (!sent.Verified)
-                    throw new LaunchException("The game did not react to the command. The console may not be opening: in Settings > Console key, click \"Set up F10\", restart the game and try again.");
-                Report(4, StepState.Done, "Accepted by the game");
-
-                // 6. Wait for the map
-                current = 5;
-                Report(5, StepState.Active, "Loading " + (plan.Map?.DisplayName ?? plan.Level));
                 var loadLines = new List<string>();
                 void Collect(string l) { lock (loadLines) loadLines.Add(l); }
                 monitor.LineReceived += Collect;
                 try
                 {
-                    string level = plan.Scenario.Level.Substring(plan.Scenario.Level.LastIndexOf('/') + 1);
-                    string done = await monitor.WaitForLine(l => l.Contains("seconds to LoadMap(") && l.IndexOf(level, StringComparison.OrdinalIgnoreCase) >= 0,
-                                                            TimeSpan.FromSeconds(240), ct);
-                    if (done == null) throw new LaunchException("The map did not finish loading. Check the game window for an error message.");
+                    // Never re-sent automatically: a second try could land while the first one is still loading.
+                    var sent = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
+                    if (!sent.Sent) throw new LaunchException(sent.Detail ?? "The command could not be sent.");
+                    if (!sent.Verified)
+                    {
+                        if (sent.NotRecognized) throw new LaunchException(sent.Detail);
+                        // The map may still be on its way; the next step waits for it.
+                        Report(4, StepState.Warning, "Sent; the game has not confirmed it yet");
+                    }
+                    else Report(4, StepState.Done, "Accepted by the game");
+
+                    // 6. Wait for the map
+                    current = 5;
+                    Report(5, StepState.Active, "Loading " + (plan.Map?.DisplayName ?? plan.Level));
+                    await WaitForMap(level, loadLines, sent.Verified ? 240 : 20, ct);
                     await Task.Delay(1500, ct);
                     monitor.Poll();
+                    List<string> snapshot;
+                    lock (loadLines) snapshot = new List<string>(loadLines);
+                    report.Warnings.AddRange(MutatorWarnings(plan, snapshot));
+                    Report(5, report.Warnings.Count > plan.Warnings.Count ? StepState.Warning : StepState.Done, "Map loaded");
+
+                    if (plan.Profile.ForceReload)
+                    {
+                        Report(5, StepState.Active, "Force reload: loading again");
+                        lock (loadLines) loadLines.Clear();
+                        var again = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
+                        if (!again.Sent) throw new LaunchException("The reload was not sent: " + again.Detail);
+                        await WaitForMap(level, loadLines, 240, ct);
+                        await Task.Delay(1500, ct);
+                        Report(5, StepState.Done, "Map loaded (reloaded)");
+                    }
                 }
                 finally { monitor.LineReceived -= Collect; }
-                List<string> snapshot;
-                lock (loadLines) snapshot = new List<string>(loadLines);
-                report.Warnings.AddRange(MutatorWarnings(plan, snapshot));
-                Report(5, report.Warnings.Count > plan.Warnings.Count ? StepState.Warning : StepState.Done, "Map loaded");
-
-                if (plan.Profile.ForceReload)
-                {
-                    Report(5, StepState.Active, "Force reload: loading again");
-                    await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(9));
-                    string level = plan.Scenario.Level.Substring(plan.Scenario.Level.LastIndexOf('/') + 1);
-                    await monitor.WaitForLine(l => l.Contains("seconds to LoadMap(") && l.IndexOf(level, StringComparison.OrdinalIgnoreCase) >= 0, TimeSpan.FromSeconds(240), ct);
-                    await Task.Delay(1500, ct);
-                    Report(5, StepState.Done, "Map loaded (reloaded)");
-                }
 
                 // 7. After-load commands
                 current = 6;
@@ -236,6 +247,26 @@ namespace SandstormModLauncher.Game
             }
         }
 
+        /// <summary>Waits until the log says the level finished loading (lines already collected count too).</summary>
+        private async Task WaitForMap(string level, List<string> lines, int timeoutSec, CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.Elapsed < TimeSpan.FromSeconds(timeoutSec))
+            {
+                List<string> snapshot;
+                lock (lines) snapshot = new List<string>(lines);
+                if (snapshot.Any(l => l.Contains("seconds to LoadMap(") && l.IndexOf(level, StringComparison.OrdinalIgnoreCase) >= 0)) return;
+                string fail = snapshot.FirstOrDefault(l => l.Contains("TravelFailure") || l.Contains("Travel Failure") || l.Contains("LoadMap failed"));
+                if (fail != null) throw new LaunchException("The game could not load the map: " + Regex.Replace(fail, @"^\[[^\]]*\]\[[^\]]*\]", "").Trim());
+                if (!monitor.IsRunning) throw new LaunchException("The game closed while loading the map.");
+                await Task.Delay(250, ct);
+                monitor.Poll();
+            }
+            throw new LaunchException(timeoutSec < 100
+                ? "The game did not start loading the map. Look at the game window: if the console is still open with the command in it, press Enter there; otherwise press Launch again."
+                : "The map did not finish loading. Check the game window for an error message.");
+        }
+
         private string WriteGameIni(LaunchPlan plan)
         {
             var p = plan.Profile;
@@ -269,12 +300,23 @@ namespace SandstormModLauncher.Game
         {
             if (monitor.IsRunning) return;
             if (plan != null && plan.IsValid) WriteGameIni(plan);
+            PrepareConsoleKey();
             StartGame(plan);
             state.Settings.GameStartedWithRulesHash = plan?.RestartKey ?? LaunchPlanner.RestartKeyFor(new Profile(), state.Rules);
         }
 
+        /// <summary>Makes sure a function key opens the console before the game starts (the ` key is missing on many layouts).</summary>
+        private void PrepareConsoleKey()
+        {
+            if (!state.Settings.AutoConsoleKey) return;
+            KeyBindings.Backup("before starting the game");
+            string key = ConsoleBridge.EnsureLayoutFreeKey(state.Official, state.Settings, Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0);
+            if (key != null) AppLog.Debug("Console key for this start: " + key);
+        }
+
         private void StartGame(LaunchPlan plan)
         {
+            AppLog.Info("Starting the game (" + state.Install.Store + ")");
             var install = state.Install;
             var args = new List<string>();
             string ruleset = plan?.Profile?.LaunchRuleset;

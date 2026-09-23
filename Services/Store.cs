@@ -14,10 +14,19 @@ namespace SandstormModLauncher
         public static string ExeDir => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         /// <summary>%APPDATA%\SandstormModLauncher, or a Data folder next to the exe when a "portable" file exists.</summary>
+        private static string overrideDir;
+
+        /// <summary>Keeps all launcher data in another folder (command line --data, used for testing).</summary>
+        public static void UseDataDir(string dir) => overrideDir = Path.GetFullPath(dir);
+
+        /// <summary>True in test runs (--data): the game's own files are then never written.</summary>
+        public static bool TestRun => overrideDir != null;
+
         public static string DataDir
         {
             get
             {
+                if (overrideDir != null) return overrideDir;
                 if (File.Exists(Path.Combine(ExeDir, "portable")) || File.Exists(Path.Combine(ExeDir, "portable.txt")))
                     return Path.Combine(ExeDir, "Data");
                 return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SandstormModLauncher");

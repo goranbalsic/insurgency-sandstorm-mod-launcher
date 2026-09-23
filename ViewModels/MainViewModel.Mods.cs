@@ -45,7 +45,14 @@ namespace SandstormModLauncher.ViewModels
         private void InitModCommands()
         {
             RescanModsCommand = new AsyncCommand(() => RescanMods(false));
-            OpenModFolderCommand = new RelayCommand(p => Open((p as ModItem)?.Info.Folder ?? GameInstall.ModioRoot));
+            OpenModFolderCommand = new RelayCommand(p =>
+            {
+                string folder = (p as ModItem)?.Info.Folder;
+                if (!string.IsNullOrEmpty(folder) && System.IO.Directory.Exists(folder)) { Open(folder); return; }
+                string parent = string.IsNullOrEmpty(folder) ? GameInstall.ModioRoot : System.IO.Path.GetDirectoryName(folder);
+                Open(System.IO.Directory.Exists(parent) ? parent : GameInstall.ModioRoot);
+                if (!string.IsNullOrEmpty(folder)) ShowToast("This mod's folder is not on disk, so its parent folder was opened");
+            });
             UseModMutatorsCommand = new RelayCommand(p => UseModMutators(p as ModItem));
             SelectModCommand = new RelayCommand(p => { if (p is ModItem m) SelectedMod = m; });
             SetupPlaylistCommand = new RelayCommand(p => SetupPlaylist(p as PlaylistItem, false));

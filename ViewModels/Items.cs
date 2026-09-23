@@ -112,7 +112,7 @@ namespace SandstormModLauncher.ViewModels
         public string Name => Info.Name;
         public string Author => string.IsNullOrEmpty(Info.Author) ? "" : "by " + Info.Author;
         public string Summary => Info.Summary;
-        public string Logo => Info.LogoUrl;
+        public string Logo => Info.LogoFile;
         public string Version => string.IsNullOrEmpty(Info.Version) ? "" : "v" + Info.Version;
         public string Updated => Info.Updated.HasValue ? "Updated " + Info.Updated.Value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) : "";
         public int MutatorCount => Info.Mutators.Count(m => m.Registered && !m.IsBaseClass);
@@ -151,7 +151,10 @@ namespace SandstormModLauncher.ViewModels
         public string Key => Prop.Key;
         public string Label => Prop.Label;
         public string Description => Prop.Description;
-        public string Category => Prop.Category;
+        public const string UnavailableCategory = "Not in this mode";
+        public bool IsAvailable { get; set; } = true;
+        public string AvailabilityNote { get; set; }
+        public string Category => IsAvailable ? Prop.Category : UnavailableCategory;
         public bool IsBool => Prop.IsBool;
         public bool IsNumber => Prop.IsNumber;
         public bool IsEnum => Prop.Type == "enum";
@@ -255,6 +258,7 @@ namespace SandstormModLauncher.ViewModels
         public string Command { get; set; }
         public string Tip { get; set; }
         public bool Cheat { get; set; }
+        public bool CoopOnly { get; set; }
         public string Badge => Cheat ? "CHEAT" : "ADMIN";
     }
 

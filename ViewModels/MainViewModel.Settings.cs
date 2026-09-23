@@ -23,12 +23,10 @@ namespace SandstormModLauncher.ViewModels
         public ICommand ResetGameDirCommand { get; private set; }
         public ICommand AddModFolderCommand { get; private set; }
         public ICommand RemoveModFolderCommand { get; private set; }
-        public ICommand ImportLegacyCommand { get; private set; }
         public ICommand OpenPathCommand { get; private set; }
         public ICommand CreateShortcutCommand { get; private set; }
         public ICommand ClearCacheCommand { get; private set; }
         public ICommand RemoveIniRulesCommand { get; private set; }
-        public ICommand DiagnosticsCommand { get; private set; }
         public ICommand RefreshConsoleKeyCommand { get; private set; }
         public ICommand AddCustomMapCommand { get; private set; }
         public ICommand EditCustomMapCommand { get; private set; }
@@ -53,24 +51,25 @@ namespace SandstormModLauncher.ViewModels
                 SaveSettingsSoon();
                 await RescanMods(false);
             });
-            ImportLegacyCommand = new AsyncCommand(ImportLegacyInteractive);
             OpenPathCommand = new RelayCommand(p => OpenKnownPath(p as string));
             CreateShortcutCommand = new RelayCommand(CreateShortcut);
             ClearCacheCommand = new AsyncCommand(ClearCache);
             RemoveIniRulesCommand = new AsyncCommand(RemoveIniRules);
-            DiagnosticsCommand = new AsyncCommand(WriteDiagnostics);
-            RefreshConsoleKeyCommand = new RelayCommand(RefreshConsoleKeyStatus);
+            RefreshConsoleKeyCommand = new RelayCommand(() => { RefreshConsoleKeyStatus(); RefreshKeyBackups(); });
+            RestoreKeyBindingsCommand = new AsyncCommand(RestoreKeyBindings, () => SelectedKeyBackup != null);
+            DismissKeyWarningCommand = new RelayCommand(() => { KeyBindings.ClearWarning(); KeyBindingsWarning = null; });
+            SaveReportCommand = new AsyncCommand(SaveReport);
             AddCustomMapCommand = new RelayCommand(() => OpenMapEditor(null));
             EditCustomMapCommand = new RelayCommand(p => OpenMapEditor((p as MapItem)?.Custom));
             SaveCustomMapCommand = new RelayCommand(SaveCustomMap, () => !string.IsNullOrWhiteSpace(editMapLevel) && !string.IsNullOrWhiteSpace(editMapScenario));
             DeleteCustomMapCommand = new AsyncCommand(p => DeleteCustomMap((p as MapItem)?.Custom ?? editingMap));
             CancelCustomMapCommand = new RelayCommand(() => MapEditorOpen = false);
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
-                "1. PLAY: pick a map and scenario, then set your squad and the enemies. Every value starts at that mode's own default. Changed values turn gold.\n\n" +
-                "2. RULES has every match setting, play-style presets and the official rulesets. MUTATORS: tick what you want, in load order. PLAYLISTS sets up any official online playlist for offline play.\n\n" +
-                "3. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console for you. Keep your hands off the keyboard for those few seconds.\n\n" +
-                "4. LIVE works during a match: restart rounds, add time, respawn bots, change rules, without typing commands.\n\n" +
-                "If the game never reacts, open Settings > Console key, press \"Set up F10\" and restart the game once."));
+                "1. PLAY > Map: pick a map and scenario, then set your squad and the enemies on the right. Every value starts at that mode's own default. Changed values turn gold.\n\n" +
+                "2. PLAY > Rules has every other match setting of that mode, plus play-style presets and the official rulesets. PLAY > Advanced shows exactly what will be sent to the game. MUTATORS: tick what you want, in load order. PLAYLISTS sets up any official online playlist for offline play.\n\n" +
+                "3. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
+                "4. LIVE works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
+                "Something wrong? Settings > Something went wrong? saves a report with everything needed to find the cause."));
         }
 
         public ICommand HelpCommand { get; private set; }
@@ -83,7 +82,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
                       nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs),
-                      nameof(StartTimeoutSec), nameof(ConsoleKeyPreference), nameof(ConsoleKeyChoices), nameof(DataDir), nameof(IsPortable), nameof(ModioRoot));
+                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(IsPortable), nameof(ModioRoot));
         }
 
         // ------------------------------------------------------------------ game install
@@ -121,6 +120,7 @@ namespace SandstormModLauncher.ViewModels
                 await Task.Run(() =>
                 {
                     State.Official = GameCatalog.Load(State.Install, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
+                    LoadCommands();
                     State.Mods = ModScanner.Scan(State.Install, State.Settings.ExtraModFolders, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
                     State.Rebuild();
                 });
@@ -194,117 +194,127 @@ namespace SandstormModLauncher.ViewModels
         public bool HasF10 { get => hasF10; set => Set(ref hasF10, value); }
         public bool F10Pending { get => f10Pending; set => Set(ref f10Pending, value); }
 
-        public List<string> ConsoleKeyChoices
+        public bool AutoConsoleKey
         {
-            get
-            {
-                var list = new List<string> { "Auto" };
-                try { list.AddRange(ConsoleBridge.ConfiguredKeys(State.Official)); } catch { }
-                return list.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            }
+            get => State.Settings.AutoConsoleKey;
+            set { SetSetting(() => State.Settings.AutoConsoleKey = value); RefreshConsoleKeyStatus(); }
         }
 
-        public string ConsoleKeyPreference
-        {
-            get => State.Settings.ConsoleKey ?? "Auto";
-            set { State.Settings.ConsoleKey = string.IsNullOrEmpty(value) ? "Auto" : value; Raise(); SaveSettingsSoon(); RefreshConsoleKeyStatus(); }
-        }
-
-        private static string PrettyKey(string k) => k.Equals("Tilde", StringComparison.OrdinalIgnoreCase) ? "` (the key left of 1)" : k;
+        private bool GameProcessRunning => Monitor?.IsRunning == true || System.Diagnostics.Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0;
 
         private void RefreshConsoleKeyStatus()
         {
             try
             {
+                bool running = GameProcessRunning;
+                // With the game closed the extra key can be written safely (the game rewrites Input.ini when it exits).
+                if (State.Settings.AutoConsoleKey && !running && State.Official != null)
+                    ConsoleBridge.EnsureLayoutFreeKey(State.Official, State.Settings, false);
                 var keys = ConsoleBridge.ConfiguredKeys(State.Official);
-                var input = new GameInput(Monitor?.Window ?? IntPtr.Zero);
-                var usable = keys.Where(k => input.VirtualKeyFor(k) != 0).ToList();
-                HasF10 = keys.Contains("F10", StringComparer.OrdinalIgnoreCase);
-                F10Pending = HasF10 && Monitor?.ProcessStartUtc != null && State.Settings.ConsoleKeyAddedUtc > Monitor.ProcessStartUtc.Value;
-                ConsoleKeysText = keys.Count == 0 ? "none" : string.Join(", ", keys.Select(PrettyKey));
-                if (usable.Count == 0)
+                IntPtr window = Monitor?.Window ?? IntPtr.Zero;
+                var input = new GameInput(window);
+                string layout = ConsoleBridge.LayoutName(window != IntPtr.Zero ? input.KeyboardLayout : Native.GetKeyboardLayout(0));
+                string fn = keys.FirstOrDefault(ConsoleBridge.IsFunctionKey);
+                bool pending = fn != null && running && Monitor?.ProcessStartUtc != null && State.Settings.ConsoleKeyAddedUtc > Monitor.ProcessStartUtc.Value;
+                bool layoutKey = keys.Any(k => !ConsoleBridge.IsFunctionKey(k) && input.VirtualKeyFor(k) != 0);
+                HasF10 = fn != null;
+                F10Pending = pending;
+                ConsoleKeysText = keys.Count == 0 ? "none" : string.Join(", ", keys.Select(ConsoleBridge.PrettyKey));
+                if (fn != null && !pending)
                 {
-                    ConsoleKeyOk = false;
-                    ConsoleKeyStatus = "None of the game's console keys can be pressed on your keyboard layout. Click \"Set up F10\" once and the launcher can control the game.";
+                    ConsoleKeyOk = true;
+                    ConsoleKeyStatus = "Ready. The launcher opens the console with " + fn + ", which works on every keyboard layout.";
                 }
-                else if (F10Pending && usable.All(k => k.Equals("F10", StringComparison.OrdinalIgnoreCase)))
+                else if (fn != null)
                 {
-                    ConsoleKeyOk = false;
-                    ConsoleKeyStatus = "F10 is set up. Restart the game once so it takes effect.";
+                    ConsoleKeyOk = layoutKey;
+                    ConsoleKeyStatus = layoutKey
+                        ? "Ready with ` for now. " + fn + " takes over after the game restarts, so any keyboard layout works."
+                        : fn + " is set up but only works after the game restarts. Until then switch the keyboard to English (Win+Space), or close the game and launch from here.";
+                }
+                else if (layoutKey)
+                {
+                    ConsoleKeyOk = true;
+                    ConsoleKeyStatus = "Ready with ` (" + layout + " keyboard). " + (State.Settings.AutoConsoleKey
+                        ? "F10 is added the next time the game is closed, so other keyboard layouts work too."
+                        : "Turn on the switch below so other keyboard layouts work too.");
                 }
                 else
                 {
-                    ConsoleKeyOk = true;
-                    string best = usable.OrderBy(k => k.StartsWith("F", StringComparison.OrdinalIgnoreCase) && k.Length <= 3 ? 0 : 1).First();
-                    ConsoleKeyStatus = "Ready. The launcher opens the console with " + PrettyKey(best) + (HasF10 ? "." : ". Setting up F10 as well makes it work on any keyboard layout.");
+                    ConsoleKeyOk = false;
+                    ConsoleKeyStatus = "The " + layout + " keyboard layout has no ` key, which the game uses for its console. " + (State.Settings.AutoConsoleKey
+                        ? "Close the game and launch from here: the launcher adds F10 first, which works on every layout. Or switch the keyboard to English (Win+Space)."
+                        : "Turn on the switch below, or switch the keyboard to English (Win+Space).");
                 }
             }
             catch (Exception ex)
             {
                 ConsoleKeyOk = false;
                 ConsoleKeyStatus = "Could not read Input.ini: " + ex.Message;
+                AppLog.Warn("Console key status: " + ex.Message);
             }
-            Raise(nameof(ConsoleKeyChoices));
         }
 
         private void SetupF10()
         {
-            try
+            if (GameProcessRunning)
             {
-                bool added = ConsoleBridge.AddConsoleKey("F10");
-                if (added)
-                {
-                    State.Settings.ConsoleKeyAddedUtc = DateTime.UtcNow;
-                    SaveSettingsSoon();
-                    ShowToast(Monitor?.IsRunning == true ? "F10 added. Restart the game once so it takes effect." : "F10 added as a console key");
-                }
-                else ShowToast("F10 is already a console key");
+                // Writing now would be lost: the game rewrites Input.ini when it exits.
+                if (!State.Settings.AutoConsoleKey) AutoConsoleKey = true;
+                ShowToast("F10 is added as soon as the game is closed");
+                return;
             }
-            catch (Exception ex) { ShowToast("Could not update Input.ini: " + ex.Message); }
+            string key = ConsoleBridge.EnsureLayoutFreeKey(State.Official, State.Settings, false);
+            SaveSettingsSoon();
+            ShowToast(key != null ? key + " is set up as a console key" : "Could not add a console key. See the launcher log.");
             RefreshConsoleKeyStatus();
         }
 
-        // ------------------------------------------------------------------ legacy import
+        // ------------------------------------------------------------------ key bindings safety copies
 
-        private async Task ImportLegacyInteractive()
+        public ObservableCollection<KeyBindingsBackup> KeyBindingBackups { get; } = new ObservableCollection<KeyBindingsBackup>();
+        private KeyBindingsBackup selectedKeyBackup;
+        private string keyBindingsWarning;
+        public KeyBindingsBackup SelectedKeyBackup { get => selectedKeyBackup; set => Set(ref selectedKeyBackup, value); }
+        public string KeyBindingsWarning { get => keyBindingsWarning; set => Set(ref keyBindingsWarning, value); }
+        public ICommand RestoreKeyBindingsCommand { get; private set; }
+        public ICommand DismissKeyWarningCommand { get; private set; }
+
+        private void RefreshKeyBackups()
         {
-            string folder = LegacyImport.FindOldLauncherFolder();
-            if (folder == null)
-                folder = FolderPicker.Pick(OwnerHandle, "Pick the old Local Play Launcher folder (the one with the \"Defaults\" file)");
-            if (folder == null) return;
-            if (!File.Exists(Path.Combine(folder, "Defaults")))
-            {
-                await ShowMessage("Nothing to import", "That folder has no \"Defaults\" file from the old launcher.");
-                return;
-            }
-            ImportLegacy(folder);
+            var keep = selectedKeyBackup?.Path;
+            KeyBindingBackups.Clear();
+            foreach (var b in KeyBindings.List()) KeyBindingBackups.Add(b);
+            SelectedKeyBackup = KeyBindingBackups.FirstOrDefault(b => b.Path == keep) ?? KeyBindingBackups.FirstOrDefault();
+            KeyBindingsWarning = KeyBindings.DropWarning;
         }
 
-        private void ImportLegacy(string folder)
+        private async Task RestoreKeyBindings()
         {
-            try
-            {
-                var res = LegacyImport.Import(folder, State);
-                foreach (var p in res.Profiles)
-                {
-                    State.Store.Profiles.Add(p);
-                    State.Store.SaveProfile(p);
-                }
-                State.Rebuild();
-                SaveSettingsSoon();
-                RebuildProfilesList();
-                BuildMutatorPresets();
-                RefreshCatalogUi();
-                RaiseSettings();
-                RefreshConsoleKeyStatus();
-                ShowToast($"Imported {res.Profiles.Count} profile(s), {res.Presets} preset(s), {res.CustomMaps} custom map(s)");
-                if (res.Profiles.Count > 0) SelectedProfile = res.Profiles[0].Name;
-            }
-            catch (Exception ex)
-            {
-                AppLog.Error("Legacy import failed", ex);
-                ShowToast("Import failed: " + ex.Message);
-            }
+            var b = SelectedKeyBackup;
+            if (b == null) return;
+            if (GameProcessRunning) { await ShowMessage("Close the game first", "The game rewrites its key bindings while it runs, so close it and then restore."); return; }
+            if (await Ask("Restore key bindings?", "Put back your game key bindings from " + b.Label + "? The current ones are copied first, so this can be undone.", "Restore") != "Restore") return;
+            string error = KeyBindings.Restore(b);
+            RefreshKeyBackups();
+            if (error != null) await ShowMessage("Could not restore", error);
+            else ShowToast("Key bindings restored. They apply the next time the game starts.");
+        }
+
+        // ------------------------------------------------------------------ problem reports
+
+        private string reportNote = "";
+        public string ReportNote { get => reportNote; set => Set(ref reportNote, value ?? ""); }
+        public ICommand SaveReportCommand { get; private set; }
+
+        private async Task SaveReport()
+        {
+            string note = ReportNote;
+            ShowToast("Saving a problem report...");
+            string dir = await Task.Run(() => DebugReport.Write("manual", note, State, Monitor));
+            if (dir == null) { ShowToast("Could not save the report. See the launcher log."); return; }
+            ReportNote = "";
+            ShowToast("Report saved: " + Path.GetFileName(dir));
         }
 
         // ------------------------------------------------------------------ tools
@@ -315,6 +325,7 @@ namespace SandstormModLauncher.ViewModels
             {
                 case "Data": Open(AppPaths.DataDir); break;
                 case "Logs": Open(Path.Combine(AppPaths.DataDir, "logs")); break;
+                case "Reports": Directory.CreateDirectory(DebugReport.ReportsDir); Open(DebugReport.ReportsDir); break;
                 case "Backups": Directory.CreateDirectory(Path.Combine(AppPaths.DataDir, "backups")); Open(Path.Combine(AppPaths.DataDir, "backups")); break;
                 case "Config": Open(GameInstall.ConfigDir); break;
                 case "GameIni": if (File.Exists(GameInstall.GameIniPath)) Open(GameInstall.GameIniPath); else Open(GameInstall.ConfigDir); break;
@@ -322,7 +333,6 @@ namespace SandstormModLauncher.ViewModels
                 case "GameLogs": Open(Path.GetDirectoryName(GameInstall.LogPath)); break;
                 case "Game": Open(State.Install?.GameDir); break;
                 case "Modio": Open(GameInstall.ModioRoot); break;
-                case "ModioSite": Open("https://mod.io/g/insurgencysandstorm"); break;
                 default: Open(what); break;
             }
         }
@@ -365,20 +375,6 @@ namespace SandstormModLauncher.ViewModels
                 ShowToast("Launcher rules removed from Game.ini");
             }
             catch (Exception ex) { await ShowMessage("Could not update Game.ini", ex.Message); }
-        }
-
-        private async Task WriteDiagnostics()
-        {
-            string file = Path.Combine(AppPaths.DataDir, "logs", "diagnostics.txt");
-            ShowToast("Writing the diagnostics report...");
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(file));
-                await Task.Run(() => SelfTest.Run(file));
-                File.AppendAllText(file, "\r\n--- recent launcher log ---\r\n" + AppLog.Recent());
-                Open(file);
-            }
-            catch (Exception ex) { await ShowMessage("Diagnostics failed", ex.Message); }
         }
 
         // ------------------------------------------------------------------ custom map entries

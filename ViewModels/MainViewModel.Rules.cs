@@ -13,7 +13,6 @@ namespace SandstormModLauncher.ViewModels
 {
     public sealed partial class MainViewModel
     {
-        public ObservableCollection<ModeDef> RuleModes { get; } = new ObservableCollection<ModeDef>();
         public ObservableCollection<CategoryItem> RuleCategories { get; } = new ObservableCollection<CategoryItem>();
         public ObservableCollection<RuleItem> RuleItems { get; } = new ObservableCollection<RuleItem>();
         public ObservableCollection<PresetItem> RulePresets { get; } = new ObservableCollection<PresetItem>();
@@ -23,18 +22,21 @@ namespace SandstormModLauncher.ViewModels
         public ICommand DeleteRulesPresetCommand { get; private set; }
         public ICommand ResetModeCommand { get; private set; }
         public ICommand ResetAllRulesCommand { get; private set; }
-        public ICommand SelectRuleModeCommand { get; private set; }
-        public ICommand SelectCategoryCommand { get; private set; }
         public ICommand InsertSectionCommand { get; private set; }
+        public ICommand PlayTabCommand { get; private set; }
         private ModeDef rulesMode;
         private CategoryItem ruleCategory;
-        private string ruleSearch = "", presetFilter = "Styles";
+        private string ruleSearch = "", presetFilter = "Styles", playTab = "Map";
 
         public static readonly string[] CategoryOrder =
         {
             "Bots & AI", "Enemy forces", "Tickets & waves", "Rounds & time", "Objectives", "Defense & counter-attacks",
             "Respawning", "Supply & loadout", "Friendly fire", "Teams & players", "HUD & spectating", "Voice & chat"
         };
+
+        /// <summary>Set in the squad card on Play, so the rules list leaves them out (nothing is shown twice).</summary>
+        public static readonly HashSet<string> SquadKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty", "bBots", "BotQuota" };
 
         private void InitRulesCommands()
         {
@@ -43,39 +45,34 @@ namespace SandstormModLauncher.ViewModels
             DeleteRulesPresetCommand = new AsyncCommand(p => DeleteRulesPreset(p as PresetItem));
             ResetModeCommand = new AsyncCommand(ResetMode, () => rulesMode != null && Profile.Rules.ContainsKey(rulesMode.Cls));
             ResetAllRulesCommand = new AsyncCommand(ResetAllRules, () => Profile.Rules.Count > 0);
-            SelectRuleModeCommand = new RelayCommand(p => { if (p is ModeDef m) RulesMode = m; });
-            SelectCategoryCommand = new RelayCommand(p => { if (p is CategoryItem c) RuleCategory = c; });
             InsertSectionCommand = new RelayCommand(p => InsertMutatorSection(p as string));
+            PlayTabCommand = new RelayCommand(p => { Page = "Play"; PlayTab = p as string ?? "Map"; });
+        }
+
+        /// <summary>Map, Rules or Advanced: the three views of the Play page.</summary>
+        public string PlayTab
+        {
+            get => playTab;
+            set { if (Set(ref playTab, string.IsNullOrEmpty(value) ? "Map" : value)) SyncRulesModeToScenario(); }
         }
 
         private void BuildRules()
         {
-            if (RuleModes.Count == 0) foreach (var m in State.Rules.Modes) RuleModes.Add(m);
             rulesMode = CurrentMode ?? State.Rules.Modes.First();
             BuildRuleItems();
             BuildPresets();
-            Raise(nameof(RulesMode));
         }
 
+        /// <summary>The rules always belong to the game mode of the scenario picked on the map.</summary>
         private void SyncRulesModeToScenario()
         {
             var m = CurrentMode;
-            if (m != null && m != rulesMode) RulesMode = m;
-        }
-
-        public ModeDef RulesMode
-        {
-            get => rulesMode;
-            set
-            {
-                if (value == null || !Set(ref rulesMode, value)) return;
-                BuildRuleItems();
-                RaiseMany(nameof(RulesModeTitle), nameof(RulesModeIsPlayed));
-            }
+            if (m == null || m == rulesMode) return;
+            rulesMode = m;
+            BuildRuleItems();
         }
 
         public string RulesModeTitle => rulesMode == null ? "" : rulesMode.Name;
-        public bool RulesModeIsPlayed => rulesMode != null && rulesMode == CurrentMode;
 
         private void BuildRuleItems()
         {
@@ -83,38 +80,49 @@ namespace SandstormModLauncher.ViewModels
             if (rulesMode == null) return;
             foreach (var p in State.Rules.Properties)
             {
-                if (!rulesMode.Defaults.TryGetValue(p.Key, out var def)) continue;
+                if (SquadKeys.Contains(p.Key) || !rulesMode.Defaults.TryGetValue(p.Key, out var def)) continue;
                 RuleItems.Add(new RuleItem(p, rulesMode.Cls, def, RuleGet, (cls, key, v) => { RuleSet(cls, key, v); OnRuleEdited(); }));
             }
-            string keep = ruleCategory?.Name ?? "Bots & AI";
+            // Settings other modes have: listed read-only so every mode shows the full picture.
+            foreach (var p in State.Rules.Properties)
+            {
+                if (SquadKeys.Contains(p.Key) || rulesMode.Defaults.ContainsKey(p.Key)) continue;
+                var owners = State.Rules.Modes.Where(m => m.Defaults.ContainsKey(p.Key)).ToList();
+                if (owners.Count == 0) continue;
+                string who = owners.All(m => m.Coop) ? "co-op modes" : owners.All(m => !m.Coop) ? "versus modes" : string.Join(", ", owners.Select(m => m.Name));
+                RuleItems.Add(new RuleItem(p, rulesMode.Cls, owners[0].Defaults[p.Key], (c, k) => null, (c, k, v) => { })
+                {
+                    IsAvailable = false,
+                    AvailabilityNote = "Only in " + who + ". " + rulesMode.Name + " has no such setting, so the game would ignore it."
+                });
+            }
+            string keep = ruleCategory?.Name ?? "All settings";
             RuleCategories.Clear();
+            RuleCategories.Add(new CategoryItem { Name = "All settings", Count = RuleItems.Count(r => r.IsAvailable) });
+            RuleCategories.Add(new CategoryItem { Name = "Changed", Count = 0 });
             foreach (var name in CategoryOrder)
             {
-                int count = RuleItems.Count(r => r.Category == name);
+                int count = RuleItems.Count(r => r.Category == name && r.IsAvailable);
                 if (count > 0) RuleCategories.Add(new CategoryItem { Name = name, Count = count });
             }
-            RuleCategories.Add(new CategoryItem { Name = "Changed", Count = 0 });
-            RuleCategories.Add(new CategoryItem { Name = "All settings", Count = RuleItems.Count });
-            RuleCategories.Add(new CategoryItem { Name = AdvancedCategory, Count = 0 });
+            int other = RuleItems.Count(r => !r.IsAvailable);
+            if (other > 0) RuleCategories.Add(new CategoryItem { Name = RuleItem.UnavailableCategory, Count = other });
             ruleCategory = RuleCategories.FirstOrDefault(c => c.Name == keep) ?? RuleCategories.First();
             RuleItemsView = CollectionViewSource.GetDefaultView(RuleItems);
             RuleItemsView.Filter = o =>
             {
                 var r = (RuleItem)o;
+                if (!r.IsAvailable) return string.IsNullOrWhiteSpace(ruleSearch) && ruleCategory?.Name == RuleItem.UnavailableCategory;
                 if (!string.IsNullOrWhiteSpace(ruleSearch))
                     return (r.Label ?? "").IndexOf(ruleSearch, StringComparison.OrdinalIgnoreCase) >= 0 || r.Key.IndexOf(ruleSearch, StringComparison.OrdinalIgnoreCase) >= 0
                            || (r.Description ?? "").IndexOf(ruleSearch, StringComparison.OrdinalIgnoreCase) >= 0;
                 if (ruleCategory == null || ruleCategory.Name == "All settings") return true;
-                if (ruleCategory.Name == AdvancedCategory) return false;
                 if (ruleCategory.Name == "Changed") return r.Changed;
                 return r.Category == ruleCategory.Name;
             };
             UpdateCategoryCounts();
-            RaiseMany(nameof(RuleItemsView), nameof(RuleCategory), nameof(RulesModeTitle), nameof(RulesModeIsPlayed), nameof(ShowAdvancedRules));
+            RaiseMany(nameof(RuleItemsView), nameof(RuleCategory), nameof(RulesModeTitle));
         }
-
-        public const string AdvancedCategory = "Advanced";
-        public bool ShowAdvancedRules => ruleCategory?.Name == AdvancedCategory && string.IsNullOrWhiteSpace(ruleSearch);
 
         private void RefreshRuleItems()
         {
@@ -133,21 +141,24 @@ namespace SandstormModLauncher.ViewModels
             foreach (var c in RuleCategories)
                 c.Changes = c.Name == "Changed" || c.Name == "All settings" ? RuleItems.Count(r => r.Changed) : RuleItems.Count(r => r.Category == c.Name && r.Changed);
             Raise(nameof(RuleChangeCount));
+            Raise(nameof(RulesTabLabel));
             Raise(nameof(RulesSummary));
         }
 
+        /// <summary>Changed settings in the rules list (the squad card shows its own).</summary>
         public int RuleChangeCount => RuleItems.Count(r => r.Changed);
+        public string RulesTabLabel => RuleChangeCount == 0 ? "Rules" : "Rules · " + RuleChangeCount;
 
         public CategoryItem RuleCategory
         {
             get => ruleCategory;
-            set { if (Set(ref ruleCategory, value)) { RuleItemsView?.Refresh(); Raise(nameof(ShowAdvancedRules)); } }
+            set { if (value != null && Set(ref ruleCategory, value)) RuleItemsView?.Refresh(); }
         }
 
         public string RuleSearch
         {
             get => ruleSearch;
-            set { if (Set(ref ruleSearch, value ?? "")) { RuleItemsView?.Refresh(); Raise(nameof(ShowAdvancedRules)); } }
+            set { if (Set(ref ruleSearch, value ?? "")) RuleItemsView?.Refresh(); }
         }
 
         // ------------------------------------------------------------------ presets
@@ -245,7 +256,7 @@ namespace SandstormModLauncher.ViewModels
             ProfileChanged();
             ShowToast(item.Name + " applied" + (mutators != null && mutators.Count > 0 ? " (+ " + string.Join(", ", mutators) + ")" : ""));
             if (item.Source is RulesetDef def2 && def2.Notes.Count > 0)
-                await ShowMessage(item.Name, string.Join("\n\n", def2.Notes) + "\n\nTo get every part of the official ruleset, including player speed and health changes, pick it under \"Official ruleset at game start\" on this page. It takes effect the next time the launcher starts the game.");
+                await ShowMessage(item.Name, string.Join("\n\n", def2.Notes) + "\n\nTo get every part of the official ruleset, including player speed and health changes, pick it under \"Official ruleset at game start\" on the Advanced tab of Play. It takes effect the next time the launcher starts the game.");
         }
 
         private async Task SaveRulesPreset()

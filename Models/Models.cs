@@ -59,9 +59,7 @@ namespace SandstormModLauncher.Models
         public string Summary { get; set; }
         public string Description { get; set; }
         public string Author { get; set; }
-        public string AuthorUrl { get; set; }
-        public string ProfileUrl { get; set; }
-        public string LogoUrl { get; set; }
+        public string LogoFile { get; set; }                    // local image only (the game's own mod cache or the mod folder)
         public string Version { get; set; }
         public DateTime? Updated { get; set; }
         public long SizeOnDisk { get; set; }
@@ -143,7 +141,7 @@ namespace SandstormModLauncher.Models
         public List<MutatorPreset> MutatorPresets { get; set; } = new List<MutatorPreset>();
         public List<CustomMapEntry> CustomMaps { get; set; } = new List<CustomMapEntry>();
         public List<RulesPreset> RulesPresets { get; set; } = new List<RulesPreset>();
-        public string ConsoleKey { get; set; } = "Auto";
+        public bool AutoConsoleKey { get; set; } = true;         // add F10 as a console key while the game is closed
         public DateTime ConsoleKeyAddedUtc { get; set; }
         public string InputMethod { get; set; } = "Paste";      // Paste / Type
         public int KeyDelayMs { get; set; } = 60;
@@ -155,7 +153,6 @@ namespace SandstormModLauncher.Models
         public bool SoloGameFlag { get; set; } = true;
         public bool ApplyLiveRules { get; set; } = true;
         public string LaunchArgs { get; set; } = "";
-        public bool LegacyImportChecked { get; set; }
         public string LastWrittenRulesHash { get; set; } = "";
         public string GameStartedWithRulesHash { get; set; }
         public DateTime LastRulesWriteUtc { get; set; }

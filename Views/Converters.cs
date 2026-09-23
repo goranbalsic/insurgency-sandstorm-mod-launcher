@@ -54,7 +54,7 @@ namespace SandstormModLauncher.Views
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => !(value is bool b && b);
     }
 
-    /// <summary>File path or http(s) url to a cached, frozen bitmap.</summary>
+    /// <summary>Local image file to a cached, frozen bitmap (never loads from the network).</summary>
     public sealed class ImageFromPath : IValueConverter
     {
         private static readonly ConcurrentDictionary<string, ImageSource> cache = new ConcurrentDictionary<string, ImageSource>(StringComparer.OrdinalIgnoreCase);
@@ -72,19 +72,15 @@ namespace SandstormModLauncher.Views
         {
             try
             {
+                if (!Path.IsPathRooted(path) || !File.Exists(path)) return null;
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
                 bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
                 bmp.DecodePixelWidth = width;
-                if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) bmp.UriSource = new Uri(path);
-                else
-                {
-                    if (!File.Exists(path)) return null;
-                    bmp.StreamSource = new MemoryStream(File.ReadAllBytes(path));
-                }
+                bmp.StreamSource = new MemoryStream(File.ReadAllBytes(path));
                 bmp.EndInit();
-                if (bmp.CanFreeze && !bmp.IsDownloading) bmp.Freeze();
+                bmp.Freeze();
                 return bmp;
             }
             catch { return null; }
@@ -181,4 +177,5 @@ namespace SandstormModLauncher.Views
         }
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
     }
+
 }

@@ -27,7 +27,6 @@ namespace SandstormModLauncher.Game
         private bool firstPoll = true;
         private bool mapLoaded;
         private readonly List<(Func<string, bool> Match, TaskCompletionSource<string> Tcs)> waiters = new List<(Func<string, bool>, TaskCompletionSource<string>)>();
-        private static readonly Regex Sensitive = new Regex(@"LogPros|LogVOIP|VivoxCore|LogOnline|token|signature|Steam(ID|NWI)|userIdentity|payload|LogEOS|LogHydra|LogAnalytics", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex Transition = new Regex(@"State transition: '(\w+)' -> '(\w+)'", RegexOptions.Compiled);
         private static readonly Regex LoadMap = new Regex(@"LogLoad: LoadMap: (\S+)", RegexOptions.Compiled);
         private static readonly Regex LoadDone = new Regex(@"Took [\d\.]+ seconds to LoadMap\(([^\)]+)\)", RegexOptions.Compiled);
@@ -148,7 +147,7 @@ namespace SandstormModLauncher.Game
             foreach (var raw in text.Substring(0, last).Split('\n'))
             {
                 string line = raw.TrimEnd('\r').TrimStart('﻿');
-                if (line.Length == 0 || Sensitive.IsMatch(line)) continue;
+                if (line.Length == 0 || LogSanitizer.IsSensitive(line)) continue;
                 changed |= Parse(line);
                 try { LineReceived?.Invoke(line); } catch { }
                 CheckWaiters(line);

@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Input;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
+using SandstormModLauncher.Services;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -83,7 +84,9 @@ namespace SandstormModLauncher.ViewModels
                     return who + " vs " + SoloEnemies + " enemies · AI " + diff;
                 }
                 if (mode.Defaults.ContainsKey("bBots"))
-                    return BotsEnabled ? "Bots on · " + BotQuota + " bots · AI " + diff : "No bots · players only";
+                    return !BotsEnabled ? "No bots · players only"
+                         : BotQuota <= 1 ? "You vs 1 bot · AI " + diff
+                         : "You + " + (BotQuota - 1) + " AI vs " + BotQuota + " bots · AI " + diff;
                 return "Versus · AI " + diff;
             }
         }
@@ -203,6 +206,8 @@ namespace SandstormModLauncher.ViewModels
             if (report.Success) LaunchProgress = 1;
             Raise(nameof(LaunchFailed));
             UpdateLaunchButton();
+            if (!report.Success && report.Message != "Launch cancelled.")
+                DebugReport.Auto("launch-failed", report.Message, State, Monitor);
             if (report.Success)
             {
                 AppLog.Info("Launched " + plan.Title);

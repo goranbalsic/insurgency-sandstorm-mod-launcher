@@ -17,6 +17,7 @@ namespace SandstormModLauncher
         public GameInstall Install { get; set; }
         public OfficialData Official { get; set; } = new OfficialData();
         public List<ModInfo> Mods { get; set; } = new List<ModInfo>();
+        public List<ExecCommand> Commands { get; set; } = new List<ExecCommand>();
         public List<MutatorInfo> AllMutators { get; private set; } = new List<MutatorInfo>();
         public List<ScenarioInfo> AllScenarios { get; private set; } = new List<ScenarioInfo>();
         public List<MapInfo> Maps { get; private set; } = new List<MapInfo>();

@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using System.Windows.Input;
+using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
+using SandstormModLauncher.Services;
 using SandstormModLauncher.Models;
 
 namespace SandstormModLauncher.ViewModels
@@ -25,22 +29,35 @@ namespace SandstormModLauncher.ViewModels
     {
         public ObservableCollection<LiveGroup> LiveGroups { get; } = new ObservableCollection<LiveGroup>();
         public ObservableCollection<LiveRule> LiveRules { get; } = new ObservableCollection<LiveRule>();
+        public ObservableCollection<ExecCommand> CommandSuggestions { get; } = new ObservableCollection<ExecCommand>();
+        public ObservableCollection<ExecCommand> GameCommands { get; } = new ObservableCollection<ExecCommand>();
+        public ICollectionView GameCommandsView { get; private set; }
         public ICommand RunLiveActionCommand { get; private set; }
         public ICommand ReadLiveRulesCommand { get; private set; }
         public ICommand ApplyLiveRulesCommand { get; private set; }
         public ICommand SendCustomCommand { get; private set; }
         public ICommand CountBotsCommand { get; private set; }
-        private string liveOutput = "", customCommand = "", liveModeName = "";
-        private bool liveBusy, restartAfterApply = true;
+        public ICommand UseGameCommand { get; private set; }
+        private string liveOutput = "", customCommand = "", liveModeName = "", commandSearch = "";
+        private bool liveBusy, restartAfterApply = true, cheatsForCustom = true;
         private string liveModeCls;
 
         private void InitLiveCommands()
         {
-            RunLiveActionCommand = new AsyncCommand(p => RunLiveAction(p as LiveAction), p => CanLive);
+            RunLiveActionCommand = new AsyncCommand(p => RunLiveAction(p as LiveAction), p => CanLive && !(p is LiveAction a && a.CoopOnly && !liveIsCoop));
             ReadLiveRulesCommand = new AsyncCommand(ReadLiveRules, () => CanLive && LiveRules.Count > 0);
             ApplyLiveRulesCommand = new AsyncCommand(ApplyLiveRuleChanges, () => CanLive && LiveRules.Any(r => !string.IsNullOrWhiteSpace(r.Value)));
             SendCustomCommand = new AsyncCommand(SendCustom, () => Monitor?.IsRunning == true && !string.IsNullOrWhiteSpace(customCommand) && !liveBusy);
             CountBotsCommand = new AsyncCommand(CountBots, () => CanLive);
+            UseGameCommand = new RelayCommand(p =>
+            {
+                if (!(p is ExecCommand c)) return;
+                string text = customCommand ?? "";
+                int bar = text.LastIndexOf('|');
+                string prefix = bar >= 0 ? text.Substring(0, bar + 1) + " " : "";
+                CustomCommand = prefix + c.Name + (c.Params.Count > 0 ? " " : "");
+                CommandSuggestions.Clear();
+            });
 
             LiveGroup G(string title, bool cheat, params (string label, string cmd, string tip)[] actions) => new LiveGroup
             {
@@ -50,35 +67,104 @@ namespace SandstormModLauncher.ViewModels
             LiveGroups.Add(G("ROUND", false,
                 ("Restart round", "AdminRestartRound 0", "Starts the round again with the current settings."),
                 ("Restart and switch sides", "AdminRestartRound 1", "Restarts the round with the teams swapped."),
-                ("Add 5 minutes", "AdminExtendRoundTimer 300", "Adds time to the round clock."),
+                ("5 minutes left", "SetRoundTimer 300", "Sets the round clock to 5:00."),
+                ("15 minutes left", "SetRoundTimer 900", "Sets the round clock to 15:00."),
+                ("30 minutes left", "SetRoundTimer 1800", "Sets the round clock to 30:00."),
+                ("Add about 1 hour", "AdminExtendRoundTimer", "The game's own round extension: adds roughly an hour to the clock."),
+                ("Round never ends", "IgnoreRoundOver 1", "The round keeps going when it would end."),
+                ("Round can end again", "IgnoreRoundOver 0", "Turns \"Round never ends\" off."),
                 ("End the match", "AdminForceGameOver", "Ends the match immediately.")));
             LiveGroups.Add(G("OBJECTIVES", true,
                 ("Capture current objective", "InstaCap", "Captures the objective you are attacking."),
-                ("Start a counter-attack", "CheatCounterAttack", "Checkpoint: triggers a counter-attack now."),
-                ("Finish the counter-attack", "CheatFinishCounterAttack", "Checkpoint: ends the running counter-attack.")));
+                ("Start a counter-attack", "CheatCounterAttack", "Co-op: triggers a counter-attack now."),
+                ("Finish the counter-attack", "CheatFinishCounterAttack", "Co-op: ends the running counter-attack."),
+                ("Skip to extraction", "SkipToExtraction", "Co-op with extraction: jumps to the final extraction.")));
             LiveGroups.Add(G("BOTS", true,
+                ("Respawn all bots", "RespawnAllBots", "Brings every bot back."),
                 ("Respawn enemy bots", "AIRespawnEnemyBots", "Brings enemy bots back."),
                 ("Respawn AI teammates", "AIRespawnFriendlyBots", "Brings dead AI teammates back."),
                 ("Remove all enemies", "AIPurgeEnemy", "Removes every enemy bot."),
+                ("Remove AI teammates", "AIPurgeFriendly", "Removes the bots on your team."),
                 ("Freeze or unfreeze all AI", "AIToggle", "Stops every bot in place, press again to resume."),
+                ("Bots ignore everyone", "AIIgnorePlayers", "Co-op: bots stop attacking players. Press again to undo."),
                 ("Bots ignore me", "AINoTargetPlayer", "Enemies stop targeting you.")));
             LiveGroups.Add(G("YOUR SOLDIER", true,
                 ("God mode", "GodMode", "You can't take damage. Press again to turn off."),
                 ("Refill ammo and gear", "ResupplyNow", "Instant resupply."),
                 ("Give 10 supply points", "GiveSupplyPointsUnrestricted 10", "Extra supply for your loadout."),
                 ("Respawn me", "RespawnMe", "Respawns your soldier."),
+                ("Revive me", "Revive", "Gets you back up."),
                 ("Fly through walls", "Noclip", "Free movement through geometry. Press again to land.")));
-            LiveGroups.Add(G("TEAM", false,
+            LiveGroups.Add(G("MATCH & VIEW", true,
                 ("Respawn every player", "AdminRespawnAllPlayers", "Respawns all players on both teams."),
-                ("Free camera", "EnableCheats | ToggleDebugCamera", "Detached camera for screenshots. Press again to return.")));
+                ("Slow motion", "Slomo 0.4", "Game runs at 40% speed."),
+                ("Normal speed", "Slomo 1", "Back to normal game speed."),
+                ("Free camera", "ToggleDebugCamera", "Detached camera for screenshots. Press again to return."),
+                ("Hide or show HUD", "ShowHUD", "Toggles the HUD for clean screenshots.")));
+
+            // Measured in the game: these only exist in the co-op game modes and are rejected in versus.
+            var coopOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CheatCounterAttack", "CheatFinishCounterAttack", "SkipToExtraction", "AIIgnorePlayers" };
+            foreach (var a in LiveGroups.SelectMany(g => g.Actions))
+                if (coopOnly.Contains(a.Command.Split(' ')[0])) a.CoopOnly = true;
         }
+
+        private bool liveIsCoop = true;
 
         public bool CanLive => Monitor?.Phase == GamePhase.InMatch && !liveBusy;
         public bool LiveBusy { get => liveBusy; set { if (Set(ref liveBusy, value)) { Raise(nameof(CanLive)); CommandManager.InvalidateRequerySuggested(); } } }
         public string LiveOutput { get => liveOutput; set => Set(ref liveOutput, value); }
-        public string CustomCommand { get => customCommand; set => Set(ref customCommand, value ?? ""); }
         public string LiveModeName { get => liveModeName; set => Set(ref liveModeName, value); }
         public bool RestartAfterApply { get => restartAfterApply; set => Set(ref restartAfterApply, value); }
+        public bool CheatsForCustom { get => cheatsForCustom; set => Set(ref cheatsForCustom, value); }
+
+        public string CustomCommand
+        {
+            get => customCommand;
+            set { if (Set(ref customCommand, value ?? "")) UpdateSuggestions(); }
+        }
+
+        // ------------------------------------------------------------------ command catalog
+
+        /// <summary>Background thread: reads (or loads the cached) list of console commands from the game exe.</summary>
+        private void LoadCommands()
+        {
+            try { State.Commands = ExecCatalog.Load(State.Install?.ClientExe, AppPaths.CacheDir); }
+            catch (Exception ex) { AppLog.Warn("Command catalog: " + ex.Message); State.Commands = new List<ExecCommand>(); }
+            ui.BeginInvoke(new Action(BuildCommandList));
+        }
+
+        private void BuildCommandList()
+        {
+            GameCommands.Clear();
+            foreach (var c in State.Commands) GameCommands.Add(c);
+            GameCommandsView = CollectionViewSource.GetDefaultView(GameCommands);
+            GameCommandsView.Filter = o =>
+            {
+                var c = (ExecCommand)o;
+                return string.IsNullOrWhiteSpace(commandSearch) || c.Name.IndexOf(commandSearch, StringComparison.OrdinalIgnoreCase) >= 0
+                       || c.Note.IndexOf(commandSearch, StringComparison.OrdinalIgnoreCase) >= 0;
+            };
+            RaiseMany(nameof(GameCommandsView), nameof(GameCommandCount));
+        }
+
+        public int GameCommandCount => GameCommands.Count;
+        public string CommandSearch { get => commandSearch; set { if (Set(ref commandSearch, value ?? "")) GameCommandsView?.Refresh(); } }
+
+        private void UpdateSuggestions()
+        {
+            CommandSuggestions.Clear();
+            string text = customCommand ?? "";
+            int bar = text.LastIndexOf('|');
+            string part = (bar >= 0 ? text.Substring(bar + 1) : text).TrimStart();
+            if (part.Length < 2 || part.Contains(' ')) return;
+            foreach (var c in State.Commands.Where(c => c.Name.StartsWith(part, StringComparison.OrdinalIgnoreCase))
+                                          .Concat(State.Commands.Where(c => c.Name.IndexOf(part, 1, StringComparison.OrdinalIgnoreCase) > 0))
+                                          .Distinct().Take(8))
+                CommandSuggestions.Add(c);
+            if (CommandSuggestions.Count == 1 && CommandSuggestions[0].Name.Equals(part, StringComparison.OrdinalIgnoreCase)) CommandSuggestions.Clear();
+        }
+
+        // ------------------------------------------------------------------ live state
 
         private void RefreshLive()
         {
@@ -91,7 +177,9 @@ namespace SandstormModLauncher.ViewModels
             var mode = sc != null ? State.Rules.ResolveMode(sc.GameModeClass, hardcore) : CurrentMode;
             if (mode?.Cls == liveModeCls) return;
             liveModeCls = mode?.Cls;
+            liveIsCoop = mode?.Coop ?? true;
             LiveModeName = mode?.Name ?? "";
+            CommandManager.InvalidateRequerySuggested();
             LiveRules.Clear();
             if (mode == null) return;
             string[] keys = mode.Coop
@@ -114,9 +202,14 @@ namespace SandstormModLauncher.ViewModels
                 var res = await Console.Run(command, CancellationToken.None, null, verify ?? TimeSpan.FromSeconds(2.5));
                 var interesting = res.Lines.Where(l => !l.Contains("LogViewport") && !l.Contains("LogCosmetics") && !l.Contains("LogFX") && !l.Contains("LogRagdoll")
                                                       && (l.Contains("Command not recognized") || l.Contains("Bad or missing") || l.Contains("LogAI: Display: AI difficulty")
-                                                          || l.Contains(") ") || l.Contains("LogGameMode: Display: State") || l.Contains("LogExec")))
+                                                          || l.Contains(") ") || l.Contains("LogGameMode: Display: State") || l.Contains("LogExec") || l.Contains("Cheat")))
                                            .Select(l => Regex.Replace(l, @"^\[[^\]]*\]\[[^\]]*\]", "")).Take(12).ToList();
-                LiveOutput = !res.Sent ? "Not sent: " + res.Detail : interesting.Count > 0 ? string.Join("\n", interesting) : "Sent: " + command;
+                LiveOutput = !res.Sent ? "Not sent: " + res.Detail : res.NotRecognized ? res.Detail : interesting.Count > 0 ? string.Join("\n", interesting) : "Sent: " + command;
+                if (!res.Sent)
+                {
+                    ShowToast("Not sent: " + res.Detail);
+                    DebugReport.Auto("console-failed", res.Detail, State, Monitor);
+                }
                 return res;
             }
             finally { LiveBusy = false; }
@@ -125,9 +218,9 @@ namespace SandstormModLauncher.ViewModels
         private async Task RunLiveAction(LiveAction action)
         {
             if (action == null) return;
-            string cmd = action.Cheat && !action.Command.StartsWith("EnableCheats") ? "EnableCheats | " + action.Command : action.Command;
-            var res = await RunConsole(cmd);
-            if (res.Sent) ShowToast(res.NotRecognized ? "The game did not recognise that command" : action.Label + ": sent");
+            // Cheats are only needed for cheat commands, but switching them on is harmless in local play.
+            var res = await RunConsole("EnableCheats | " + action.Command);
+            if (res.Sent) ShowToast(res.NotRecognized ? res.Detail : action.Label + ": done");
         }
 
         private async Task ReadLiveRules()
@@ -168,8 +261,9 @@ namespace SandstormModLauncher.ViewModels
         {
             string cmd = customCommand.Trim();
             if (cmd.Length == 0) return;
+            if (cheatsForCustom && !cmd.StartsWith("EnableCheats", StringComparison.OrdinalIgnoreCase)) cmd = "EnableCheats | " + cmd;
             var res = await RunConsole(cmd, TimeSpan.FromSeconds(3));
-            if (res.Sent) CustomCommand = "";
+            if (res.Sent && !res.NotRecognized) CustomCommand = "";
         }
 
         private async Task CountBots()
@@ -194,8 +288,8 @@ namespace SandstormModLauncher.ViewModels
             string humanTeam = teams.FirstOrDefault(kv => bots.TryGetValue(kv.Key, out var isBot) && !isBot).Value ?? "0";
             int mates = teams.Count(kv => kv.Value == humanTeam && bots.TryGetValue(kv.Key, out var isBot) && isBot);
             int enemies = teams.Count(kv => kv.Value != humanTeam);
-            LiveOutput = $"Your team: you + {mates} AI teammate{(mates == 1 ? "" : "s")}\nEnemies alive right now: {enemies}";
-            ShowToast($"You + {mates} AI vs {enemies} enemies alive");
+            LiveOutput = $"Your team: you + {mates} AI teammate{(mates == 1 ? "" : "s")}\nEnemy team: {enemies} bot{(enemies == 1 ? "" : "s")}";
+            ShowToast($"You + {mates} AI vs {enemies} enemies");
         }
     }
 }

@@ -8,24 +8,24 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 
 ![Play page](docs/screenshots/play.png)
 
-It replaces the old Local Play Launcher (0.11.x), which no longer finds mutators since mods moved to the current mod.io layout. Profiles and presets from the old launcher can be imported.
-
 ## Features
 
 - All official maps and scenarios plus mod maps, day or night, Hardcore Checkpoint
-- Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults
-- All official and mod mutators, read from your installed mod.io mods, with load order and presets
+- One Play page: map, scenario, squad, enemies and every match rule of the selected mode
+- Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults. Versus with bots as 1v1, 5v5, 10v10 or any team size
+- All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
 - The official rulesets and all official online playlists, playable offline
-- Live match control: restart rounds, add time, respawn or freeze bots, change rules mid-match
+- Live match control: restart rounds, set the clock, respawn or freeze bots, change rules mid-match, and every console command the game has, searchable
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - One click: starts the game, waits for the main menu and loads the match
+- Fully offline: no accounts, no network access, no telemetry
 
-| Rules | Mutators |
+| Match rules | Mutators |
 | --- | --- |
 | ![Rules](docs/screenshots/rules.png) | ![Mutators](docs/screenshots/mutators.png) |
-| **Live match control** | **Launching** |
-| ![Live](docs/screenshots/live.png) | ![Launch](docs/screenshots/launch.png) |
+| **Live match control** | **Settings** |
+| ![Live](docs/screenshots/live.png) | ![Settings](docs/screenshots/settings.png) |
 
 ## Download
 
@@ -37,10 +37,10 @@ Requirements: Windows 10 or 11, Insurgency: Sandstorm, .NET Framework 4.8 (part 
 
 1. Rules you change are written to your `Game.ini` inside a marked block (backed up first), so bots spawn with your values from the first second.
 2. The launcher starts the game if needed and follows the game log until the main menu is up.
-3. It opens the game console, pastes the `open` command with map, scenario, lighting and mutators, and checks the log that the game accepted it.
+3. It presses the console key and checks on screen that the console line opened. Only then does it paste the `open` command (map, scenario, lighting, mutators) and press Enter. If the console is not clearly open it stops without pressing anything else, so no key can land in the game's menus.
 4. After the map loads it applies your rules again with admin commands.
 
-If the console key does not work on your keyboard layout, use Settings > Console key > Set up F10 and restart the game once.
+The ` key is missing on many keyboard layouts (Serbian, German, French and others). While the game is closed the launcher adds F10 as an extra console key, which works on every layout.
 
 ## Is it safe?
 
@@ -48,24 +48,29 @@ All source code is in this repository, and every release is built from it by [Gi
 
 What the program does on your PC:
 
-- Reads the game's .pak files, configs and log, and your mod.io folder (read only)
-- Writes only its own block in `Game.ini`, and adds F10 to `Input.ini` only when you press "Set up F10". Both files are backed up first
-- Sends keystrokes only to the Insurgency: Sandstorm window, to open the console and paste the command
-- Keeps its settings in `%APPDATA%\SandstormModLauncher`
-- Loads mod logo images from mod.io. No other network access, no telemetry
-- Never changes game files and does not touch the anti-cheat. It is for local play only
+- Reads the game's .pak files, configs and log, and the game's mod folder (read only)
+- Writes only its own block in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
+- Keeps copies of your game key bindings before it sends any key to the game, and can put them back (Settings > Game key bindings). It never edits them itself
+- Sends keystrokes only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
+- Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
+- Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
+- No network access, no telemetry. Never changes game files and does not touch the anti-cheat. It is for local play only
 
 The exe is not code-signed, so SmartScreen may show "Windows protected your PC" (More info > Run anyway). Some antivirus tools are wary of programs that send keystrokes. To check a download:
 
 ```powershell
 # compare with the SHA-256 on the release page
-Get-FileHash .\SandstormModLauncher-v1.0.0.zip -Algorithm SHA256
+Get-FileHash .\SandstormModLauncher-v1.1.0.zip -Algorithm SHA256
 
 # check that the file was built by this repository's workflow (GitHub CLI)
-gh attestation verify .\SandstormModLauncher-v1.0.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
+gh attestation verify .\SandstormModLauncher-v1.1.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
 ```
 
 Or build it yourself and use your own exe.
+
+## Troubleshooting
+
+Settings > "Something went wrong?" saves a report to `%APPDATA%\SandstormModLauncher\logs\reports`: launcher logs, settings, the end of the game log (account lines removed) and the console pictures. A report is also saved automatically when a launch fails. Every run of the launcher has its own log in `logs\sessions`.
 
 ## Build from source
 
@@ -77,7 +82,12 @@ cd insurgency-sandstorm-mod-launcher
 dotnet build -c Release
 ```
 
-The exe ends up in `bin\Release\net48\`. `SandstormModLauncher.exe --selftest report.txt` writes a report of what it finds in your game and mods.
+The exe ends up in `bin\Release\net48\`. Command line tools:
+
+- `--selftest report.txt` writes a report of what it finds in your game and mods
+- `--probe-test out.txt shot1.png ...` checks the console detection against screenshots of the game
+- `--render folder` draws every page to PNG files without opening a window
+- `--data folder` keeps settings and logs in another folder (for testing)
 
 ## FAQ
 

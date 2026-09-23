@@ -60,7 +60,8 @@
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="CONSOLE KEY" Style="{StaticResource H2}" FontSize="16" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" Text="The launcher opens the game console for you to send the match. You never type in it." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="The launcher opens the game console to send the match. It checks on screen that the console line is open before it types anything, and stops if it is not." />
                             <Border CornerRadius="8" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">
@@ -69,32 +70,24 @@
                             <TextBlock Style="{StaticResource Mute}" Margin="0,8,0,0">
                                 <Run Text="Console keys in the game: " /><Run Text="{Binding ConsoleKeysText, Mode=OneWay}" Foreground="{StaticResource Text}" />
                             </TextBlock>
-                            <WrapPanel Margin="0,10,0,0">
-                                <Button Content="Set up F10" Style="{StaticResource AccentButton}" Margin="0,0,8,6" Command="{Binding SetupF10Command}"
-                                        ToolTip="Adds F10 as an extra console key in Input.ini. Works on every keyboard layout." />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoConsoleKey}" Margin="0,10,0,4">
+                                <StackPanel>
+                                    <TextBlock Text="Add F10 as a console key automatically" FontSize="13.5" />
+                                    <TextBlock Text="Written to Input.ini (with a backup) while the game is closed. Works on every keyboard layout, unlike the ` key." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <WrapPanel Margin="0,6,0,0">
+                                <Button Content="Set up F10 now" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding SetupF10Command}" />
                                 <Button Content="Check again" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding RefreshConsoleKeyCommand}" />
                                 <Button Content="Open Input.ini" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="InputIni" />
                             </WrapPanel>
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="16" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="KEY TO USE" Style="{StaticResource Label}" />
-                                    <ComboBox ItemsSource="{Binding ConsoleKeyChoices}" SelectedItem="{Binding ConsoleKeyPreference}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="HOW TO ENTER COMMANDS" Style="{StaticResource Label}" />
-                                    <Border Style="{StaticResource SegmentHost}">
-                                        <UniformGrid Rows="1">
-                                            <RadioButton Style="{StaticResource Segment}" Content="Paste (fast)" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Paste}" />
-                                            <RadioButton Style="{StaticResource Segment}" Content="Type" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Type}" />
-                                        </UniformGrid>
-                                    </Border>
-                                </StackPanel>
-                            </Grid>
+                            <TextBlock Text="HOW TO ENTER COMMANDS" Style="{StaticResource Label}" />
+                            <Border Style="{StaticResource SegmentHost}">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Style="{StaticResource Segment}" Content="Paste (fast)" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Paste}" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="Type" IsChecked="{Binding InputMethod, Converter={StaticResource Eq}, ConverterParameter=Type}" />
+                                </UniformGrid>
+                            </Border>
                             <TextBlock Style="{StaticResource Label}">
                                 <Run Text="KEY DELAY · " /><Run Text="{Binding KeyDelayMs, Mode=OneWay}" /><Run Text=" MS" />
                             </TextBlock>
@@ -103,11 +96,33 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- key bindings -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="GAME KEY BINDINGS" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="The launcher never edits your key bindings. It keeps copies of them (at start-up and before it sends any key to the game), so if they are ever lost you can put them back here." />
+                            <Border Background="{StaticResource BadBg}" CornerRadius="8" Padding="12,9" Margin="0,10,0,0" Visibility="{Binding KeyBindingsWarning, Converter={StaticResource Vis}}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Dismiss" Command="{Binding DismissKeyWarningCommand}" VerticalAlignment="Top" />
+                                    <TextBlock Text="{Binding KeyBindingsWarning}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" />
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="SAVED COPIES" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Restore" Margin="8,0,0,0" Command="{Binding RestoreKeyBindingsCommand}" />
+                                <ComboBox ItemsSource="{Binding KeyBindingBackups}" SelectedItem="{Binding SelectedKeyBackup}" DisplayMemberPath="Label" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Text="No copies yet. One is made the first time the launcher starts with the game installed."
+                                       Visibility="{Binding KeyBindingBackups.Count, Converter={StaticResource VisNot}}" />
+                        </StackPanel>
+                    </Border>
+
                     <!-- mods -->
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="MOD FOLDERS" Style="{StaticResource H2}" FontSize="16" />
-                            <TextBlock Text="MOD.IO FOLDER (USED BY THE GAME)" Style="{StaticResource Label}" />
+                            <TextBlock Text="THE GAME'S MOD FOLDER" Style="{StaticResource Label}" />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8B7;" ToolTip="Open" Command="{Binding OpenPathCommand}" CommandParameter="Modio" />
                                 <Border Style="{StaticResource Well}" Padding="10,7">
@@ -138,6 +153,7 @@
                             </WrapPanel>
                         </StackPanel>
                     </Border>
+
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
@@ -186,15 +202,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- old launcher + files -->
+                    <!-- files -->
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="FILES AND TOOLS" Style="{StaticResource H2}" FontSize="16" />
-                            <TextBlock Text="OLD LOCAL PLAY LAUNCHER" Style="{StaticResource Label}" />
-                            <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="Import..." Command="{Binding ImportLegacyCommand}" Margin="8,0,0,0" />
-                                <TextBlock Style="{StaticResource Mute}" VerticalAlignment="Center" Text="Bring over profiles, mutator presets, custom maps and settings from v0.11 and earlier." />
-                            </DockPanel>
                             <TextBlock Text="OPEN" Style="{StaticResource Label}" />
                             <WrapPanel>
                                 <Button Content="Game.ini" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="GameIni" />
@@ -207,8 +218,17 @@
                             <TextBlock Text="TOOLS" Style="{StaticResource Label}" />
                             <WrapPanel>
                                 <Button Content="Desktop shortcut" Margin="0,0,8,6" Command="{Binding CreateShortcutCommand}" />
-                                <Button Content="Diagnostics report" Margin="0,0,8,6" Command="{Binding DiagnosticsCommand}" ToolTip="Writes a report of what the launcher found, useful when asking for help" />
                                 <Button Content="Remove launcher rules from Game.ini" Style="{StaticResource DangerButton}" Margin="0,0,8,6" Command="{Binding RemoveIniRulesCommand}" />
+                            </WrapPanel>
+                            <TextBlock Text="SOMETHING WENT WRONG?" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Save report" Margin="8,0,0,0" Command="{Binding SaveReportCommand}" />
+                                <TextBox Text="{Binding ReportNote, UpdateSourceTrigger=PropertyChanged}" Tag="What happened? (optional)" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="Saves the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots to logs\reports on this PC. Nothing is uploaded. A report is also saved automatically when a launch fails." />
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="Open reports" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Reports" />
                             </WrapPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">
                                 <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=". Put an empty file called &quot;portable&quot; next to the exe to keep it beside the exe instead." />
@@ -231,9 +251,7 @@
                                 <Button Style="{StaticResource LinkButton}" Content="Updates" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
                                         CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases" />
                                 <Button Style="{StaticResource LinkButton}" Content="Report a problem" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />
-                                <Button Style="{StaticResource LinkButton}" Content="Mods on mod.io" Margin="0,0,16,4" Command="{Binding OpenPathCommand}" CommandParameter="ModioSite" />
-                            </WrapPanel>
+                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />                            </WrapPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>

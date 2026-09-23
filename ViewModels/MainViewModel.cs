@@ -61,17 +61,24 @@ namespace SandstormModLauncher.ViewModels
                 if (!State.Store.IsLoaded) State.Store.Load();
                 State.Rules = RulesDb.LoadEmbedded();
                 State.Install = GameInstall.Detect(State.Settings.GameDirOverride);
-                State.Settings.ExtraModFolders.RemoveAll(f => LegacyImport.IsScannedAnyway(f, State));
                 AppLog.Info($"Game: {State.Install.GameDir ?? "not found"} ({State.Install.Store})");
                 Monitor = new GameMonitor();
                 Console = new ConsoleBridge(Monitor, () => State.Settings, () => State.Official);
                 Launcher = new LaunchService(State, Monitor, Console);
                 Monitor.StateChanged += () => ui.BeginInvoke(new Action(OnGameStateChanged));
 
+                KeyBindings.DropDetected += () => ui.BeginInvoke(new Action(() =>
+                {
+                    RefreshKeyBackups();
+                    ShowToast("Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.");
+                }));
+
                 LoadingText = "Reading the game and your mods...";
                 await Task.Run(() =>
                 {
+                    KeyBindings.Backup("launcher started");
                     State.Official = GameCatalog.Load(State.Install, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
+                    LoadCommands();
                     State.Mods = ModScanner.Scan(State.Install, State.Settings.ExtraModFolders, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
                     State.Rebuild();
                 });
@@ -81,8 +88,12 @@ namespace SandstormModLauncher.ViewModels
                 BuildMods();
                 BuildMutatorPresets();
                 RefreshConsoleKeyStatus();
+                RefreshKeyBackups();
                 StartModWatcher();
-                Page = State.Settings.LastPage ?? "Play";
+                lastPhase = Monitor.Phase;
+                lastRunning = Monitor.IsRunning;
+                RaiseSettings();
+                Page = State.Settings.LastPage == "Rules" || State.Settings.LastPage == null ? "Play" : State.Settings.LastPage;
                 Loading = false;
                 OnGameStateChanged();
                 if (!State.Install.IsValid)
@@ -90,7 +101,6 @@ namespace SandstormModLauncher.ViewModels
                     Page = "Settings";
                     await ShowMessage("Game not found", "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains \"Insurgency\" and \"Insurgency.exe\").");
                 }
-                await OfferLegacyImport();
             }
             catch (Exception ex)
             {
@@ -158,19 +168,6 @@ namespace SandstormModLauncher.ViewModels
             UpdatePlan();
         }
 
-        private async Task OfferLegacyImport()
-        {
-            if (State.Settings.LegacyImportChecked) return;
-            State.Settings.LegacyImportChecked = true;
-            SaveSettingsSoon();
-            string folder = LegacyImport.FindOldLauncherFolder();
-            if (folder == null) return;
-            string answer = await Ask("Import from the old launcher?",
-                "Settings from the old Insurgency: Sandstorm Local Play Launcher were found in " + folder + ". Import its profiles, mutator presets and custom maps?",
-                "Import", "Not now");
-            if (answer == "Import") ImportLegacy(folder);
-        }
-
         // ------------------------------------------------------------------ navigation / status
 
         public ICommand NavigateCommand { get; }
@@ -183,7 +180,6 @@ namespace SandstormModLauncher.ViewModels
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();
-                if (value == "Rules") SyncRulesModeToScenario();
                 if (value == "Live") RefreshLive();
             }
         }
@@ -198,9 +194,28 @@ namespace SandstormModLauncher.ViewModels
         public string GameStatusKind { get => gameStatusKind; set => Set(ref gameStatusKind, value); }
         public bool InMatch => Monitor?.Phase == GamePhase.InMatch;
 
+        private GamePhase lastPhase = GamePhase.NotRunning;
+        private bool lastRunning;
+
         private void OnGameStateChanged()
         {
             if (Monitor == null) return;
+            if (Monitor.Phase != lastPhase)
+            {
+                AppLog.Debug("Game: " + lastPhase + " -> " + Monitor.Phase + (Monitor.CurrentLevel != null ? " (" + Monitor.CurrentLevel + ")" : ""));
+                lastPhase = Monitor.Phase;
+            }
+            bool running = Monitor.IsRunning;
+            if (running != lastRunning)
+            {
+                AppLog.Info(running ? "Game process started (pid " + Monitor.ProcessId + ")" : "Game process exited");
+                if (!running && !Loading)
+                {
+                    // The game saves its settings when it exits: keep a copy and add the extra console key now that it is safe.
+                    Task.Run(() => KeyBindings.Backup("game closed")).ContinueWith(_ => ui.BeginInvoke(new Action(() => { RefreshConsoleKeyStatus(); RefreshKeyBackups(); })));
+                }
+                lastRunning = running;
+            }
             GameStatus = Monitor.Describe();
             GameStatusKind = Monitor.Phase == GamePhase.Menu ? "Ready" : Monitor.Phase == GamePhase.InMatch ? "Match"
                            : Monitor.Phase == GamePhase.NotRunning ? "Off" : "Busy";

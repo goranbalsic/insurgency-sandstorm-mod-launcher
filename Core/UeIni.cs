@@ -14,8 +14,6 @@ namespace SandstormModLauncher.Core
     {
         public const string BlockStart = "; >>> Sandstorm Mod Launcher (managed block, edited automatically) >>>";
         public const string BlockEnd = "; <<< Sandstorm Mod Launcher <<<";
-        private const string LegacyStart = "Local Play Launcher Updates";
-        private const string LegacyEnd = "End of LPL Updates";
 
         public static string ReadText(string path)
         {
@@ -37,7 +35,7 @@ namespace SandstormModLauncher.Core
             else File.Move(tmp, path);
         }
 
-        /// <summary>Removes the launcher's block and blocks written by the old Local Play Launcher.</summary>
+        /// <summary>Removes the launcher's managed block.</summary>
         public static string StripManagedBlocks(string text)
         {
             var lines = Split(text);
@@ -46,10 +44,10 @@ namespace SandstormModLauncher.Core
             foreach (var line in lines)
             {
                 string t = line.Trim();
-                if (!skipping && (t == BlockStart || (t.StartsWith(";") && t.Contains(LegacyStart)))) { skipping = true; continue; }
+                if (!skipping && t == BlockStart) { skipping = true; continue; }
                 if (skipping)
                 {
-                    if (t == BlockEnd || (t.StartsWith(";") && t.Contains(LegacyEnd))) skipping = false;
+                    if (t == BlockEnd) skipping = false;
                     continue;
                 }
                 result.Add(line);

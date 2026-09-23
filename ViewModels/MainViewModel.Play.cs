@@ -215,7 +215,7 @@ namespace SandstormModLauncher.ViewModels
             SyncScenarioModes();
             RaiseMany(nameof(SelectedScenario), nameof(CanHardcore), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName));
             RaiseSquad();
-            if (Page == "Rules") SyncRulesModeToScenario();
+            SyncRulesModeToScenario();
             if (user) ProfileChanged();
         }
 
@@ -248,7 +248,7 @@ namespace SandstormModLauncher.ViewModels
                 Profile.Hardcore = value;
                 RaiseMany(nameof(Hardcore), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName));
                 RaiseSquad();
-                if (Page == "Rules") SyncRulesModeToScenario();
+                SyncRulesModeToScenario();
                 ProfileChanged();
             }
         }
@@ -323,7 +323,10 @@ namespace SandstormModLauncher.ViewModels
         public string SoloEnemiesHint => "SoloEnemies · mode default " + DefaultInt("SoloEnemies");
         public string MinEnemiesHint => "MinimumEnemies · default " + DefaultInt("MinimumEnemies");
         public string MaxEnemiesHint => "MaximumEnemies · default " + DefaultInt("MaximumEnemies");
-        public string BotQuotaHint => "BotQuota · mode default " + DefaultInt("BotQuota");
+        /// <summary>Versus: BotQuota is the size of each team. You take one slot of yours, bots fill the rest and the whole enemy team.</summary>
+        public string BotQuotaHint => BotQuota <= 1
+            ? "BotQuota · you vs 1 bot · mode default " + DefaultInt("BotQuota")
+            : "BotQuota · you + " + (BotQuota - 1) + " AI vs " + BotQuota + " bots · mode default " + DefaultInt("BotQuota");
         public bool TeammatesChanged => RuleGet(CurrentMode?.Cls, "FriendlyBotQuota") != null;
         public bool SoloEnemiesChanged => RuleGet(CurrentMode?.Cls, "SoloEnemies") != null;
         public bool MinEnemiesChanged => RuleGet(CurrentMode?.Cls, "MinimumEnemies") != null;
@@ -383,7 +386,14 @@ namespace SandstormModLauncher.ViewModels
             get
             {
                 var mode = CurrentMode;
-                if (mode == null || !mode.Coop) return "Custom";
+                if (mode == null) return "Custom";
+                if (!mode.Coop)
+                {
+                    bool changed = RuleGet(mode.Cls, "bBots") != null || RuleGet(mode.Cls, "BotQuota") != null;
+                    if (!changed) return "Defaults";
+                    if (BotsEnabled && (BotQuota == 1 || BotQuota == 5 || BotQuota == 10)) return "VS" + BotQuota;
+                    return "Custom";
+                }
                 bool any = new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty" }.Any(k => RuleGet(mode.Cls, k) != null);
                 if (!any) return "Defaults";
                 if (Teammates == 0) return "LoneWolf";
@@ -405,6 +415,15 @@ namespace SandstormModLauncher.ViewModels
                 case "Squad":
                     if (mode.Coop) SetInt("FriendlyBotQuota", Math.Max(DefaultInt("FriendlyBotQuota"), Teammates == 0 ? DefaultInt("FriendlyBotQuota") : Teammates), 0, 32);
                     else { BotsEnabled = true; if (BotQuota == 0) BotQuota = 10; }
+                    break;
+                case "VS1":
+                case "VS5":
+                case "VS10":
+                    if (mode.Coop) break;
+                    int size = int.Parse(style.Substring(2), CultureInfo.InvariantCulture);
+                    BotsEnabled = true;
+                    BotQuota = size;
+                    ShowToast(size == 1 ? "1 v 1: you against one bot" : size + " v " + size + ": you + " + (size - 1) + " AI against " + size + " bots");
                     break;
                 case "Defaults":
                     foreach (var k in new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty", "bBots", "BotQuota" })
@@ -438,7 +457,8 @@ namespace SandstormModLauncher.ViewModels
             RaiseMany(nameof(Teammates), nameof(SoloEnemies), nameof(MinEnemies), nameof(MaxEnemies), nameof(BotQuota), nameof(BotsEnabled),
                       nameof(TeammatesHint), nameof(SoloEnemiesHint), nameof(MinEnemiesHint), nameof(MaxEnemiesHint), nameof(BotQuotaHint),
                       nameof(TeammatesChanged), nameof(SoloEnemiesChanged), nameof(MinEnemiesChanged), nameof(MaxEnemiesChanged), nameof(BotQuotaChanged),
-                      nameof(AiDifficulty), nameof(AiDifficultyLabel), nameof(PlayStyle), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName));
+                      nameof(AiDifficulty), nameof(AiDifficultyLabel), nameof(PlayStyle), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName),
+                      nameof(RuleChangeCount), nameof(RulesTabLabel), nameof(RulesModeTitle));
         }
 
         private void RandomMission()

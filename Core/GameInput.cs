@@ -119,12 +119,11 @@ namespace SandstormModLauncher.Core
             Thread.Sleep(KeyDelayMs);
         }
 
-        /// <summary>Clears the console input line (End + backspaces).</summary>
-        public void ClearLine(int chars = 120)
+        /// <summary>Presses one key several times in a single batch.</summary>
+        public void TapRepeat(ushort vk, int count)
         {
-            Tap(0x23);
             var list = new List<Native.INPUT>();
-            for (int i = 0; i < chars; i++) { list.Add(KeyInput(0x08, false)); list.Add(KeyInput(0x08, true)); }
+            for (int i = 0; i < count; i++) { list.Add(KeyInput(vk, false)); list.Add(KeyInput(vk, true)); }
             Send(list.ToArray());
             Thread.Sleep(KeyDelayMs);
         }

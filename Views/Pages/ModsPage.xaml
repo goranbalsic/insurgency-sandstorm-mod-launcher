@@ -25,19 +25,16 @@
                     <TextBox Text="{Binding ModSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search mods" Padding="30,6,8,6" />
                     <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
                 </Grid>
-                <Button Margin="8,0,0,0" Command="{Binding RescanModsCommand}">
+                <Button Margin="8,0,0,0" Command="{Binding RescanModsCommand}" ToolTip="Read the mod folders again">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" />
                         <TextBlock Text="Rescan" />
                     </StackPanel>
                 </Button>
+                <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding OpenPathCommand}" CommandParameter="Modio" Content="Mod folder" />
             </StackPanel>
-            <TextBlock Grid.Row="1" Style="{StaticResource Mute}" FontSize="13" Margin="0,6,16,0" VerticalAlignment="Center"
-                       Text="Read straight from the game's mod.io folder. Subscribe to mods in the game's mod browser and they show up here automatically." />
-            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-                <Button Style="{StaticResource LinkButton}" Command="{Binding OpenPathCommand}" CommandParameter="Modio" Content="Open mod folder" Margin="0,0,16,0" />
-                <Button Style="{StaticResource LinkButton}" Command="{Binding OpenPathCommand}" CommandParameter="ModioSite" Content="Find more mods on mod.io" />
-            </StackPanel>
+            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource Mute}" FontSize="13" Margin="0,6,0,0"
+                       Text="Read from the game's own mod folder on this PC. Mods you subscribe to in the game's mod menu show up here after the game has downloaded them." />
         </Grid>
 
         <Grid Grid.Row="1">
@@ -129,11 +126,12 @@
                                     <Run Text="{Binding SelectedMod.Author, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Version, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Updated, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Info.SizeOnDisk, Mode=OneWay, Converter={StaticResource Bytes}}" />
                                 </TextBlock>
                                 <TextBlock Text="{Binding SelectedMod.Tags}" FontSize="11.5" Foreground="{StaticResource AccentSoftFg}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0">
+                                    <Run Text="State: " /><Run Text="{Binding SelectedMod.Info.State, Mode=OneWay}" />
+                                </TextBlock>
                                 <WrapPanel Margin="0,10,0,0">
                                     <Button Style="{StaticResource AccentButton}" Content="Use its mutators" Margin="0,0,8,6" Command="{Binding UseModMutatorsCommand}" CommandParameter="{Binding SelectedMod}"
                                             Visibility="{Binding SelectedMod.MutatorCount, Converter={StaticResource Vis}}" />
-                                    <Button Content="Mod page" Margin="0,0,8,6" Command="{Binding OpenUrlCommand}" CommandParameter="{Binding SelectedMod.Info.ProfileUrl}"
-                                            Visibility="{Binding SelectedMod.Info.ProfileUrl, Converter={StaticResource Vis}}" />
                                     <Button Content="Open folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenModFolderCommand}" CommandParameter="{Binding SelectedMod}" />
                                 </WrapPanel>
                             </StackPanel>
@@ -145,7 +143,7 @@
 
                         <TextBlock Text="{Binding SelectedMod.Summary}" Style="{StaticResource Dim}" Margin="0,14,0,0" FontSize="13" />
 
-                        <StackPanel Visibility="{Binding SelectedMod.Info.Mutators, Converter={StaticResource Vis}}">
+                        <StackPanel Visibility="{Binding SelectedMod.Info.Mutators.Count, Converter={StaticResource Vis}}">
                             <TextBlock Text="MUTATORS IN THIS MOD" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
                             <ItemsControl ItemsSource="{Binding SelectedMod.Info.Mutators}" Focusable="False">
                                 <ItemsControl.ItemTemplate>
@@ -169,7 +167,7 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <StackPanel Visibility="{Binding SelectedMod.Info.Scenarios, Converter={StaticResource Vis}}">
+                        <StackPanel Visibility="{Binding SelectedMod.Info.Scenarios.Count, Converter={StaticResource Vis}}">
                             <TextBlock Text="SCENARIOS (PLAYABLE ON THE PLAY PAGE)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
                             <ItemsControl ItemsSource="{Binding SelectedMod.Info.Scenarios}" Focusable="False">
                                 <ItemsControl.ItemTemplate>
@@ -194,7 +192,7 @@
             </Border>
             <TextBlock Grid.Column="2" Style="{StaticResource Dim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="420"
                        Visibility="{Binding ModCount, Converter={StaticResource VisNot}}"
-                       Text="No mods found. Subscribe to mods in the game (Main menu > Mods), start the game once so they download, then press Rescan." />
+                       Text="No mods found. Subscribe to mods in the game's mod menu, start the game once so they download, then press Rescan." />
         </Grid>
     </Grid>
 </UserControl>

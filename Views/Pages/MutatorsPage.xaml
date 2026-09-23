@@ -221,8 +221,6 @@
                                 </DockPanel>
                             </StackPanel>
                             <WrapPanel Margin="0,12,0,0">
-                                <Button Content="Open mod page" Margin="0,0,8,6" Command="{Binding OpenUrlCommand}" CommandParameter="{Binding SelectedMutatorMod.ProfileUrl}"
-                                        Visibility="{Binding SelectedMutatorMod.ProfileUrl, Converter={StaticResource Vis}, FallbackValue=Collapsed}" />
                                 <Button Content="Open mod folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenUrlCommand}" CommandParameter="{Binding SelectedMutatorMod.Folder}"
                                         Visibility="{Binding SelectedMutatorMod.Folder, Converter={StaticResource Vis}, FallbackValue=Collapsed}" />
                                 <Button Content="Remove this entry" Style="{StaticResource DangerButton}" Margin="0,0,8,6" Command="{Binding DeleteCustomMutatorCommand}" CommandParameter="{Binding SelectedMutator}"
