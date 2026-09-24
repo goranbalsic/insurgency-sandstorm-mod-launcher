@@ -243,10 +243,26 @@
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0"
                                        Text="Local play with bots, mods, mutators and full rule control for Insurgency: Sandstorm. Open source under the MIT license. Not affiliated with New World Interactive or Focus Entertainment." />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoUpdate}" Margin="0,12,0,4">
+                                <StackPanel>
+                                    <TextBlock Text="Keep the launcher up to date" FontSize="13.5" />
+                                    <TextBlock Text="{Binding AutoUpdateHint, Mode=OneTime}" Style="{StaticResource Mute}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <DockPanel Margin="0,4,0,0">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Button Content="Restart now" Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding RestartToUpdateCommand}"
+                                            Visibility="{Binding UpdateReady, Converter={StaticResource Vis}}" />
+                                    <Button Content="Download" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding OpenUpdatePageCommand}"
+                                            Visibility="{Binding UpdateDownloadOnly, Converter={StaticResource Vis}}" />
+                                    <Button Content="Check now" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding CheckUpdatesCommand}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource Mute}" VerticalAlignment="Center" />
+                            </DockPanel>
                             <WrapPanel Margin="0,10,0,0">
                                 <Button Style="{StaticResource LinkButton}" Content="Source code" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
                                         CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher" />
-                                <Button Style="{StaticResource LinkButton}" Content="Updates" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
+                                <Button Style="{StaticResource LinkButton}" Content="Releases" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
                                         CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases" />
                                 <Button Style="{StaticResource LinkButton}" Content="Report a problem" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
                                         CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />

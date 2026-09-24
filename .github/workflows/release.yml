@@ -1,10 +1,18 @@
 name: Release
 
 # Every release zip is built here from the tagged source. Nothing is uploaded by hand.
+# A release is made when a vX.Y.Z tag is pushed, or when main gets a <Version> in the
+# project file that has no release yet. Installed launchers pick it up by themselves.
 
 on:
   push:
     tags: ["v*"]
+    branches: [main]
+
+# A main push and a tag push for the same version run one after the other; the second one sees the release and stops.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -17,17 +25,42 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Version
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}"
+          } else {
+            $m = Select-String -Path SandstormModLauncher.csproj -Pattern '<Version>([^<]+)</Version>' | Select-Object -First 1
+            $tag = "v" + $m.Matches[0].Groups[1].Value
+          }
+          gh release view $tag --repo "${{ github.repository }}" *> $null
+          $released = $LASTEXITCODE -eq 0
+          $global:LASTEXITCODE = 0
+          if ($released) { "skip=true" >> $env:GITHUB_OUTPUT; Write-Host "$tag is already released"; exit 0 }
+          $version = $tag.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag $tag is not vX.Y.Z" }
+          "skip=false" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
       - uses: actions/setup-dotnet@v6
+        if: steps.version.outputs.skip != 'true'
         with:
           dotnet-version: 10.0.x
 
       - name: Build
-        run: dotnet build SandstormModLauncher.csproj -c Release -o out
+        if: steps.version.outputs.skip != 'true'
+        run: dotnet build SandstormModLauncher.csproj -c Release -o out -p:OfficialBuild=true -p:Version=${{ steps.version.outputs.version }} -p:FileVersion=${{ steps.version.outputs.version }}.0
 
       - name: Package
+        if: steps.version.outputs.skip != 'true'
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
+          $version = "${{ steps.version.outputs.tag }}"
           $zip = "SandstormModLauncher-$version.zip"
           New-Item -ItemType Directory -Path pkg | Out-Null
           Copy-Item out/SandstormModLauncher.exe, out/SandstormModLauncher.exe.config -Destination pkg/
@@ -42,6 +75,7 @@ jobs:
           Get-Content SHA256SUMS.txt
 
       - name: Attest build provenance
+        if: steps.version.outputs.skip != 'true'
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
@@ -49,14 +83,15 @@ jobs:
             pkg/SandstormModLauncher.exe
 
       - name: Publish release
+        if: steps.version.outputs.skip != 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $version = "${{ github.ref_name }}"
+          $version = "${{ steps.version.outputs.tag }}"
           $run = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $notes = Get-Content packaging/release-notes.md -Raw
           $notes = $notes.Replace("{VERSION}", $version).Replace("{REPO}", "${{ github.repository }}").Replace("{RUN_URL}", $run)
           $notes = $notes.Replace("{SHA256}", (Get-Content SHA256SUMS.txt -Raw).Trim())
           Set-Content -Path notes.md -Value $notes -Encoding utf8
-          gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --title "Sandstorm Mod Launcher $version" --notes-file notes.md
+          gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --target "${{ github.sha }}" --title "Sandstorm Mod Launcher $version" --notes-file notes.md

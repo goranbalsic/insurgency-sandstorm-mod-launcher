@@ -50,6 +50,7 @@ namespace SandstormModLauncher.ViewModels
             InitLiveCommands();
             InitSettingsCommands();
             InitLaunchCommands();
+            InitUpdateCommands();
         }
 
         // ------------------------------------------------------------------ startup
@@ -111,6 +112,7 @@ namespace SandstormModLauncher.ViewModels
 
         public void Dispose()
         {
+            updateTimer?.Stop();
             SaveNow();
             Monitor?.Dispose();
             modWatcher?.Dispose();

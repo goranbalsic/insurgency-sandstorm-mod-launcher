@@ -38,7 +38,8 @@ What it does on your PC
   that the console line is open before it types anything, and only types
   while the Insurgency: Sandstorm window is in front.
 - Keeps its settings and logs in %APPDATA%\SandstormModLauncher
-- No network access, no telemetry.
+- No telemetry. The only network access is the update check against the
+  project's GitHub releases (Settings > About turns it off).
 - Never changes game files and does not touch the anti-cheat. Local play only.
 
 
@@ -55,10 +56,20 @@ The release page lists the SHA-256 of every file. To check yours, run in PowerSh
 You can also build it yourself from the source code.
 
 
+Updates
+-------
+The launcher updates itself. Every few hours it checks the GitHub releases,
+verifies the new zip against its SHA-256 and replaces its own exe. The new
+version is used the next time you open it (or click "Update ready" at the
+bottom left). Nothing is installed anywhere else.
+
+
 Uninstall
 ---------
 Use Settings > "Remove launcher rules from Game.ini" if you changed rules,
 then delete this folder and %APPDATA%\SandstormModLauncher
+(a SandstormModLauncher.exe.old file next to the exe after an update is
+removed automatically at the next start).
 
 
 Source code, updates and issues

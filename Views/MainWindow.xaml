@@ -119,7 +119,12 @@
                 </Grid.ColumnDefinitions>
                 <Border Background="{StaticResource Bg0}" BorderBrush="{StaticResource Bg4}" BorderThickness="0,0,1,0">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" Margin="0,0,0,10" />
+                        <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,10">
+                            <Button Style="{StaticResource LinkButton}" Content="Update ready" FontSize="10.5" HorizontalAlignment="Center" Margin="0,0,0,4"
+                                    Command="{Binding RestartToUpdateCommand}" ToolTip="{Binding UpdateReadyTip}"
+                                    Visibility="{Binding UpdateReady, Converter={StaticResource Vis}}" />
+                            <TextBlock Text="{Binding AppVersion}" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                        </StackPanel>
                         <StackPanel Margin="0,10,0,0">
                             <RadioButton Style="{StaticResource NavButton}" Content="PLAY" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, official playlists and live control of the match" />
                             <RadioButton Style="{StaticResource NavButton}" Content="MODS" Tag="&#xEA86;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Mods}" ToolTip="Mutators (official and from mods) and installed mods" />

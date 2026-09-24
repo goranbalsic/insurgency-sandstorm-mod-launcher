@@ -19,7 +19,8 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - Live match control: restart rounds, set the clock, respawn or freeze bots, change rules mid-match, and every console command the game has, searchable
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - One click: starts the game, waits for the main menu and loads the match
-- Fully offline: no accounts, no network access, no telemetry
+- Updates itself quietly from this repository's releases (checked against the published SHA-256, can be turned off)
+- Plays fully offline: no accounts, no telemetry
 
 | Match rules | Mods and mutators |
 | --- | --- |
@@ -29,7 +30,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 
 ## Download
 
-Get the zip from [Releases](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest), extract it anywhere and run `SandstormModLauncher.exe`. No installer, no admin rights.
+Get the zip from [Releases](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest), extract it anywhere and run `SandstormModLauncher.exe`. No installer, no admin rights. From then on it keeps itself up to date: a new version is put in place in the background and used from the next start.
 
 Requirements: Windows 10 or 11, Insurgency: Sandstorm, .NET Framework 4.8 (part of Windows 10 1903 and newer).
 
@@ -54,16 +55,17 @@ What the program does on your PC:
 - Sends keystrokes only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
 - Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
 - Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
-- No network access, no telemetry. Never changes game files and does not touch the anti-cheat. It is for local play only
+- No telemetry. Its only network access is the update check: it reads the latest release of this repository from GitHub, and when there is a newer one it downloads the zip, checks it against the release's SHA256SUMS.txt and replaces its own exe (Settings > About turns this off)
+- Never changes game files and does not touch the anti-cheat. It is for local play only
 
 The exe is not code-signed, so SmartScreen may show "Windows protected your PC" (More info > Run anyway). Some antivirus tools are wary of programs that send keystrokes. To check a download:
 
 ```powershell
 # compare with the SHA-256 on the release page
-Get-FileHash .\SandstormModLauncher-v1.2.4.zip -Algorithm SHA256
+Get-FileHash .\SandstormModLauncher-v1.3.0.zip -Algorithm SHA256
 
 # check that the file was built by this repository's workflow (GitHub CLI)
-gh attestation verify .\SandstormModLauncher-v1.2.4.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
+gh attestation verify .\SandstormModLauncher-v1.3.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
 ```
 
 Or build it yourself and use your own exe.
@@ -82,12 +84,16 @@ cd insurgency-sandstorm-mod-launcher
 dotnet build -c Release
 ```
 
-The exe ends up in `bin\Release\net48\`. Command line tools:
+The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new releases but does not replace itself; only release builds (`-p:OfficialBuild=true`) do. Command line tools:
 
 - `--selftest report.txt` writes a report of what it finds in your game and mods
 - `--probe-test out.txt shot1.png ...` checks the console detection against screenshots of the game
 - `--render folder` draws every page to PNG files without opening a window
 - `--data folder` keeps settings and logs in another folder (for testing)
+
+## Releasing
+
+Raise `<Version>` in `SandstormModLauncher.csproj`, add the changes to `packaging/release-notes.md` and push to `main` (or push a `vX.Y.Z` tag). The [release workflow](.github/workflows/release.yml) builds, checksums and publishes the release, and installed launchers update themselves within a few hours.
 
 ## FAQ
 
