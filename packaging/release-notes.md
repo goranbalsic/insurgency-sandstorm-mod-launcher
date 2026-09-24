@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.2.4**
+
+- Co-op with AI teammates always gets at least 8 player slots (teammates did not join with only 2 or 3), and the teammate count is also sent after the map loads.
+
 **Changes in 1.2.3**
 
 - Co-op AI teammates: the match is now started with bots enabled (bBots), which co-op modes have off by default.

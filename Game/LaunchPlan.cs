@@ -131,7 +131,8 @@ namespace SandstormModLauncher.Game
             if (plan.Mode != null && plan.Mode.Coop)
             {
                 string fb = plan.Overrides.TryGetValue("FriendlyBotQuota", out var ov2) ? ov2 : db.DefaultValue(cls, "FriendlyBotQuota");
-                if (int.TryParse(fb, out int mates) && mates > 0) plan.PlayerSlots = Math.Max(plan.PlayerSlots, 1 + mates);
+                // Offline nobody else joins, so plenty of slots costs nothing; too few and the AI teammates do not join.
+                if (int.TryParse(fb, out int mates) && mates > 0) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Max(8, 1 + mates + 2));
             }
             url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
             url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
@@ -163,7 +164,7 @@ namespace SandstormModLauncher.Game
             if (state.Settings.ApplyLiveRules && cls != null)
                 foreach (var kv in plan.Overrides)
                 {
-                    if (RestartOnly.Contains(kv.Key)) continue;
+                    // FriendlyBotQuota is also read at game start from Game.ini; sending it again does no harm.
                     plan.AfterLoad.Add("AdminSetGamemodeProperty " + kv.Key + " " + kv.Value);
                 }
             bool versusDifficulty = plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var vd);
