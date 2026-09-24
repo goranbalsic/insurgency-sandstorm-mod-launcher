@@ -87,7 +87,7 @@ namespace SandstormModLauncher.Services
                 var f = LoadStrip(png);
                 string why = "cannot read";
                 var bar = f == null ? null : ConsoleProbe.FindOpenConsole(f, out why);
-                sb.AppendLine(Path.GetFileName(png) + ": " + (bar != null ? "OPEN " : "closed ") + why);
+                sb.AppendLine(Path.GetFileName(png) + ": " + (bar != null ? "OPEN " + (ConsoleProbe.LineLooksEmpty(f, bar) ? "empty line " : "text on line ") : "closed ") + why);
             }
             File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
         }

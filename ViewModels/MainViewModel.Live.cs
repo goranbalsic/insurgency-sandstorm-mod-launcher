@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -64,7 +64,7 @@ namespace SandstormModLauncher.ViewModels
                 Title = title, Cheat = cheat, Badge = cheat ? "CHEAT" : "ADMIN",
                 Actions = actions.Select(a => new LiveAction { Label = a.label, Command = a.cmd, Tip = a.tip }).ToList()
             };
-            LiveGroups.Add(G("ROUND", false,
+            LiveGroups.Add(G("Round", false,
                 ("Restart round", "AdminRestartRound 0", "Starts the round again with the current settings."),
                 ("Restart and switch sides", "AdminRestartRound 1", "Restarts the round with the teams swapped."),
                 ("5 minutes left", "SetRoundTimer 300", "Sets the round clock to 5:00."),
@@ -74,12 +74,12 @@ namespace SandstormModLauncher.ViewModels
                 ("Round never ends", "IgnoreRoundOver 1", "The round keeps going when it would end."),
                 ("Round can end again", "IgnoreRoundOver 0", "Turns \"Round never ends\" off."),
                 ("End the match", "AdminForceGameOver", "Ends the match immediately.")));
-            LiveGroups.Add(G("OBJECTIVES", true,
+            LiveGroups.Add(G("Objectives", true,
                 ("Capture current objective", "InstaCap", "Captures the objective you are attacking."),
                 ("Start a counter-attack", "CheatCounterAttack", "Co-op: triggers a counter-attack now."),
                 ("Finish the counter-attack", "CheatFinishCounterAttack", "Co-op: ends the running counter-attack."),
                 ("Skip to extraction", "SkipToExtraction", "Co-op with extraction: jumps to the final extraction.")));
-            LiveGroups.Add(G("BOTS", true,
+            LiveGroups.Add(G("Bots", true,
                 ("Respawn all bots", "RespawnAllBots", "Brings every bot back."),
                 ("Respawn enemy bots", "AIRespawnEnemyBots", "Brings enemy bots back."),
                 ("Respawn AI teammates", "AIRespawnFriendlyBots", "Brings dead AI teammates back."),
@@ -88,14 +88,14 @@ namespace SandstormModLauncher.ViewModels
                 ("Freeze or unfreeze all AI", "AIToggle", "Stops every bot in place, press again to resume."),
                 ("Bots ignore everyone", "AIIgnorePlayers", "Co-op: bots stop attacking players. Press again to undo."),
                 ("Bots ignore me", "AINoTargetPlayer", "Enemies stop targeting you.")));
-            LiveGroups.Add(G("YOUR SOLDIER", true,
+            LiveGroups.Add(G("Your soldier", true,
                 ("God mode", "GodMode", "You can't take damage. Press again to turn off."),
                 ("Refill ammo and gear", "ResupplyNow", "Instant resupply."),
                 ("Give 10 supply points", "GiveSupplyPointsUnrestricted 10", "Extra supply for your loadout."),
                 ("Respawn me", "RespawnMe", "Respawns your soldier."),
                 ("Revive me", "Revive", "Gets you back up."),
                 ("Fly through walls", "Noclip", "Free movement through geometry. Press again to land.")));
-            LiveGroups.Add(G("MATCH & VIEW", true,
+            LiveGroups.Add(G("Match & view", true,
                 ("Respawn every player", "AdminRespawnAllPlayers", "Respawns all players on both teams."),
                 ("Slow motion", "Slomo 0.4", "Game runs at 40% speed."),
                 ("Normal speed", "Slomo 1", "Back to normal game speed."),

@@ -336,7 +336,7 @@ namespace SandstormModLauncher.Game
             bool wasInFront = input.IsForeground;
             if (!input.Focus(4000)) throw new ConsoleSendException("Could not bring the game to the front. Click the game once and try again.", true);
             // Coming back from the background, fullscreen needs a moment before the game draws again.
-            Thread.Sleep(wasInFront ? 150 : 1500);
+            Thread.Sleep(wasInFront ? 120 : 1000);
             Frame before = WaitSteady(hwnd, 3500);
             if (before == null) throw new ConsoleSendException("Could not see the game picture (it stayed empty), so no keys were sent. Click the game once and try again.", true);
             if (!input.IsForeground) throw new ConsoleSendException("The game lost focus before the console could be opened, so no keys were sent.", true);
@@ -390,8 +390,9 @@ namespace SandstormModLauncher.Game
             if (settled != null && ConsoleProbe.BarStillThere(opened, settled, bar)) opened = settled;
 
             // 2. Clear anything left on the line, checking the console is still open in between.
+            // Stops as soon as the line shows nothing past the prompt (usually after the first batch).
             input.Tap(VK_END);
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 6; i++)
             {
                 var f = Grab(hwnd);
                 if (!ConsoleProbe.BarStillThere(opened, f, bar))
@@ -399,9 +400,10 @@ namespace SandstormModLauncher.Game
                     SaveShots(id, "closed-while-clearing", before, opened, f);
                     throw new ConsoleSendException("The console closed while the launcher was using it, so the command was not sent.", false);
                 }
-                input.TapRepeat(VK_BACK, 30);
+                if (i > 0 && ConsoleProbe.LineLooksEmpty(f, bar)) break;
+                input.TapRepeat(VK_BACK, 40);
             }
-            Thread.Sleep(60);
+            Thread.Sleep(40);
             Frame empty = Grab(hwnd);
             if (!ConsoleProbe.BarStillThere(opened, empty, bar))
             {
@@ -475,25 +477,29 @@ namespace SandstormModLauncher.Game
 
             // 4. The game's menus can take the keyboard back after the console opened (window activation,
             // menu set-up). Other keys still reach the console then, but Enter presses the focused menu button
-            // instead of running the line. The console takes the keyboard whenever it opens, so close it and
-            // open it again right before Enter, and check the line is still there.
+            // instead of running the line. The console takes the keyboard whenever it opens, so cycle it
+            // (typing -> big console -> closed -> typing, one quick key press each) right before Enter,
+            // and check the line is still there.
             bool reopened = false;
-            for (int press = 0; press < 4 && !reopened; press++)
+            for (int press = 0; press < 5 && !reopened; press++)
             {
                 input.Tap(openVk);
                 Frame f = null;
                 ConsoleBar now = null;
                 var wait = Stopwatch.StartNew();
+                // First press: wait for the line to go (big console). Second: the console closes, which looks the
+                // same at the bottom edge, so only a short look. After that: wait for the line to come back.
                 bool wantOpen = press > 0;
-                while (wait.ElapsedMilliseconds < 800)
+                int timeout = press == 0 ? 500 : press == 1 ? 90 : 900;
+                do
                 {
-                    Thread.Sleep(60);
+                    Thread.Sleep(30);
                     f = Grab(hwnd);
                     now = ConsoleProbe.FindOpenConsole(f, out _);
                     if ((now != null) == wantOpen) break;
                 }
-                if (now == null) continue;              // closed (or the big console): the next press moves on
-                if (!wantOpen) continue;                // did not close yet: keep cycling
+                while (wait.ElapsedMilliseconds < timeout);
+                if (!wantOpen || now == null) continue;  // the next press moves the cycle on
                 reopened = true;
                 bar = now;
                 opened = f;

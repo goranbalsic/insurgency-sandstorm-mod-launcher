@@ -1,4 +1,4 @@
-<UserControl x:Class="SandstormModLauncher.Views.Pages.PlayPage"
+﻿<UserControl x:Class="SandstormModLauncher.Views.Pages.PlayPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:SandstormModLauncher.Views.Controls"
@@ -41,9 +41,8 @@
             <Setter Property="Foreground" Value="{StaticResource TextMute}" />
             <Setter Property="Margin" Value="0,16,0,6" />
         </Style>
-        <Style x:Key="TabSegment" TargetType="RadioButton" BasedOn="{StaticResource Segment}">
-            <Setter Property="MinWidth" Value="90" />
-            <Setter Property="MinHeight" Value="34" />
+        <Style x:Key="TabSegment" TargetType="RadioButton" BasedOn="{StaticResource PageTab}">
+            <Setter Property="MinWidth" Value="84" />
         </Style>
     </UserControl.Resources>
 
@@ -53,31 +52,22 @@
             <ColumnDefinition Width="20" />
             <ColumnDefinition Width="410" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.Style>
-                <Style TargetType="Grid">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding ShowSetupColumn}" Value="False"><Setter Property="Grid.ColumnSpan" Value="3" /></DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Grid.Style>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-            <!-- ============================================================ header + tabs -->
+            <!-- ============================================================ header + tabs (full width, never moves) -->
+            <Border Grid.ColumnSpan="3" Style="{StaticResource TabStrip}">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left">
+                <StackPanel DockPanel.Dock="Left" Margin="0,0,0,8">
                     <TextBlock Style="{StaticResource Kicker}">
-                        <Run Text="PLAY · " /><Run Text="{Binding RulesModeTitle, Mode=OneWay, Converter={StaticResource Upper}}" />
+                        <Run Text="Play · " /><Run Text="{Binding RulesModeTitle, Mode=OneWay}" />
                     </TextBlock>
-                    <TextBlock FontSize="28" Margin="0,2,0,0">
+                    <TextBlock FontSize="20" Margin="0,2,0,0">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource H1}">
-                                <Setter Property="Text" Value="Choose your operation" />
+                                <Setter Property="Text" Value="Map and scenario" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="Match rules" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Playlists"><Setter Property="Text" Value="Official playlists" /></DataTrigger>
@@ -88,7 +78,7 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </StackPanel>
-                <Border DockPanel.Dock="Right" Style="{StaticResource SegmentHost}" VerticalAlignment="Bottom">
+                <Border DockPanel.Dock="Right" VerticalAlignment="Bottom">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Map}">
                             <StackPanel Orientation="Horizontal">
@@ -131,9 +121,16 @@
                     </StackPanel>
                 </Border>
             </DockPanel>
+            </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
             <!-- ============================================================ map toolbar -->
-            <DockPanel Grid.Row="1" Margin="0,14,0,12" LastChildFill="False" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
+            <DockPanel Grid.Row="0" Margin="0,14,0,12" LastChildFill="False" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <RadioButton Style="{StaticResource Chip}" IsChecked="{Binding MapFilter, Converter={StaticResource Eq}, ConverterParameter=All}">
                         <TextBlock><Run Text="All " /><Run Text="{Binding AllMapCount, Mode=OneWay}" /></TextBlock>
@@ -171,7 +168,7 @@
             </DockPanel>
 
             <!-- ============================================================ rules toolbar -->
-            <DockPanel Grid.Row="1" Margin="0,14,0,10" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
+            <DockPanel Grid.Row="0" Margin="0,14,0,10" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                     <Grid Width="200">
                         <TextBox Text="{Binding RuleSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search every setting" Padding="30,6,8,6" />
@@ -192,10 +189,10 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b" Height="28" CornerRadius="14" Padding="11,0" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{StaticResource Line}" Background="Transparent">
+                                        <Border x:Name="b" Height="28" CornerRadius="2" Padding="11,0" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{StaticResource Line}" Background="Transparent">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                 <TextBlock x:Name="t" Text="{Binding Name}" FontSize="12" Foreground="{StaticResource TextDim}" />
-                                                <Border x:Name="n" CornerRadius="7" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
+                                                <Border x:Name="n" CornerRadius="2" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
                                                         Visibility="{Binding Changes, Converter={StaticResource Vis}}" ToolTip="Changed settings">
                                                     <TextBlock Text="{Binding Changes}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                 </Border>
@@ -222,7 +219,7 @@
             </DockPanel>
 
             <!-- ============================================================ maps -->
-            <Grid Grid.Row="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
+            <Grid Grid.Row="1" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
                 <ScrollViewer x:Name="mapScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                     <ItemsControl ItemsSource="{Binding MapsView}" Margin="-6,-6,-6,0" Focusable="False">
                         <ItemsControl.ItemsPanel>
@@ -237,11 +234,11 @@
                                         ToolTip="{Binding Counts}">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border x:Name="card" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Bg4}" Background="{StaticResource Bg2}">
+                                            <Border x:Name="card" CornerRadius="2" BorderThickness="1" BorderBrush="{StaticResource Bg4}" Background="{StaticResource Bg2}">
                                                 <Grid>
                                                     <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="44" Foreground="{StaticResource Line}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,26" />
-                                                    <Border CornerRadius="7">
+                                                    <Border CornerRadius="2">
                                                         <Border.Background>
                                                             <ImageBrush ImageSource="{Binding Thumb, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                                         </Border.Background>
@@ -263,7 +260,7 @@
                                                             <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Display}" FontSize="18" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="4" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
+                                                        <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="2" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
                                                                 Visibility="{Binding Tag, Converter={StaticResource Vis}}">
                                                             <TextBlock Text="{Binding Tag}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                         </Border>
@@ -272,7 +269,7 @@
                                                             Background="#B0101214" ToolTip="Edit this custom map"
                                                             Visibility="{Binding Custom, Converter={StaticResource Vis}}"
                                                             Command="{Binding DataContext.EditCustomMapCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                    <Border x:Name="check" Width="22" Height="22" CornerRadius="11" Background="{StaticResource Accent}" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                    <Border x:Name="check" Width="22" Height="22" CornerRadius="2" Background="{StaticResource Accent}" HorizontalAlignment="Left" VerticalAlignment="Top"
                                                             Margin="8" Visibility="Collapsed">
                                                         <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="11" Foreground="{StaticResource AccentText}" HorizontalAlignment="Center" />
                                                     </Border>
@@ -301,7 +298,7 @@
             </Grid>
 
             <!-- ============================================================ rules -->
-            <Grid Grid.Row="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
+            <Grid Grid.Row="1" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
@@ -313,7 +310,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="10,10,0,0" Padding="14,8">
+                        <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="2,2,0,0" Padding="14,8">
                             <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource InfoFg}">
                                 <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode picked on the map. Bots, enemies and difficulty are in the squad card on the right. Gold values differ from the game default; they are written to Game.ini before the game starts and sent again after the map loads." />
                             </TextBlock>
@@ -365,7 +362,7 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <StackPanel Margin="14,12,14,8">
-                            <TextBlock Text="PRESETS" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="Presets" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="One click sets many rules. Official rulesets are the exact values from the game files." />
                             <Border Style="{StaticResource SegmentHost}">
                                 <UniformGrid Rows="1">
@@ -380,7 +377,7 @@
                                 <ItemsControl ItemsSource="{Binding RulePresets}" Focusable="False">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="11,9" Margin="0,0,0,8">
+                                            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="11,9" Margin="0,0,0,8">
                                                 <StackPanel>
                                                     <DockPanel>
                                                         <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24" FontSize="10" Content="&#xE74D;" ToolTip="Delete preset"
@@ -409,21 +406,21 @@
             </Grid>
 
             <!-- ============================================================ playlists + live -->
-            <p:PlaylistsPage Grid.Row="1" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Playlists}" />
-            <p:LivePage Grid.Row="1" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Live}" />
+            <p:PlaylistsPage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Playlists}" />
+            <p:LivePage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Live}" />
 
             <!-- ============================================================ advanced -->
-            <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0" Margin="0,14,0,0" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Advanced}">
+            <Border Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource Card}" Padding="0" Margin="0,14,0,0" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Advanced}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="18,4,18,16">
                     <StackPanel>
-                        <TextBlock Text="OFFICIAL RULESET AT GAME START" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="Official ruleset at game start" Style="{StaticResource SectionLabel}" />
                         <DockPanel>
                             <ComboBox Width="240" ItemsSource="{Binding OfficialRulesetChoices}" SelectedItem="{Binding LaunchRuleset}" DockPanel.Dock="Left" />
                             <TextBlock Style="{StaticResource Mute}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
                                        Text="Starts the game with -ruleset=, exactly like the official playlist. Also changes things the rules list can't, like movement speed. Needs a game start." />
                         </DockPanel>
 
-                        <TextBlock Text="EXTRA GAME.INI LINES" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="Extra Game.ini lines" Style="{StaticResource SectionLabel}" />
                         <DockPanel Margin="0,0,0,8">
                             <Border Style="{StaticResource SegmentHost}" DockPanel.Dock="Left">
                                 <StackPanel Orientation="Horizontal">
@@ -452,12 +449,12 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <TextBlock Text="COMMANDS AFTER THE MAP LOADS" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="Commands after the map loads" Style="{StaticResource SectionLabel}" />
                         <TextBox Style="{StaticResource CodeBox}" Height="90" Text="{Binding AfterLoadCommands, UpdateSourceTrigger=LostFocus}"
                                  Tag="One console command per line, e.g.&#x0a;SetRoundTimer 1800" />
                         <CheckBox Content="Turn on cheats after loading (EnableCheats)" IsChecked="{Binding EnableCheatsAfterLoad}" Margin="0,10,0,0" />
 
-                        <TextBlock Text="TRAVEL URL" Style="{StaticResource SectionLabel}" />
+                        <TextBlock Text="Travel URL" Style="{StaticResource SectionLabel}" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -475,7 +472,7 @@
                         </Grid>
                         <CheckBox Content="Load the map twice (for mods that only work after a second load)" IsChecked="{Binding ForceReload}" Margin="0,12,0,0" />
 
-                        <TextBlock Text="WHAT THE LAUNCHER WILL DO" Style="{StaticResource SectionLabel}" Margin="0,22,0,6" />
+                        <TextBlock Text="What the launcher will do" Style="{StaticResource SectionLabel}" Margin="0,22,0,6" />
                         <TextBlock Style="{StaticResource Mute}" Text="Console command" />
                         <TextBox Style="{StaticResource CodeBox}" IsReadOnly="True" Text="{Binding PlanCommand, Mode=OneWay}" TextWrapping="Wrap" Height="Auto" MinHeight="44" Margin="0,4,0,8" />
                         <TextBlock Style="{StaticResource Mute}" Text="Game.ini block (other lines in your Game.ini are kept)" />
@@ -487,23 +484,22 @@
             </Border>
         </Grid>
 
-        <!-- ============================================================ setup column (Map and Rules tabs) -->
-        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0"
-                      Visibility="{Binding ShowSetupColumn, Converter={StaticResource Vis}}">
+        <!-- ============================================================ setup column (always shown, so the page never changes shape) -->
+        <ScrollViewer Grid.Row="1" Grid.Column="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
             <StackPanel>
                 <!-- scenario -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" Text="{Binding SelectedMap.Counts}" />
-                            <TextBlock Style="{StaticResource H2}" FontSize="16" TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedMapTitle, Converter={StaticResource Upper}, StringFormat={}{0} · SCENARIO}" />
+                            <TextBlock Style="{StaticResource H2}" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding SelectedMapTitle, StringFormat={}{0}}" />
                         </DockPanel>
                         <ItemsControl ItemsSource="{Binding ScenarioModeGroups}" Margin="0,4,0,0" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Name, Converter={StaticResource Upper}}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
+                                        <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
                                         <ItemsControl ItemsSource="{Binding Modes}" Focusable="False">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -521,7 +517,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <StackPanel Visibility="{Binding HasScenarioSides, Converter={StaticResource Vis}}" Margin="0,6,0,0">
-                            <TextBlock Text="SIDE" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
+                            <TextBlock Text="Side" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
                             <Border Style="{StaticResource SegmentHost}">
                                 <ItemsControl ItemsSource="{Binding ScenarioSides}" Focusable="False">
                                     <ItemsControl.ItemsPanel>
@@ -573,7 +569,7 @@
                     <StackPanel>
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="All match rules" Command="{Binding PlayTabCommand}" CommandParameter="Rules" VerticalAlignment="Bottom" />
-                            <TextBlock Text="SQUAD &amp; ENEMIES" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="Squad and enemies" Style="{StaticResource H2}" />
                         </DockPanel>
                         <TextBlock Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap">
                             <Run Text="{Binding CurrentModeName, Mode=OneWay}" /><Run Text=" defaults are used unless you change them. Changed values turn gold." />
@@ -635,9 +631,9 @@
                             <Slider Minimum="0" Maximum="1" Value="{Binding AiDifficulty}" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0"
                                     ToolTip="How well bots aim, spot and react. 0.5 is the game default." />
                             <Grid Margin="0,2,0,0">
-                                <TextBlock Text="RECRUIT" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
-                                <TextBlock Text="DEFAULT 0.50" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
-                                <TextBlock Text="NIGHTMARE" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
+                                <TextBlock Text="Recruit" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
+                                <TextBlock Text="Default 0.50" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Nightmare" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
                             </Grid>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}"
                                        Text="In versus modes the difficulty is applied right after the map loads." />
@@ -650,8 +646,8 @@
                     <StackPanel>
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Manage" Command="{Binding ModsTabCommand}" CommandParameter="Mutators" VerticalAlignment="Bottom" />
-                            <TextBlock Style="{StaticResource H2}" FontSize="16">
-                                <Run Text="MUTATORS · " /><Run Text="{Binding ActiveMutatorCount, Mode=OneWay}" /><Run Text=" ACTIVE" />
+                            <TextBlock Style="{StaticResource H2}">
+                                <Run Text="Mutators · " /><Run Text="{Binding ActiveMutatorCount, Mode=OneWay}" /><Run Text=" active" />
                             </TextBlock>
                         </DockPanel>
                         <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MutatorsEnabled}" Margin="0,10,0,4" Foreground="{StaticResource TextDim}"
@@ -662,7 +658,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Height="28" CornerRadius="14" Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="11,0,4,0" Margin="0,0,6,6">
+                                    <Border Height="28" CornerRadius="2" Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="11,0,4,0" Margin="0,0,6,6">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" MaxWidth="200" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Center" Margin="7,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />

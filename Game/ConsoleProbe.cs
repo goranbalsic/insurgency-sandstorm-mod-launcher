@@ -209,6 +209,20 @@ namespace SandstormModLauncher.Game
             return new ConsoleBar { Top = darkTop - borderRows, Bottom = f.Height - 1 };
         }
 
+        /// <summary>
+        /// True when the console line shows nothing past the prompt at its left end: no bright letter pixels in the
+        /// dark band from 4% of the width onwards.
+        /// </summary>
+        public static bool LineLooksEmpty(Frame f, ConsoleBar bar)
+        {
+            if (f == null || bar == null) return false;
+            int top = bar.Top + Math.Max(3, (bar.Bottom - bar.Top) / 5), bright = 0;
+            for (int y = top; y <= bar.Bottom; y++)
+                for (int x = (int)(f.Width * 0.04); x < f.Width; x++)
+                    if (f.L(x, y) > 100 && ++bright > 6) return false;
+            return true;
+        }
+
         /// <summary>True when the bar still looks like it did right after the console opened (text may have changed).</summary>
         public static bool BarStillThere(Frame opened, Frame now, ConsoleBar bar)
         {

@@ -57,13 +57,9 @@ namespace SandstormModLauncher.ViewModels
             {
                 if (!Set(ref playTab, string.IsNullOrEmpty(value) ? "Map" : value)) return;
                 SyncRulesModeToScenario();
-                Raise(nameof(ShowSetupColumn));
                 if (playTab == "Live") RefreshLive();
             }
         }
-
-        /// <summary>The scenario / squad / mutators column is shown while setting up (Map and Rules tabs).</summary>
-        public bool ShowSetupColumn => playTab == "Map" || playTab == "Rules";
 
         private void BuildRules()
         {

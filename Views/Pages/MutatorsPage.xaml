@@ -1,4 +1,4 @@
-<UserControl x:Class="SandstormModLauncher.Views.Pages.MutatorsPage"
+﻿<UserControl x:Class="SandstormModLauncher.Views.Pages.MutatorsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid Margin="0,14,0,0">
@@ -65,7 +65,7 @@
                                         <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Bottom">
                                             <Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=" shown" />
                                         </TextBlock>
-                                        <TextBlock Text="{Binding Name, Converter={StaticResource Upper}}" FontFamily="{StaticResource Display}" FontSize="14" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Display}" FontSize="14" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
                                     </DockPanel>
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
@@ -79,7 +79,7 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b" CornerRadius="8" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
+                                        <Border x:Name="b" CornerRadius="2" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
                                             <ContentPresenter />
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -108,17 +108,17 @@
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource Bg4}" Margin="6,0,0,0" Visibility="{Binding IsBase, Converter={StaticResource Vis}}">
-                                                <TextBlock Text="BASE CLASS" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
+                                                <TextBlock Text="Base class" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding NotRegistered, Converter={StaticResource Vis}}"
                                                     ToolTip="The mod does not register this folder for mutators, so the game may not find it.">
-                                                <TextBlock Text="NOT REGISTERED" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                                <TextBlock Text="Not registered" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding Warning, Converter={StaticResource Vis}}" ToolTip="{Binding Warning}">
-                                                <TextBlock Text="CHECK" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                                <TextBlock Text="Check" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Margin="6,0,0,0" Visibility="{Binding IsActive, Converter={StaticResource Vis}}">
-                                                <TextBlock Text="ACTIVE" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
+                                                <TextBlock Text="Active" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -140,12 +140,12 @@
                         <StackPanel>
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Clear" Command="{Binding ClearMutatorsCommand}" VerticalAlignment="Bottom" />
-                                <TextBlock Text="ACTIVE · LOAD ORDER" Style="{StaticResource H2}" FontSize="16" />
+                                <TextBlock Text="Active · load order" Style="{StaticResource H2}" />
                             </DockPanel>
                             <ItemsControl ItemsSource="{Binding ActiveMutators}" Margin="0,10,0,0" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="8,5" Margin="0,0,0,4">
+                                        <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="8,5" Margin="0,0,0,4">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="26" />
@@ -179,7 +179,7 @@
 
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
-                            <TextBlock Text="PRESETS" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="Presets" Style="{StaticResource H2}" />
                             <ComboBox Margin="0,10,0,0" ItemsSource="{Binding MutatorPresetNames}" SelectedItem="{Binding SelectedMutatorPreset}" ToolTip="Load a saved set of mutators" />
                             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                 <Button Content="Save as new" Command="{Binding SaveMutatorPresetCommand}" />
@@ -190,7 +190,7 @@
 
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding SelectedMutator, Converter={StaticResource Vis}}">
                         <StackPanel>
-                            <TextBlock Text="{Binding SelectedMutator.Name, Converter={StaticResource Upper}}" Style="{StaticResource H2}" FontSize="16" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding SelectedMutator.Name}" Style="{StaticResource H2}" TextWrapping="Wrap" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0">
                                 <Run Text="From " /><Run Text="{Binding SelectedMutator.Group, Mode=OneWay}" />
                             </TextBlock>
@@ -198,7 +198,7 @@
                             <TextBlock Text="{Binding SelectedMutator.Warning}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"
                                        Visibility="{Binding SelectedMutator.Warning, Converter={StaticResource Vis}}" />
 
-                            <TextBlock Text="MUTATOR ID" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,12,0,4" />
+                            <TextBlock Text="Mutator ID" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,12,0,4" />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Copy" Command="{Binding CopyTextCommand}" CommandParameter="{Binding SelectedMutator.Id}" />
                                 <Border Style="{StaticResource Well}" Padding="8,5">
@@ -206,7 +206,7 @@
                                 </Border>
                             </DockPanel>
                             <StackPanel Visibility="{Binding SelectedMutator.Info.ConfigSection, Converter={StaticResource Vis}, FallbackValue=Collapsed}">
-                                <TextBlock Text="GAME.INI SECTION FOR ITS SETTINGS" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,10,0,4" />
+                                <TextBlock Text="Game.ini section for its settings" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,10,0,4" />
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Copy" Command="{Binding CopyTextCommand}" CommandParameter="{Binding SelectedMutator.Info.ConfigSection}" />
                                     <Border Style="{StaticResource Well}" Padding="8,5">
@@ -225,7 +225,7 @@
 
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
-                            <TextBlock Text="ADD BY NAME" Style="{StaticResource H2}" FontSize="16" />
+                            <TextBlock Text="Add by name" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" Text="For a mutator the launcher can't see, type its ID exactly as the mod author gives it." />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Add" Margin="8,0,0,0" Command="{Binding AddCustomMutatorCommand}" />
