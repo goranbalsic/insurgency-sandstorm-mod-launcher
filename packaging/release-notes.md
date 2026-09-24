@@ -1,5 +1,12 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.0**
+
+- Updates itself: every few hours the launcher looks at this project's GitHub releases, checks the new zip against its SHA-256 and quietly puts the new exe in place. It is used from the next start; "Update ready" next to the version (bottom left) restarts right away. Settings > About turns it off.
+- Fixed: renaming a profile to other letter case, switching profiles while mods were being read, co-op AI difficulty compared with a fixed 0.5, official playlists counting default values as rule changes, key binding copies of profiles with a dash in the name.
+- Saving a rules preset under an existing name now asks first. "Remove launcher rules" checks the game is closed before asking.
+- Disabled menu items look disabled, focused text boxes keep their border, and help texts point at the real pages.
+
 **Changes in 1.2.4**
 
 - Co-op with AI teammates always gets at least 8 player slots (teammates did not join with only 2 or 3), and the teammate count is also sent after the map loads.

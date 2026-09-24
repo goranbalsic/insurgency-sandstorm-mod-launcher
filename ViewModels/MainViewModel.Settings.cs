@@ -83,7 +83,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
                       nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs),
-                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot));
+                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate));
         }
 
         // ------------------------------------------------------------------ game install

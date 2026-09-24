@@ -155,6 +155,20 @@ namespace SandstormModLauncher
             window.Show();
         }
 
+        /// <summary>
+        /// Closes the launcher (settings are saved on close) and starts the exe again, which by now is the
+        /// updated one. The single-instance lock is let go first so the new process can take it.
+        /// </summary>
+        public static void RestartForUpdate()
+        {
+            string exe = Services.Updater.ExePath;
+            AppLog.Info("Restarting for the update");
+            Current.MainWindow?.Close();
+            try { singleInstance?.ReleaseMutex(); singleInstance?.Dispose(); singleInstance = null; } catch { }
+            try { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(exe) }); }
+            catch (Exception ex) { AppLog.Error("Could not start the updated launcher", ex); }
+        }
+
         private async void RunLiveTest(string script, string outFile)
         {
             try { await Services.LiveTest.Run(script, outFile); }

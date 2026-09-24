@@ -22,7 +22,11 @@ namespace SandstormModLauncher.Views
             catch (Exception ex) { AppLog.Error("Settings load failed", ex); }
             ApplySavedSize();
             DataContext = vm;
-            Loaded += async (s, e) => await vm.InitializeAsync();
+            Loaded += async (s, e) =>
+            {
+                await vm.InitializeAsync();
+                vm.StartUpdateChecks();
+            };
             StateChanged += (s, e) => UpdateChrome();
             Closing += OnClosing;
             PreviewKeyDown += OnPreviewKeyDown;
