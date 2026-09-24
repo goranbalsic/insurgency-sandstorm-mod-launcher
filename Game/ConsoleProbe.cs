@@ -149,6 +149,13 @@ namespace SandstormModLauncher.Game
             return new ConsoleBar { Top = bestTop, Bottom = bestEnd };
         }
 
+        private static int Percentile(int[] hist, int n, double q)
+        {
+            int target = (int)(n * q), acc = 0;
+            for (int v = 0; v < 256; v++) { acc += hist[v]; if (acc > target) return v; }
+            return 255;
+        }
+
         /// <summary>Share of a row's samples within ±range of its median brightness.</summary>
         private static double Flatness(int[] hist, int n, int range, out int med)
         {
@@ -170,19 +177,23 @@ namespace SandstormModLauncher.Game
             int band = BandRows(f);
             Columns(f, 0.30, 0.97, 480, out int x0, out int x1, out int step);
             var hist = new int[256];
-            int darkTop = -1;
-            // Dark rows up from the bottom edge (text only sits in the left part, outside the sampled columns
-            // unless the line is long, so allow a few bright samples).
+            int darkTop = -1, mostlyDark = 0;
+            // Dark rows up from the bottom edge. A long command covers much of the line with bright letters
+            // (up to about half of a text row), so a row counts when its darker quarter is dark.
             for (int y = f.Height - 1; y >= f.Height - band; y--)
             {
                 Array.Clear(hist, 0, 256);
-                int n = 0, bright = 0;
-                for (int x = x0; x < x1; x += step) { int v = f.L(x, y); hist[v]++; n++; if (v > 70) bright++; }
-                Flatness(hist, n, 10, out int med);
-                if (med <= 45 && bright <= n * 0.35) darkTop = y; else break;
+                int n = 0;
+                for (int x = x0; x < x1; x += step) { hist[f.L(x, y)]++; n++; }
+                int p25 = Percentile(hist, n, 0.25), med = Percentile(hist, n, 0.5);
+                if (p25 > 45) break;
+                darkTop = y;
+                if (med <= 45) mostlyDark++;
             }
             int minDark = Math.Max(6, (int)Math.Round(f.ClientHeight * 0.012));
-            if (darkTop < 0 || f.Height - darkTop < minDark) { why = $"no dark console band ({(darkTop < 0 ? 0 : f.Height - darkTop)} rows, need {minDark})"; return null; }
+            int rows = darkTop < 0 ? 0 : f.Height - darkTop;
+            if (rows < minDark) { why = $"no dark console band ({rows} rows, need {minDark})"; return null; }
+            if (mostlyDark < rows / 2) { why = $"dark band too busy ({mostlyDark} of {rows} rows mostly dark)"; return null; }
             // The solid border right above it.
             int borderRows = 0;
             for (int y = darkTop - 1; y >= Math.Max(0, darkTop - 6); y--)

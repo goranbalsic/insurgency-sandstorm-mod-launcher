@@ -112,6 +112,11 @@ namespace SandstormModLauncher.Game
                     if (def == null || !Same(def, kv.Value, db.Prop(kv.Key))) plan.Overrides[kv.Key] = kv.Value;
                 }
 
+            // Versus is played against bots unless the profile turns them off (the game's own default is off).
+            if (plan.Mode != null && !plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
+                && !(p.Rules.TryGetValue(cls, out var own) && own.ContainsKey("bBots")))
+                plan.Overrides["bBots"] = "True";
+
             // Travel URL
             var url = new StringBuilder();
             url.Append("open ").Append(plan.Level).Append("?Scenario=").Append(sc.Id);
@@ -125,7 +130,9 @@ namespace SandstormModLauncher.Game
             url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
             url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
             if (!string.IsNullOrEmpty(plan.GameAlias)) url.Append("?game=").Append(plan.GameAlias);
-            if (state.Settings.SoloGameFlag) url.Append("?bSoloGame=1");
+            // bSoloGame stops AI teammates from joining (seen in the game), so it is left out when co-op has teammates.
+            bool wantsMates = plan.Mode != null && plan.Mode.Coop && plan.PlayerSlots > Math.Max(1, p.MaxPlayers) || (plan.Mode != null && plan.Mode.Coop && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fq) ? fq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fqn) && fqn > 0);
+            if (state.Settings.SoloGameFlag && !wantsMates) url.Append("?bSoloGame=1");
             foreach (var kv in plan.Overrides)
             {
                 if (!UrlOptions.Contains(kv.Key)) continue;

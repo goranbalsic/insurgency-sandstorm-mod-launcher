@@ -1,5 +1,11 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.2.2**
+
+- AI teammates: the solo-game flag stopped them from joining; it is left out when co-op has teammates.
+- Console: a long command no longer confuses the console check (it opened the big console and gave up before Enter). If Enter still fails, the launch waits for you to press it in the game.
+- Versus is played against bots by default. Squad settings apply to all co-op modes together and to all versus modes together.
+
 **Changes in 1.2.1**
 
 - Fixed: the command was typed into the console but Enter did not run it. Right after the game window comes to the front, the game's menu can take the keyboard back, and then Enter presses a menu button instead. The launcher now closes and reopens the console right before Enter (the console takes the keyboard when it opens) and checks the line is still there. Checked in the game at the main menu and in a match.

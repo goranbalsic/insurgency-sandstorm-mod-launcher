@@ -78,6 +78,20 @@ namespace SandstormModLauncher.Services
             File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
         }
 
+        /// <summary>--probe-open out.txt a.png b.png ...: is a console line open in each saved picture?</summary>
+        public static void OpenCheck(string outFile, IEnumerable<string> pngs)
+        {
+            var sb = new StringBuilder();
+            foreach (var png in pngs)
+            {
+                var f = LoadStrip(png);
+                string why = "cannot read";
+                var bar = f == null ? null : ConsoleProbe.FindOpenConsole(f, out why);
+                sb.AppendLine(Path.GetFileName(png) + ": " + (bar != null ? "OPEN " : "closed ") + why);
+            }
+            File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
+        }
+
         public static void Analyse(string outFile, string beforePng, string afterPng)
         {
             var b = LoadStrip(beforePng);

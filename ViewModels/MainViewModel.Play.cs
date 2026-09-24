@@ -303,15 +303,31 @@ namespace SandstormModLauncher.ViewModels
 
         private int DefaultInt(string key) => int.TryParse(State.Rules.DefaultValue(CurrentMode?.Cls, key), out var i) ? i : 0;
 
+        /// <summary>
+        /// Squad settings belong to the kind of play, not one mode: a value set while a co-op scenario is picked
+        /// applies to every co-op mode that has the setting, and a versus value to every versus mode.
+        /// </summary>
+        private IEnumerable<ModeDef> SquadModes(string key)
+        {
+            var mode = CurrentMode;
+            if (mode == null) return Enumerable.Empty<ModeDef>();
+            return State.Rules.Modes.Where(m => m.Coop == mode.Coop && m.Defaults.ContainsKey(key));
+        }
+
+        private void SetSquadValue(string key, string value, Func<ModeDef, string, string> stored)
+        {
+            foreach (var m in SquadModes(key)) RuleSet(m.Cls, key, stored(m, value));
+            RaiseSquad();
+            RefreshRuleItems();
+        }
+
         private void SetInt(string key, int value, int min, int max)
         {
             var mode = CurrentMode;
             if (mode == null || !mode.Defaults.ContainsKey(key)) return;
             value = Math.Max(min, Math.Min(max, value));
-            string def = State.Rules.DefaultValue(mode.Cls, key);
-            RuleSet(mode.Cls, key, def == value.ToString(CultureInfo.InvariantCulture) ? null : value.ToString(CultureInfo.InvariantCulture));
-            RaiseSquad();
-            RefreshRuleItems();
+            string text = value.ToString(CultureInfo.InvariantCulture);
+            SetSquadValue(key, text, (m, v) => State.Rules.DefaultValue(m.Cls, key) == v ? null : v);
         }
 
         public int Teammates { get => EffectiveInt("FriendlyBotQuota"); set => SetInt("FriendlyBotQuota", value, 0, 32); }
@@ -335,18 +351,20 @@ namespace SandstormModLauncher.ViewModels
 
         public bool BotsEnabled
         {
+            // Versus is played against bots unless the player turns them off (the game's own default is off).
             get
             {
-                string v = RuleGet(CurrentMode?.Cls, "bBots") ?? State.Rules.DefaultValue(CurrentMode?.Cls, "bBots");
-                return LaunchPlanner.IsTrue(v);
+                var mode = CurrentMode;
+                string v = RuleGet(mode?.Cls, "bBots");
+                if (v != null) return LaunchPlanner.IsTrue(v);
+                return mode != null && !mode.Coop ? mode.Defaults.ContainsKey("bBots") : LaunchPlanner.IsTrue(State.Rules.DefaultValue(mode?.Cls, "bBots"));
             }
             set
             {
                 var mode = CurrentMode;
                 if (mode == null) return;
-                RuleSet(mode.Cls, "bBots", LaunchPlanner.IsTrue(State.Rules.DefaultValue(mode.Cls, "bBots")) == value ? null : (value ? "True" : "False"));
-                RaiseSquad();
-                RefreshRuleItems();
+                SetSquadValue("bBots", value ? "True" : "False", (m, v) => !m.Coop ? (value ? null : "False")
+                                                                           : (LaunchPlanner.IsTrue(State.Rules.DefaultValue(m.Cls, "bBots")) == value ? null : v));
             }
         }
 
@@ -364,8 +382,8 @@ namespace SandstormModLauncher.ViewModels
                 var mode = CurrentMode;
                 double v = Math.Round(Math.Max(0, Math.Min(1, value)) * 20) / 20;
                 string s = v.ToString("0.##", CultureInfo.InvariantCulture);
-                if (mode != null && mode.Coop) RuleSet(mode.Cls, "AIDifficulty", Math.Abs(v - 0.5) < 0.001 ? null : s);
-                else RuleSet("*", "AIDifficulty", Math.Abs(v - 0.5) < 0.001 ? null : s);
+                if (mode != null && mode.Coop) { SetSquadValue("AIDifficulty", s, (m, x) => Math.Abs(v - 0.5) < 0.001 ? null : x); return; }
+                RuleSet("*", "AIDifficulty", Math.Abs(v - 0.5) < 0.001 ? null : s);
                 RaiseSquad();
                 RefreshRuleItems();
             }
@@ -389,9 +407,9 @@ namespace SandstormModLauncher.ViewModels
                 if (mode == null) return "Custom";
                 if (!mode.Coop)
                 {
+                    if (BotsEnabled && (BotQuota == 1 || BotQuota == 5 || BotQuota == 10) && RuleGet(mode.Cls, "BotQuota") != null) return "VS" + BotQuota;
                     bool changed = RuleGet(mode.Cls, "bBots") != null || RuleGet(mode.Cls, "BotQuota") != null;
                     if (!changed) return "Defaults";
-                    if (BotsEnabled && (BotQuota == 1 || BotQuota == 5 || BotQuota == 10)) return "VS" + BotQuota;
                     return "Custom";
                 }
                 bool any = new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty" }.Any(k => RuleGet(mode.Cls, k) != null);
@@ -427,9 +445,9 @@ namespace SandstormModLauncher.ViewModels
                     break;
                 case "Defaults":
                     foreach (var k in new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty", "bBots", "BotQuota" })
-                        RuleSet(mode.Cls, k, null);
-                    RuleSet("*", "AIDifficulty", null);
-                    ShowToast("Bot and enemy settings reset to the " + mode.Name + " defaults");
+                        foreach (var m in SquadModes(k)) RuleSet(m.Cls, k, null);
+                    if (!mode.Coop) RuleSet("*", "AIDifficulty", null);
+                    ShowToast(mode.Coop ? "Bot and enemy settings reset to each co-op mode's defaults" : "Bots back to the defaults: versus is played against bots");
                     break;
             }
             RaiseSquad();

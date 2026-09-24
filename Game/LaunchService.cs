@@ -177,6 +177,14 @@ namespace SandstormModLauncher.Game
                 {
                     // Never re-sent automatically: a second try could land while the first one is still loading.
                     var sent = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
+                    if (!sent.Sent && !sent.NothingTyped)
+                    {
+                        // The command may be sitting on the console line: the player can press Enter in the game.
+                        Report(4, StepState.Active, sent.Detail + " If the command is in the game's console, press Enter there; waiting a minute for it.");
+                        var until = DateTime.UtcNow.AddSeconds(60);
+                        while (DateTime.UtcNow < until && !SnapshotHas(loadLines, browsed)) { await Task.Delay(250, ct); monitor.Poll(); }
+                        if (SnapshotHas(loadLines, browsed)) { AppLog.Info("The open command was run by hand after the console send failed"); sent.Sent = true; sent.Verified = true; }
+                    }
                     if (!sent.Sent) throw new LaunchException(sent.Detail ?? "The command could not be sent.");
                     if (!sent.Verified)
                     {
@@ -268,6 +276,11 @@ namespace SandstormModLauncher.Game
             AppLog.Debug("Loading screen " + (monitor.LoadingScreenUp ? "still up after 45 s" : "gone") + " after " + sw.ElapsedMilliseconds + " ms");
             await Task.Delay(1200, ct);
             monitor.Poll();
+        }
+
+        private static bool SnapshotHas(List<string> lines, Func<string, bool> match)
+        {
+            lock (lines) return lines.Any(match);
         }
 
         private bool GameProcessRunning() => monitor.IsRunning || Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0;

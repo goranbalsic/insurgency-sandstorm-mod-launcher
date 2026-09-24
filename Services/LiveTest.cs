@@ -123,9 +123,12 @@ namespace SandstormModLauncher.Services
         {
             var parts = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var p = new Profile { Name = "LiveTest", ScenarioId = parts[0], MaxPlayers = 8, Lighting = "Day", MutatorsEnabled = false };
+            state.Settings.SoloGameFlag = !parts.Contains("nosolo");
             foreach (var kv in parts.Skip(1))
             {
                 if (kv == "night") { p.Lighting = "Night"; continue; }
+                if (kv == "nosolo") continue;
+                if (kv == "hardcore") { p.Hardcore = true; continue; }
                 if (kv.StartsWith("slots=")) { p.MaxPlayers = int.Parse(kv.Substring(6)); continue; }
                 int dot = kv.IndexOf('.'), eq = kv.IndexOf('=');
                 if (dot < 0 || eq < dot) continue;
