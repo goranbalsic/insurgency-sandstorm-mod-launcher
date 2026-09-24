@@ -35,7 +35,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand CancelCustomMapCommand { get; private set; }
 
         private string consoleKeyStatus = "", consoleKeysText = "";
-        private bool consoleKeyOk = true, hasF10, f10Pending;
+        private bool consoleKeyOk = true;
 
         private void InitSettingsCommands()
         {
@@ -66,9 +66,10 @@ namespace SandstormModLauncher.ViewModels
             CancelCustomMapCommand = new RelayCommand(() => MapEditorOpen = false);
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
                 "1. PLAY > Map: pick a map and scenario, then set your squad and the enemies on the right. Every value starts at that mode's own default. Changed values turn gold.\n\n" +
-                "2. PLAY > Rules has every other match setting of that mode, plus play-style presets and the official rulesets. PLAY > Advanced shows exactly what will be sent to the game. MUTATORS: tick what you want, in load order. PLAYLISTS sets up any official online playlist for offline play.\n\n" +
-                "3. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
-                "4. LIVE works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
+                "2. PLAY > Rules has every other match setting of that mode, with play-style presets and the official rulesets. PLAY > Playlists sets up any official online playlist for offline play. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
+                "3. MODS > Mutators: tick what you want, in load order. MODS > Installed mods lists what the game has downloaded.\n\n" +
+                "4. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
+                "5. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
                 "Something wrong? Settings > Something went wrong? saves a report with everything needed to find the cause."));
         }
 
@@ -82,7 +83,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
                       nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs),
-                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(IsPortable), nameof(ModioRoot));
+                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot));
         }
 
         // ------------------------------------------------------------------ game install
@@ -93,7 +94,6 @@ namespace SandstormModLauncher.ViewModels
         public bool GameFound => State.Install?.IsValid == true;
         public bool GameDirIsManual => !string.IsNullOrEmpty(State.Settings.GameDirOverride);
         public string DataDir => AppPaths.DataDir;
-        public bool IsPortable => AppPaths.DataDir.StartsWith(AppPaths.ExeDir, StringComparison.OrdinalIgnoreCase);
         public string ModioRoot => GameInstall.ModioRoot;
 
         private async Task ChangeGameDir()
@@ -191,8 +191,6 @@ namespace SandstormModLauncher.ViewModels
         public string ConsoleKeyStatus { get => consoleKeyStatus; set => Set(ref consoleKeyStatus, value); }
         public string ConsoleKeysText { get => consoleKeysText; set => Set(ref consoleKeysText, value); }
         public bool ConsoleKeyOk { get => consoleKeyOk; set => Set(ref consoleKeyOk, value); }
-        public bool HasF10 { get => hasF10; set => Set(ref hasF10, value); }
-        public bool F10Pending { get => f10Pending; set => Set(ref f10Pending, value); }
 
         public bool AutoConsoleKey
         {
@@ -217,8 +215,6 @@ namespace SandstormModLauncher.ViewModels
                 string fn = keys.FirstOrDefault(ConsoleBridge.IsFunctionKey);
                 bool pending = fn != null && running && Monitor?.ProcessStartUtc != null && State.Settings.ConsoleKeyAddedUtc > Monitor.ProcessStartUtc.Value;
                 bool layoutKey = keys.Any(k => !ConsoleBridge.IsFunctionKey(k) && input.VirtualKeyFor(k) != 0);
-                HasF10 = fn != null;
-                F10Pending = pending;
                 ConsoleKeysText = keys.Count == 0 ? "none" : string.Join(", ", keys.Select(ConsoleBridge.PrettyKey));
                 if (fn != null && !pending)
                 {
@@ -359,8 +355,8 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task RemoveIniRules()
         {
-            if (await Ask("Remove launcher rules?", "Remove every match rule from Game.ini? Other lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
             if (GameProcessRunning) { await ShowMessage("Close the game first", "The game rewrites Game.ini while it runs, so close it and then remove the rules."); return; }
+            if (await Ask("Remove launcher rules?", "Remove every match rule from Game.ini? Other lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
             try
             {
                 string path = GameInstall.GameIniPath;

@@ -253,19 +253,29 @@ namespace SandstormModLauncher.ViewModels
             }
             if (rules == null) return;
             foreach (var mode in rules)
-                foreach (var kv in mode.Value)
-                {
-                    string def = State.Rules.DefaultValue(mode.Key, kv.Key);
-                    RuleSet(mode.Key, kv.Key, def != null && LaunchPlanner.Same(def, kv.Value, State.Rules.Prop(kv.Key)) ? null : kv.Value);
-                }
-            if (mutators != null) foreach (var m in mutators) if (State.FindMutator(m) != null) SetMutatorActive(State.FindMutator(m).Id, true);
+                foreach (var kv in mode.Value) SetRuleOverride(mode.Key, kv.Key, kv.Value);
+            var added = new List<string>();
+            foreach (var id in mutators ?? new List<string>())
+            {
+                var info = State.FindMutator(id);
+                if (info == null) continue;
+                SetMutatorActive(info.Id, true);
+                added.Add(info.DisplayName);
+            }
             Profile.RulesPresetName = item.Name;
             RefreshRuleItems();
             RaiseSquad();
             ProfileChanged();
-            ShowToast(item.Name + " applied" + (mutators != null && mutators.Count > 0 ? " (+ " + string.Join(", ", mutators) + ")" : ""));
+            ShowToast(item.Name + " applied" + (added.Count > 0 ? " (+ " + string.Join(", ", added) + ")" : ""));
             if (item.Source is RulesetDef def2 && def2.Notes.Count > 0)
                 await ShowMessage(item.Name, string.Join("\n\n", def2.Notes) + "\n\nTo get every part of the official ruleset, including player speed and health changes, pick it under \"Official ruleset at game start\" on the Advanced tab of Play. It takes effect the next time the launcher starts the game.");
+        }
+
+        /// <summary>Sets a rule, or clears it when the value is that mode's default (so it does not count as a change).</summary>
+        private void SetRuleOverride(string cls, string key, string value)
+        {
+            string def = State.Rules.DefaultValue(cls, key);
+            RuleSet(cls, key, def != null && LaunchPlanner.Same(def, value, State.Rules.Prop(key)) ? null : value);
         }
 
         private async Task SaveRulesPreset()
@@ -273,13 +283,18 @@ namespace SandstormModLauncher.ViewModels
             if (Profile.Rules.Count == 0 && Profile.Mutators.Count == 0) { await ShowMessage("Nothing to save", "Change some settings first, then save them as a preset."); return; }
             string name = await Prompt("Save rules preset", "Name for these rule changes (all modes) and mutators:", Profile.RulesPresetName ?? "My rules", "Save");
             if (string.IsNullOrWhiteSpace(name)) return;
+            var existing = State.Settings.RulesPresets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                if (await Ask("Replace preset?", "A preset called \"" + existing.Name + "\" already exists. Replace it?", "Replace") != "Replace") return;
+                State.Settings.RulesPresets.Remove(existing);
+            }
             var copy = new RulesPreset { Name = name, Mutators = new List<string>(Profile.Mutators) };
             foreach (var kv in Profile.Rules) copy.Rules[kv.Key] = new Dictionary<string, string>(kv.Value, StringComparer.OrdinalIgnoreCase);
-            State.Settings.RulesPresets.RemoveAll(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             State.Settings.RulesPresets.Add(copy);
+            Profile.RulesPresetName = name;
             SaveSettingsSoon();
-            PresetFilter = "Mine";
-            BuildPresets();
+            if (PresetFilter == "Mine") BuildPresets(); else PresetFilter = "Mine";
             ShowToast("Preset \"" + name + "\" saved");
         }
 

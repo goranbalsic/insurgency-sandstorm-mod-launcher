@@ -86,7 +86,7 @@ namespace SandstormModLauncher.Game
                         if (text.Length < 200 || text.IndexOf("actionMappings", StringComparison.Ordinal) < 0) continue;
                         string profile = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(file));
                         Directory.CreateDirectory(BackupDir);
-                        var newest = Directory.GetFiles(BackupDir, profile + "-*.json").OrderByDescending(f => f).FirstOrDefault();
+                        var newest = CopiesOf(profile).FirstOrDefault();
                         string newestText = newest != null ? File.ReadAllText(newest) : null;
                         if (newestText != null && Hash(newestText) == Hash(text)) continue;
                         int bound = BoundCount(text);
@@ -98,12 +98,12 @@ namespace SandstormModLauncher.Game
                             int before = BoundCount(newestText);
                             if (before >= 20 && bound < before * 0.7)
                             {
-                                DropWarning = $"Your game key bindings went from {before} to {bound} bound keys (noticed {DateTime.Now:HH:mm}). A copy from before is kept; restore it in Settings > Key bindings.";
+                                DropWarning = $"Your game key bindings went from {before} to {bound} bound keys (noticed {DateTime.Now:HH:mm}). A copy from before is kept; restore it in Settings > Game key bindings.";
                                 AppLog.Warn("Key bindings dropped from " + before + " to " + bound + " bound keys (" + reason + ")");
                                 try { DropDetected?.Invoke(); } catch { }
                             }
                         }
-                        foreach (var old in Directory.GetFiles(BackupDir, profile + "-*.json").OrderByDescending(f => f).Skip(40)) File.Delete(old);
+                        foreach (var old in CopiesOf(profile).Skip(40)) File.Delete(old);
                     }
                     catch (Exception ex) { AppLog.Warn("Key bindings copy failed: " + ex.Message); }
                 }
@@ -116,16 +116,14 @@ namespace SandstormModLauncher.Game
             try
             {
                 if (!Directory.Exists(BackupDir)) return list;
-                foreach (var f in Directory.GetFiles(BackupDir, "*-*.json").OrderByDescending(f => f))
+                foreach (var f in Directory.GetFiles(BackupDir, "*-*.json"))
                 {
-                    string name = System.IO.Path.GetFileNameWithoutExtension(f);
-                    int dash = name.IndexOf('-');
-                    if (dash <= 0) continue;
-                    DateTime.TryParseExact(name.Substring(dash + 1), "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t);
+                    if (!ParseCopyName(f, out string profile, out DateTime t)) continue;
                     int bound = 0;
                     try { bound = BoundCount(File.ReadAllText(f)); } catch { }
-                    list.Add(new KeyBindingsBackup { Path = f, Profile = name.Substring(0, dash), Time = t, Bound = bound });
+                    list.Add(new KeyBindingsBackup { Path = f, Profile = profile, Time = t, Bound = bound });
                 }
+                list.Sort((a, b) => b.Time.CompareTo(a.Time));
             }
             catch { }
             return list;
@@ -159,6 +157,24 @@ namespace SandstormModLauncher.Game
         }
 
         public static void ClearWarning() => DropWarning = null;
+
+        /// <summary>Copies are named &lt;profile&gt;-yyyyMMdd-HHmmss.json; the profile folder name may contain dashes itself.</summary>
+        private static bool ParseCopyName(string file, out string profile, out DateTime time)
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(file);
+            profile = null; time = default;
+            const int stampLength = 15; // yyyyMMdd-HHmmss
+            if (name.Length < stampLength + 2 || name[name.Length - stampLength - 1] != '-') return false;
+            if (!DateTime.TryParseExact(name.Substring(name.Length - stampLength), "yyyyMMdd-HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out time)) return false;
+            profile = name.Substring(0, name.Length - stampLength - 1);
+            return true;
+        }
+
+        /// <summary>This profile's copies, newest first.</summary>
+        private static IEnumerable<string> CopiesOf(string profile) =>
+            Directory.GetFiles(BackupDir, profile + "-*.json")
+                     .Where(f => ParseCopyName(f, out string p, out _) && p.Equals(profile, StringComparison.OrdinalIgnoreCase))
+                     .OrderByDescending(f => f, StringComparer.OrdinalIgnoreCase);
 
         private static string ReadShared(string path)
         {

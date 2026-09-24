@@ -128,17 +128,18 @@ namespace SandstormModLauncher.Game
             url.Append("open ").Append(plan.Level).Append("?Scenario=").Append(sc.Id);
             // AI teammates take player slots, so there must be room for you plus all of them.
             plan.PlayerSlots = Math.Max(1, p.MaxPlayers);
+            bool wantsMates = false;
             if (plan.Mode != null && plan.Mode.Coop)
             {
                 string fb = plan.Overrides.TryGetValue("FriendlyBotQuota", out var ov2) ? ov2 : db.DefaultValue(cls, "FriendlyBotQuota");
+                wantsMates = int.TryParse(fb, out int mates) && mates > 0;
                 // Offline nobody else joins, so plenty of slots costs nothing; too few and the AI teammates do not join.
-                if (int.TryParse(fb, out int mates) && mates > 0) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Max(8, 1 + mates + 2));
+                if (wantsMates) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Max(8, 1 + mates + 2));
             }
             url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
             url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
             if (!string.IsNullOrEmpty(plan.GameAlias)) url.Append("?game=").Append(plan.GameAlias);
             // bSoloGame stops AI teammates from joining (seen in the game), so it is left out when co-op has teammates.
-            bool wantsMates = plan.Mode != null && plan.Mode.Coop && plan.PlayerSlots > Math.Max(1, p.MaxPlayers) || (plan.Mode != null && plan.Mode.Coop && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fq) ? fq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fqn) && fqn > 0);
             if (state.Settings.SoloGameFlag && !wantsMates) url.Append("?bSoloGame=1");
             foreach (var kv in plan.Overrides)
             {
@@ -167,11 +168,10 @@ namespace SandstormModLauncher.Game
                     // FriendlyBotQuota is also read at game start from Game.ini; sending it again does no harm.
                     plan.AfterLoad.Add("AdminSetGamemodeProperty " + kv.Key + " " + kv.Value);
                 }
-            bool versusDifficulty = plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var vd);
-            if (versusDifficulty)
+            if (plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var versusDifficulty))
             {
                 plan.AfterLoad.Add("EnableCheats");
-                plan.AfterLoad.Add("AIDifficulty " + p.Rules["*"]["AIDifficulty"]);
+                plan.AfterLoad.Add("AIDifficulty " + versusDifficulty);
             }
             else if (p.EnableCheatsAfterLoad) plan.AfterLoad.Add("EnableCheats");
             foreach (var line in (p.AfterLoadCommands ?? "").Split('\n'))

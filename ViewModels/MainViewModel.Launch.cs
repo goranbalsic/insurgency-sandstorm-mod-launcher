@@ -51,20 +51,15 @@ namespace SandstormModLauncher.ViewModels
             if (State.Rules == null || State.Install == null) return;
             try { CurrentPlan = LaunchPlanner.Build(Profile, State); }
             catch (Exception ex) { AppLog.Error("Could not build the launch plan", ex); CurrentPlan = null; }
-            RaiseMany(nameof(PlanTitle), nameof(PlanCommand), nameof(PlanIni), nameof(PlanAfterLoad), nameof(PlanWarnings), nameof(HasPlanWarnings),
-                      nameof(MapSummary), nameof(ModeSummary), nameof(SquadSummary), nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch),
-                      nameof(PlanOverrideCount), nameof(PlanError));
+            RaiseMany(nameof(PlanCommand), nameof(PlanIni), nameof(PlanAfterLoad), nameof(MapSummary), nameof(ModeSummary), nameof(SquadSummary),
+                      nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch), nameof(PlanError));
             UpdateLaunchButton();
         }
 
-        public string PlanTitle => currentPlan?.Title ?? "";
         public string PlanError => currentPlan?.Error;
         public string PlanCommand => currentPlan?.OpenCommand ?? "";
         public string PlanIni => string.IsNullOrWhiteSpace(currentPlan?.GameIniBlock) ? "; No Game.ini changes. The game uses its default rules." : currentPlan.GameIniBlock;
         public string PlanAfterLoad => currentPlan == null || currentPlan.AfterLoad.Count == 0 ? "Nothing. The match uses the rules above as loaded." : string.Join("\n", currentPlan.AfterLoad);
-        public List<string> PlanWarnings => currentPlan?.Warnings ?? new List<string>();
-        public bool HasPlanWarnings => PlanWarnings.Count > 0;
-        public int PlanOverrideCount => currentPlan?.Overrides.Count ?? 0;
 
         public string MapSummary => currentPlan?.Scenario == null ? "No map selected"
             : (currentPlan.Map?.DisplayName ?? currentPlan.Scenario.MapKey) + " · " + (Profile.Lighting == "Night" ? "Night" : "Day");
@@ -143,7 +138,7 @@ namespace SandstormModLauncher.ViewModels
         public bool LaunchRunning
         {
             get => launchRunning;
-            set { if (Set(ref launchRunning, value)) { Raise(nameof(CanLaunch)); UpdateLaunchButton(); CommandManager.InvalidateRequerySuggested(); } }
+            set { if (Set(ref launchRunning, value)) { RaiseMany(nameof(CanLaunch), nameof(CanSwitchProfile)); UpdateLaunchButton(); CommandManager.InvalidateRequerySuggested(); } }
         }
         public bool LaunchSucceeded { get => launchSucceeded; set => Set(ref launchSucceeded, value); }
         public string LaunchResult { get => launchResult; set => Set(ref launchResult, value); }

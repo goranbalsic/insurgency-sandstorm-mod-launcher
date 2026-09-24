@@ -139,7 +139,7 @@ namespace SandstormModLauncher.Game
                         if (sw.Elapsed.TotalSeconds >= 20 && (int)sw.Elapsed.TotalSeconds % 5 == 0)
                             Report(2, StepState.Active, "Waiting for the game to start (" + (int)sw.Elapsed.TotalSeconds + " s). If Steam shows a dialog, answer it.");
                     }
-                    if (!monitor.IsRunning) throw new LaunchException("The game did not start. Check that Steam is running and the game is installed.");
+                    if (!monitor.IsRunning) throw new LaunchException("The game did not start. Check that " + (state.Install.Store == "Epic" ? "the Epic Games Launcher" : "Steam") + " is running and the game is installed.");
                     Report(2, StepState.Done, "Started in " + (int)sw.Elapsed.TotalSeconds + " s");
                 }
                 else Report(2, StepState.Skipped, "Already running");
@@ -382,7 +382,7 @@ namespace SandstormModLauncher.Game
             for (int i = 0; i < 60 && !p.HasExited; i++) await Task.Delay(500, ct);
             if (!p.HasExited)
             {
-                var res = await console.Run("exit", ct, null, TimeSpan.FromSeconds(1));
+                await console.Run("exit", ct, null, TimeSpan.FromSeconds(1));
                 for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
             }
             if (!p.HasExited) throw new LaunchException("The game did not close. Close it yourself and press Launch again.");

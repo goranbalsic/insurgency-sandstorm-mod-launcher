@@ -7,8 +7,8 @@ using System.Text;
 namespace SandstormModLauncher.Core
 {
     /// <summary>
-    /// Text-preserving helpers for Unreal config files (Game.ini, Input.ini). Only the launcher's
-    /// own managed block is ever rewritten; the rest of the file is left byte-for-byte intact.
+    /// Text-preserving helpers for Unreal config files (Game.ini, Input.ini). Values are written by key;
+    /// every line the launcher does not manage is kept as it was.
     /// </summary>
     public static class UeIni
     {
@@ -35,7 +35,7 @@ namespace SandstormModLauncher.Core
             else File.Move(tmp, path);
         }
 
-        /// <summary>Removes the launcher's managed block.</summary>
+        /// <summary>Removes the marked block older launcher versions wrote.</summary>
         public static string StripManagedBlocks(string text)
         {
             var lines = Split(text);
@@ -54,25 +54,6 @@ namespace SandstormModLauncher.Core
             }
             while (result.Count > 0 && result[result.Count - 1].Trim().Length == 0) result.RemoveAt(result.Count - 1);
             return string.Join("\r\n", result);
-        }
-
-        public static string ExtractManagedBlock(string text)
-        {
-            int a = text.IndexOf(BlockStart, StringComparison.Ordinal);
-            if (a < 0) return null;
-            int b = text.IndexOf(BlockEnd, a, StringComparison.Ordinal);
-            if (b < 0) return null;
-            return text.Substring(a + BlockStart.Length, b - a - BlockStart.Length).Trim('\r', '\n');
-        }
-
-        public static string WithManagedBlock(string text, string block)
-        {
-            string baseText = StripManagedBlocks(text);
-            if (string.IsNullOrWhiteSpace(block)) return baseText.Length > 0 ? baseText + "\r\n" : "\r\n";
-            var sb = new StringBuilder();
-            if (baseText.Length > 0) sb.Append(baseText).Append("\r\n\r\n");
-            sb.Append(BlockStart).Append("\r\n").Append(block.Trim('\r', '\n')).Append("\r\n").Append(BlockEnd).Append("\r\n");
-            return sb.ToString();
         }
 
         public static List<string> Split(string text) => (text ?? "").Replace("\r\n", "\n").Split('\n').ToList();

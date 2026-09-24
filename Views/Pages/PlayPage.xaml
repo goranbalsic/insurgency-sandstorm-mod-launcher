@@ -239,7 +239,7 @@
                                         <ControlTemplate TargetType="Button">
                                             <Border x:Name="card" CornerRadius="8" BorderThickness="1" BorderBrush="{StaticResource Bg4}" Background="{StaticResource Bg2}">
                                                 <Grid>
-                                                    <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="44" Foreground="#2B3036"
+                                                    <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="44" Foreground="{StaticResource Line}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,26" />
                                                     <Border CornerRadius="7">
                                                         <Border.Background>
@@ -260,7 +260,7 @@
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
-                                                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Display}" FontSize="18" Foreground="#F4F1EC" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Display}" FontSize="18" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
                                                         <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="4" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
@@ -397,7 +397,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Style="{StaticResource Mute}" Visibility="{Binding HasNoPresets, Converter={StaticResource Vis}}" Margin="4,4,4,0" TextWrapping="Wrap"
-                                           Text="No presets yet. Change some rules and press &quot;Save as preset&quot;." />
+                                           Text="No presets yet. Change some rules and press &quot;Save my changes as a preset&quot;." />
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="2" Margin="14,4,14,12">
@@ -564,7 +564,7 @@
                                           ToolTip="Hardcore Checkpoint: no HUD, more damage, limited respawns (Checkpoint scenarios only)" />
                             </Border>
                         </Grid>
-                        <c:Stepper Margin="0,8,0,0" Label="Player slots" Hint="MaxPlayers · room for friends joining your game" Value="{Binding MaxPlayers}" Minimum="1" Maximum="64" />
+                        <c:Stepper Margin="0,8,0,0" Label="Player slots" Hint="MaxPlayers · raised automatically to fit AI teammates" Value="{Binding MaxPlayers}" Minimum="1" Maximum="64" />
                     </StackPanel>
                 </Border>
 
@@ -662,7 +662,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Height="28" CornerRadius="14" Background="#1F2428" BorderBrush="#2F353B" BorderThickness="1" Padding="11,0,4,0" Margin="0,0,6,6">
+                                    <Border Height="28" CornerRadius="14" Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="11,0,4,0" Margin="0,0,6,6">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" MaxWidth="200" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Center" Margin="7,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />
@@ -674,7 +674,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource VisNot}}"
-                                   Text="No mutators. Add some on the Mutators page, or pick an official playlist." />
+                                   Text="No mutators. Add some under Mods > Mutators, or pick an official playlist." />
                     </StackPanel>
                 </Border>
             </StackPanel>

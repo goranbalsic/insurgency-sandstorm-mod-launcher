@@ -28,7 +28,6 @@ namespace SandstormModLauncher.ViewModels
         public ICommand DeleteMutatorPresetCommand { get; private set; }
         public ICommand CopyTextCommand { get; private set; }
         public ICommand OpenUrlCommand { get; private set; }
-        public ICommand SelectMutatorCommand { get; private set; }
         private string mutatorFilter = "All", mutatorSearch = "", customMutatorText = "", selectedMutatorPreset;
         private bool showBaseClasses;
         private MutatorItem selectedMutator;
@@ -45,7 +44,6 @@ namespace SandstormModLauncher.ViewModels
             DeleteMutatorPresetCommand = new AsyncCommand(DeleteMutatorPreset, () => selectedMutatorPreset != null);
             CopyTextCommand = new RelayCommand(p => { if (p is string s && s.Length > 0) { try { Clipboard.SetDataObject(s, true); ShowToast("Copied to the clipboard"); } catch { } } });
             OpenUrlCommand = new RelayCommand(p => Open(p as string));
-            SelectMutatorCommand = new RelayCommand(p => { if (p is MutatorItem m) SelectedMutator = m; });
         }
 
         private void BuildMutatorList()
@@ -223,6 +221,7 @@ namespace SandstormModLauncher.ViewModels
             {
                 if (await Ask("Replace preset?", "A preset called \"" + existing.Name + "\" already exists. Replace it?", "Replace") != "Replace") return;
                 existing.Mutators = new List<string>(Profile.Mutators);
+                name = existing.Name;
             }
             else State.Settings.MutatorPresets.Add(new MutatorPreset { Name = name, Mutators = new List<string>(Profile.Mutators) });
             Profile.MutatorPreset = name;

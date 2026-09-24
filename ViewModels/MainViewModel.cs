@@ -38,10 +38,10 @@ namespace SandstormModLauncher.ViewModels
             watchTimer.Tick += async (s, e) => { watchTimer.Stop(); await RescanMods(true); };
 
             NavigateCommand = new RelayCommand(p => Page = p as string ?? "Play");
-            NewProfileCommand = new AsyncCommand(NewProfile);
-            DuplicateProfileCommand = new AsyncCommand(DuplicateProfile);
-            RenameProfileCommand = new AsyncCommand(RenameProfile);
-            DeleteProfileCommand = new AsyncCommand(DeleteProfile, () => State.Store.Profiles.Count > 1);
+            NewProfileCommand = new AsyncCommand(NewProfile, () => CanSwitchProfile);
+            DuplicateProfileCommand = new AsyncCommand(DuplicateProfile, () => CanSwitchProfile);
+            RenameProfileCommand = new AsyncCommand(RenameProfile, () => CanSwitchProfile);
+            DeleteProfileCommand = new AsyncCommand(DeleteProfile, () => State.Store.Profiles.Count > 1 && CanSwitchProfile);
             DialogCommand = new RelayCommand(p => CloseDialog(p as string));
             InitPlayCommands();
             InitMutatorCommands();
@@ -180,11 +180,10 @@ namespace SandstormModLauncher.ViewModels
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();
-
             }
         }
 
-        public bool Loading { get => loading; set => Set(ref loading, value); }
+        public bool Loading { get => loading; set { if (Set(ref loading, value)) Raise(nameof(CanSwitchProfile)); } }
         public string LoadingText { get => loadingText; set => Set(ref loadingText, value); }
         public string AppVersion => "v" + typeof(MainViewModel).Assembly.GetName().Version.ToString(3);
 
@@ -290,6 +289,9 @@ namespace SandstormModLauncher.ViewModels
 
         public Profile Profile => State.Store.Active;
 
+        /// <summary>Profiles cannot change while the catalog is being read or a launch is running.</summary>
+        public bool CanSwitchProfile => !loading && !launchRunning;
+
         public string SelectedProfile
         {
             get => State.Settings.ActiveProfile;
@@ -356,7 +358,7 @@ namespace SandstormModLauncher.ViewModels
         {
             string name = await Prompt("Rename profile", "New name:", Profile.Name, "Rename");
             if (string.IsNullOrWhiteSpace(name) || name == Profile.Name) return;
-            name = UniqueProfileName(name);
+            name = UniqueProfileName(name, Profile);
             State.Store.RenameProfile(Profile, name);
             State.Settings.ActiveProfile = name;
             SaveSettingsSoon();
@@ -373,10 +375,11 @@ namespace SandstormModLauncher.ViewModels
             ApplyProfileToUi();
         }
 
-        private string UniqueProfileName(string name)
+        /// <summary>The name, with a number added when another profile already has it (renaming ignores the profile itself).</summary>
+        private string UniqueProfileName(string name, Profile self = null)
         {
             string n = name.Trim(); int i = 2;
-            while (State.Store.Profiles.Any(p => p.Name.Equals(n, StringComparison.OrdinalIgnoreCase))) n = name.Trim() + " " + i++;
+            while (State.Store.Profiles.Any(p => p != self && p.Name.Equals(n, StringComparison.OrdinalIgnoreCase))) n = name.Trim() + " " + i++;
             return n;
         }
 

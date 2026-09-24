@@ -164,7 +164,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoStartGame}" Margin="0,12,0,6">
                                 <StackPanel>
                                     <TextBlock Text="Start the game automatically" FontSize="13.5" />
-                                    <TextBlock Text="Launch starts Insurgency: Sandstorm through Steam when it is not running" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="Launch starts Insurgency: Sandstorm through Steam or Epic when it is not running" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding MinimizeOnLaunch}">
@@ -214,6 +214,7 @@
                                 <Button Content="Backups" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Backups" />
                                 <Button Content="Launcher data" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Data" />
                                 <Button Content="Launcher log" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Logs" />
+                                <Button Content="Problem reports" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Reports" />
                             </WrapPanel>
                             <TextBlock Text="TOOLS" Style="{StaticResource Label}" />
                             <WrapPanel>
@@ -226,10 +227,7 @@
                                 <TextBox Text="{Binding ReportNote, UpdateSourceTrigger=PropertyChanged}" Tag="What happened? (optional)" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Saves the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots to logs\reports on this PC. Nothing is uploaded. A report is also saved automatically when a launch fails." />
-                            <WrapPanel Margin="0,8,0,0">
-                                <Button Content="Open reports" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Reports" />
-                            </WrapPanel>
+                                       Text="Saves the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots to logs\reports on this PC (Open > Problem reports). Nothing is uploaded. A report is also saved automatically when a launch fails." />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">
                                 <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=". Put an empty file called &quot;portable&quot; next to the exe to keep it beside the exe instead." />
                             </TextBlock>
@@ -251,7 +249,8 @@
                                 <Button Style="{StaticResource LinkButton}" Content="Updates" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
                                         CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases" />
                                 <Button Style="{StaticResource LinkButton}" Content="Report a problem" Margin="0,0,16,4" Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />                            </WrapPanel>
+                                        CommandParameter="https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues" />
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>

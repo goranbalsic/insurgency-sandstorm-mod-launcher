@@ -24,7 +24,6 @@ namespace SandstormModLauncher.ViewModels
         public string Tag => Custom != null ? "CUSTOM" : Info.Source == ContentSource.Mod ? "MOD" : "";
         public string Source => Custom != null ? "Custom" : Info.Source == ContentSource.Mod ? "Mods" : "Official";
         public string Thumb => night ? (Info.ThumbNight ?? Info.ThumbDay) : Info.ThumbDay;
-        public bool HasThumb => Info.ThumbDay != null;
         public string Initials => string.IsNullOrEmpty(Name) ? "?" : new string(Name.Split(' ').Where(w => w.Length > 0).Take(2).Select(w => char.ToUpperInvariant(w[0])).ToArray());
         public int CoopCount => Info.Scenarios.Count(s => s.Category == "Co-op");
         public int VersusCount => Info.Scenarios.Count(s => s.Category == "Versus");
@@ -77,7 +76,6 @@ namespace SandstormModLauncher.ViewModels
         public string Id => Info.Id;
         public string Name => Info.DisplayName;
         public string Description => string.IsNullOrWhiteSpace(Info.Description) ? "No description in the mod files." : Info.Description;
-        public bool HasDescription => !string.IsNullOrWhiteSpace(Info.Description);
         /// <summary>Set for official mutators: which official playlists (co-op, versus) use it.</summary>
         public string OfficialGroup { get; set; }
         public int GroupRank { get; set; }
@@ -119,7 +117,6 @@ namespace SandstormModLauncher.ViewModels
         public string Version => string.IsNullOrEmpty(Info.Version) ? "" : "v" + Info.Version;
         public string Updated => Info.Updated.HasValue ? "Updated " + Info.Updated.Value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) : "";
         public int MutatorCount => Info.Mutators.Count(m => m.Registered && !m.IsBaseClass);
-        public int MapCount => Info.Scenarios.Select(s => s.Level).Distinct().Count();
         public string Counts
         {
             get
@@ -161,7 +158,6 @@ namespace SandstormModLauncher.ViewModels
         public bool IsBool => Prop.IsBool;
         public bool IsNumber => Prop.IsNumber;
         public bool IsEnum => Prop.Type == "enum";
-        public bool IsText => !IsBool && !IsNumber && !IsEnum;
         public List<string> Options => Prop.Options;
         public double Min => Prop.Min ?? 0;
         public double Max => Math.Max(Prop.Max ?? 100, NumericDefault);
@@ -242,7 +238,6 @@ namespace SandstormModLauncher.ViewModels
         public string Group { get; set; }
         public string Description { get; set; }
         public object Source { get; set; }
-        public string Display => Group + " · " + Name;
     }
 
     public sealed class LaunchStepItem : ObservableObject
@@ -256,13 +251,10 @@ namespace SandstormModLauncher.ViewModels
 
     public sealed class LiveAction
     {
-        public string Group { get; set; }
         public string Label { get; set; }
         public string Command { get; set; }
         public string Tip { get; set; }
-        public bool Cheat { get; set; }
         public bool CoopOnly { get; set; }
-        public string Badge => Cheat ? "CHEAT" : "ADMIN";
     }
 
     public sealed class LiveGroup
