@@ -60,10 +60,10 @@ The exe is not code-signed, so SmartScreen may show "Windows protected your PC" 
 
 ```powershell
 # compare with the SHA-256 on the release page
-Get-FileHash .\SandstormModLauncher-v1.2.2.zip -Algorithm SHA256
+Get-FileHash .\SandstormModLauncher-v1.2.3.zip -Algorithm SHA256
 
 # check that the file was built by this repository's workflow (GitHub CLI)
-gh attestation verify .\SandstormModLauncher-v1.2.2.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
+gh attestation verify .\SandstormModLauncher-v1.2.3.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
 ```
 
 Or build it yourself and use your own exe.

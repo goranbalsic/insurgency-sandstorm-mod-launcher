@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.2.3**
+
+- Co-op AI teammates: the match is now started with bots enabled (bBots), which co-op modes have off by default.
+
 **Changes in 1.2.2**
 
 - AI teammates: the solo-game flag stopped them from joining; it is left out when co-op has teammates.

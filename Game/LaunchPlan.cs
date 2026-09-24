@@ -117,6 +117,12 @@ namespace SandstormModLauncher.Game
                 && !(p.Rules.TryGetValue(cls, out var own) && own.ContainsKey("bBots")))
                 plan.Overrides["bBots"] = "True";
 
+            // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
+            if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
+                && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && fbn > 0
+                && !(p.Rules.TryGetValue(cls, out var own2) && own2.ContainsKey("bBots")))
+                plan.Overrides["bBots"] = "True";
+
             // Travel URL
             var url = new StringBuilder();
             url.Append("open ").Append(plan.Level).Append("?Scenario=").Append(sc.Id);
