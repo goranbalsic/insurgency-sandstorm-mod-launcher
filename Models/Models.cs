@@ -143,6 +143,7 @@ namespace SandstormModLauncher.Models
         public List<RulesPreset> RulesPresets { get; set; } = new List<RulesPreset>();
         public bool AutoConsoleKey { get; set; } = true;         // add F10 as a console key while the game is closed
         public DateTime ConsoleKeyAddedUtc { get; set; }
+        public List<string> ManagedIniKeys { get; set; } = new List<string>();   // "section\nkey" of extra Game.ini lines written last time
         public string InputMethod { get; set; } = "Paste";      // Paste / Type
         public int KeyDelayMs { get; set; } = 60;
         public bool AutoStartGame { get; set; } = true;

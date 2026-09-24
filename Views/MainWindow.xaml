@@ -121,21 +121,15 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Bottom" Text="{Binding AppVersion}" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" Margin="0,0,0,10" />
                         <StackPanel Margin="0,10,0,0">
-                            <RadioButton Style="{StaticResource NavButton}" Content="PLAY" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, scenario, squad, enemies and every match rule" />
-                            <RadioButton Style="{StaticResource NavButton}" Content="MUTATORS" Tag="&#xE945;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Mutators}" ToolTip="Official and mod mutators" />
-                            <RadioButton Style="{StaticResource NavButton}" Content="PLAYLISTS" Tag="&#xE8FD;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Playlists}" ToolTip="Official online playlists, playable offline" />
-                            <RadioButton Style="{StaticResource NavButton}" Content="MODS" Tag="&#xEA86;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Mods}" ToolTip="Installed mods" />
-                            <RadioButton Style="{StaticResource NavButton}" Content="LIVE" Tag="&#xE7C8;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Live}" ToolTip="Control the running match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="PLAY" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, official playlists and live control of the match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="MODS" Tag="&#xEA86;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Mods}" ToolTip="Mutators (official and from mods) and installed mods" />
                             <RadioButton Style="{StaticResource NavButton}" Content="SETTINGS" Tag="&#xE713;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Settings}" ToolTip="Game folder, console key, launch options" />
                         </StackPanel>
                     </DockPanel>
                 </Border>
                 <Grid Grid.Column="1">
                     <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
-                    <p:MutatorsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Mutators}" />
-                    <p:PlaylistsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Playlists}" />
                     <p:ModsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Mods}" />
-                    <p:LivePage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Live}" />
                     <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
                 </Grid>
             </Grid>

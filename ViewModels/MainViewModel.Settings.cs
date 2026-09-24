@@ -359,13 +359,16 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task RemoveIniRules()
         {
-            if (await Ask("Remove launcher rules?", "Remove the rules this launcher wrote to Game.ini? Your own lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
+            if (await Ask("Remove launcher rules?", "Remove every match rule from Game.ini? Other lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
+            if (GameProcessRunning) { await ShowMessage("Close the game first", "The game rewrites Game.ini while it runs, so close it and then remove the rules."); return; }
             try
             {
                 string path = GameInstall.GameIniPath;
                 string text = UeIni.ReadText(path);
-                string stripped = UeIni.StripManagedBlocks(text);
-                if (stripped == text) { ShowToast("Game.ini has no launcher rules"); return; }
+                var earlier = new HashSet<string>(State.Settings.ManagedIniKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+                string stripped = UeIni.MergeSections(text, new List<UeIni.Section>(), (s, k) => LaunchPlanner.IsManagedIniKey(State.Rules, s, k) || earlier.Contains(s + "\n" + k));
+                if (stripped.Replace("\r\n", "\n").Trim() == text.Replace("\r\n", "\n").Trim()) { ShowToast("Game.ini has no launcher rules"); return; }
+                State.Settings.ManagedIniKeys = new List<string>();
                 ConsoleBridge.BackupFile(path);
                 UeIni.WriteText(path, stripped);
                 State.Settings.LastWrittenRulesHash = LaunchPlanner.RestartKeyFor(new Profile(), State.Rules);

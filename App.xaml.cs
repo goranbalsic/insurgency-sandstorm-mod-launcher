@@ -102,6 +102,15 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 3 && eArgs[0] == "--ini-test")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                try { SelfTest.IniTest(eArgs[1], eArgs[2]); }
+                catch (Exception ex) { File.WriteAllText(eArgs[2], "INI TEST CRASHED: " + ex); }
+                Shutdown();
+                return;
+            }
+
             if (eArgs.Length >= 2 && eArgs[0] == "--selftest")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -155,13 +164,14 @@ namespace SandstormModLauncher
                 Layout();
                 var init = vm.InitializeAsync();
                 for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
-                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Advanced", "Mutators", "Playlists", "Mods", "Live", "Settings" };
+                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Playlists", "Play-Live", "Play-Advanced", "Mods", "Mods-Installed", "Settings" };
                 foreach (var page in pages)
                 {
                     // "Play-Rules" = page Play, tab Rules
                     var parts = page.Split('-');
                     vm.Page = parts[0];
                     if (parts[0] == "Play") vm.PlayTab = parts.Length > 1 ? parts[1] : "Map";
+                    if (parts[0] == "Mods") vm.ModsTab = parts.Length > 1 ? parts[1] : "Mutators";
                     await Task.Delay(700);
                     Layout();
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);

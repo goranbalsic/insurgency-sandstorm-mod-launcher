@@ -78,7 +78,10 @@ namespace SandstormModLauncher.ViewModels
         public string Name => Info.DisplayName;
         public string Description => string.IsNullOrWhiteSpace(Info.Description) ? "No description in the mod files." : Info.Description;
         public bool HasDescription => !string.IsNullOrWhiteSpace(Info.Description);
-        public string Group => Info.Source == ContentSource.Official ? "Official · New World Interactive"
+        /// <summary>Set for official mutators: which official playlists (co-op, versus) use it.</summary>
+        public string OfficialGroup { get; set; }
+        public int GroupRank { get; set; }
+        public string Group => Info.Source == ContentSource.Official ? OfficialGroup ?? "Official"
                              : Info.Source == ContentSource.Custom ? "Added by name" : Info.ModName;
         public string SourceKey => Info.Source.ToString();
         public bool IsBase => Info.IsBaseClass;

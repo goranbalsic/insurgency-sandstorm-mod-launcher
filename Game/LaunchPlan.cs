@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
 
 namespace SandstormModLauncher.Game
@@ -23,6 +24,8 @@ namespace SandstormModLauncher.Game
         public Dictionary<string, string> Overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         public string OpenCommand;
         public string GameIniBlock = "";
+        public List<UeIni.Section> IniSections = new List<UeIni.Section>();
+        public int PlayerSlots;
         public string RestartKey = "";
         public List<string> AfterLoad = new List<string>();
         public List<string> Warnings = new List<string>();
@@ -112,7 +115,14 @@ namespace SandstormModLauncher.Game
             // Travel URL
             var url = new StringBuilder();
             url.Append("open ").Append(plan.Level).Append("?Scenario=").Append(sc.Id);
-            url.Append("?MaxPlayers=").Append(Math.Max(1, p.MaxPlayers));
+            // AI teammates take player slots, so there must be room for you plus all of them.
+            plan.PlayerSlots = Math.Max(1, p.MaxPlayers);
+            if (plan.Mode != null && plan.Mode.Coop)
+            {
+                string fb = plan.Overrides.TryGetValue("FriendlyBotQuota", out var ov2) ? ov2 : db.DefaultValue(cls, "FriendlyBotQuota");
+                if (int.TryParse(fb, out int mates) && mates > 0) plan.PlayerSlots = Math.Max(plan.PlayerSlots, 1 + mates);
+            }
+            url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
             url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
             if (!string.IsNullOrEmpty(plan.GameAlias)) url.Append("?game=").Append(plan.GameAlias);
             if (state.Settings.SoloGameFlag) url.Append("?bSoloGame=1");
@@ -131,8 +141,9 @@ namespace SandstormModLauncher.Game
             if (extra.Length > 0) url.Append(extra.StartsWith("?") ? extra : "?" + extra);
             plan.OpenCommand = url.ToString();
 
-            // Game.ini block (every mode the profile customises)
-            plan.GameIniBlock = BuildGameIniBlock(p, state, sc);
+            // Game.ini sections (every mode the profile customises)
+            plan.IniSections = BuildIniSections(p, state);
+            plan.GameIniBlock = UeIni.Render(plan.IniSections);
             plan.RestartKey = RestartKeyFor(p, db);
 
             // After-load commands
@@ -159,42 +170,51 @@ namespace SandstormModLauncher.Game
             return plan;
         }
 
-        public static string BuildGameIniBlock(Profile p, AppState state, ScenarioInfo played)
+        /// <summary>Game.ini sections for every mode the profile customises, plus the profile's own extra lines.</summary>
+        public static List<UeIni.Section> BuildIniSections(Profile p, AppState state)
         {
             var db = state.Rules;
-            var sb = new StringBuilder();
+            var sections = new List<UeIni.Section>();
             foreach (var mode in p.Rules.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
                 if (mode.Key == "*") continue;
-                var def = db.Mode(mode.Key);
-                if (def == null) continue;
-                var lines = new List<string>();
+                if (db.Mode(mode.Key) == null) continue;
+                var values = new List<KeyValuePair<string, string>>();
                 foreach (var kv in mode.Value.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
                 {
                     string d = db.DefaultValue(mode.Key, kv.Key);
                     if (d != null && Same(d, kv.Value, db.Prop(kv.Key))) continue;
-                    lines.Add(kv.Key + "=" + IniValue(kv.Value, db.Prop(kv.Key)));
+                    values.Add(new KeyValuePair<string, string>(kv.Key, IniValue(kv.Value, db.Prop(kv.Key))));
                 }
-                if (lines.Count == 0) continue;
-                sb.Append("[/Script/Insurgency.").Append(mode.Key).Append("]\r\n");
-                foreach (var l in lines) sb.Append(l).Append("\r\n");
-                sb.Append("\r\n");
+                if (values.Count == 0) continue;
+                sections.Add(new UeIni.Section("/Script/Insurgency." + mode.Key) { Values = values });
                 // Blueprint subclasses (e.g. the Skirmish blueprint) read their own section too.
-                foreach (var bpPath in state.AllScenarios.Where(s => s.GameModePath != null && s.Category != "Training"
-                                                                     && !s.GameModePath.StartsWith("/Script/", StringComparison.OrdinalIgnoreCase)
-                                                                     && s.GameModePath.IndexOf("/Develop", StringComparison.OrdinalIgnoreCase) < 0
-                                                                     && db.ResolveMode(s.GameModeClass)?.Cls == mode.Key)
-                                                          .Select(s => s.GameModePath).Distinct(StringComparer.OrdinalIgnoreCase))
-                {
-                    sb.Append('[').Append(bpPath).Append("]\r\n");
-                    foreach (var l in lines) sb.Append(l).Append("\r\n");
-                    sb.Append("\r\n");
-                }
+                foreach (var bpPath in ModeBlueprints(state, mode.Key))
+                    sections.Add(new UeIni.Section(bpPath) { Values = new List<KeyValuePair<string, string>>(values) });
             }
-            if (string.Equals(p.CustomIniMode, "Append", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.CustomIniText))
-                sb.Append("; Custom Game.ini lines from profile \"").Append(p.Name).Append("\"\r\n").Append(p.CustomIniText.Trim()).Append("\r\n");
-            return sb.ToString().TrimEnd('\r', '\n');
+            if (!string.Equals(p.CustomIniMode ?? "Off", "Off", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.CustomIniText))
+                foreach (var s in UeIni.Parse(p.CustomIniText))
+                {
+                    var existing = sections.FirstOrDefault(x => x.Name.Equals(s.Name, StringComparison.OrdinalIgnoreCase));
+                    if (existing == null) sections.Add(s);
+                    else foreach (var v in s.Values) { existing.Values.RemoveAll(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)); existing.Values.Add(v); }
+                }
+            return sections;
         }
+
+        public static IEnumerable<string> ModeBlueprints(AppState state, string modeCls) =>
+            state.AllScenarios.Where(s => s.GameModePath != null && s.Category != "Training"
+                                          && !s.GameModePath.StartsWith("/Script/", StringComparison.OrdinalIgnoreCase)
+                                          && s.GameModePath.IndexOf("/Develop", StringComparison.OrdinalIgnoreCase) < 0
+                                          && state.Rules.ResolveMode(s.GameModeClass)?.Cls == modeCls)
+                              .Select(s => s.GameModePath).Distinct(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Keys the launcher owns in Game.ini: every match rule it knows, in any game mode section. Old copies of
+        /// them (from earlier launches, or left behind when the game rewrote the file) are removed before writing.
+        /// </summary>
+        public static bool IsManagedIniKey(RulesDb db, string section, string key) =>
+            section.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) >= 0 && db.Prop(key) != null;
 
         /// <summary>Fingerprint of everything that only takes effect when the game starts.</summary>
         public static string RestartKeyFor(Profile p, RulesDb db)

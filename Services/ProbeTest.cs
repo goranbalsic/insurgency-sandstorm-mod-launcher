@@ -88,6 +88,8 @@ namespace SandstormModLauncher.Services
             {
                 var bar = ConsoleProbe.DetectOpened(b, a, out string why);
                 sb.AppendLine("opened: " + (bar != null) + "  " + why);
+                sb.AppendLine("already open before: " + (ConsoleProbe.FindOpenConsole(b, out why) != null) + "  " + why);
+                sb.AppendLine("open after: " + (ConsoleProbe.FindOpenConsole(a, out why) != null) + "  " + why);
                 sb.AppendLine("steady: " + ConsoleProbe.Steady(b, a) + "  changed " + ConsoleProbe.Changed(b, a, 0, a.Height - 1).ToString("P1"));
                 for (int y = Math.Max(0, a.Height - ConsoleProbe.BandRows(a)); y < a.Height; y++)
                     sb.AppendLine($"row {y}: changed {ConsoleProbe.Changed(b, a, y, y, 0.3, 0.97):P0}");

@@ -1,18 +1,12 @@
 <UserControl x:Class="SandstormModLauncher.Views.Pages.LivePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="20,18,20,16">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="0" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-        <StackPanel>
-            <TextBlock Text="LIVE CONTROL" Style="{StaticResource Kicker}" />
-            <TextBlock Text="Run the match like a server admin" Style="{StaticResource H1}" FontSize="28" Margin="0,2,0,0" />
-            <TextBlock Style="{StaticResource Mute}" FontSize="13" Margin="0,4,0,0" Text="Commands go straight to the game. You never touch the console." />
-        </StackPanel>
 
         <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="8" Padding="14,10" BorderThickness="1"
                 Background="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=bg}"
@@ -23,7 +17,7 @@
                     <Run Text="{Binding GameStatus, Mode=OneWay}" />
                 </TextBlock>
                 <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Visibility="{Binding InMatch, Converter={StaticResource VisNot}}" Text="Start a match with Launch first. These controls work while you are in a match." />
+                           Visibility="{Binding InMatch, Converter={StaticResource VisNot}}" Text="These controls start working once you are in a match. Press Launch first." />
             </DockPanel>
         </Border>
 

@@ -85,6 +85,23 @@ namespace SandstormModLauncher
             File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
         }
 
+        /// <summary>--ini-test in.ini out.ini: merges the active profile's rules into a copy of a Game.ini (nothing else is touched).</summary>
+        public static void IniTest(string inFile, string outFile)
+        {
+            var state = new AppState();
+            state.Store.Load();
+            state.Rules = RulesDb.LoadEmbedded();
+            state.Install = GameInstall.Detect(state.Settings.GameDirOverride);
+            state.Official = GameCatalog.Load(state.Install, Path.Combine(AppPaths.DataDir, "cache"), m => { });
+            state.Mods = ModScanner.Scan(state.Install, state.Settings.ExtraModFolders, Path.Combine(AppPaths.DataDir, "cache"), m => { });
+            state.Rebuild();
+            var plan = LaunchPlanner.Build(state.Store.Active, state);
+            string text = UeIni.ReadText(inFile);
+            string merged = UeIni.MergeSections(text, plan.IniSections, (s, k) => LaunchPlanner.IsManagedIniKey(state.Rules, s, k));
+            File.WriteAllText(outFile, merged);
+            File.WriteAllText(outFile + ".plan.txt", "Open: " + plan.OpenCommand + "\r\nPlayer slots: " + plan.PlayerSlots + "\r\n\r\n" + plan.GameIniBlock);
+        }
+
         private static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length > n ? s.Substring(0, n) + "..." : s).Replace("\n", " ");
     }
 }

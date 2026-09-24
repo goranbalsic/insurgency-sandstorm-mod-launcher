@@ -159,6 +159,45 @@ namespace SandstormModLauncher.Game
             return n == 0 ? 0 : (double)flat / n;
         }
 
+        /// <summary>
+        /// Finds a console line that is already open, from one picture. The game draws it as a solid grey line
+        /// (about 3 px at 1080p, the same value across the whole width) above a dark band down to the bottom edge.
+        /// </summary>
+        public static ConsoleBar FindOpenConsole(Frame f, out string why)
+        {
+            why = "no picture";
+            if (f == null) return null;
+            int band = BandRows(f);
+            Columns(f, 0.30, 0.97, 480, out int x0, out int x1, out int step);
+            var hist = new int[256];
+            int darkTop = -1;
+            // Dark rows up from the bottom edge (text only sits in the left part, outside the sampled columns
+            // unless the line is long, so allow a few bright samples).
+            for (int y = f.Height - 1; y >= f.Height - band; y--)
+            {
+                Array.Clear(hist, 0, 256);
+                int n = 0, bright = 0;
+                for (int x = x0; x < x1; x += step) { int v = f.L(x, y); hist[v]++; n++; if (v > 70) bright++; }
+                Flatness(hist, n, 10, out int med);
+                if (med <= 45 && bright <= n * 0.35) darkTop = y; else break;
+            }
+            int minDark = Math.Max(6, (int)Math.Round(f.ClientHeight * 0.012));
+            if (darkTop < 0 || f.Height - darkTop < minDark) { why = $"no dark console band ({(darkTop < 0 ? 0 : f.Height - darkTop)} rows, need {minDark})"; return null; }
+            // The solid border right above it.
+            int borderRows = 0;
+            for (int y = darkTop - 1; y >= Math.Max(0, darkTop - 6); y--)
+            {
+                Array.Clear(hist, 0, 256);
+                int n = 0;
+                for (int x = 0; x < f.Width; x += Math.Max(1, step)) { hist[f.L(x, y)]++; n++; }
+                double flat = Flatness(hist, n, 4, out int med);
+                if (flat >= 0.97 && med >= 80 && med <= 210) borderRows++; else break;
+            }
+            if (borderRows == 0) { why = "dark band without the console border"; return null; }
+            why = $"console already open, rows {darkTop - borderRows}-{f.Height - 1}";
+            return new ConsoleBar { Top = darkTop - borderRows, Bottom = f.Height - 1 };
+        }
+
         /// <summary>True when the bar still looks like it did right after the console opened (text may have changed).</summary>
         public static bool BarStillThere(Frame opened, Frame now, ConsoleBar bar)
         {

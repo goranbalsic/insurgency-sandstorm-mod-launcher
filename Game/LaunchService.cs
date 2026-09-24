@@ -104,11 +104,13 @@ namespace SandstormModLauncher.Game
                 Report(0, plan.MissingMutators.Count > 0 ? StepState.Warning : StepState.Done,
                     $"{plan.Mutators.Count} mutator{(plan.Mutators.Count == 1 ? "" : "s")}" + (plan.MissingMutators.Count > 0 ? $", {plan.MissingMutators.Count} missing" : ""));
 
-                // 2. Game.ini
+                // 2. Game.ini: only while the game is closed. A running game keeps its own copy in memory and
+                // writes that back when it changes map or exits, which would undo the change.
                 current = 1;
                 Report(1, StepState.Active);
-                string ruleDetail = WriteGameIni(plan);
-                Report(1, StepState.Done, ruleDetail);
+                bool startedNow = false;
+                if (GameProcessRunning()) Report(1, StepState.Skipped, "The game is running: the rules are sent after the map loads, and Game.ini is updated before the next start");
+                else Report(1, StepState.Done, WriteGameIni(plan));
 
                 // 3. Start / restart
                 current = 2;
@@ -124,8 +126,10 @@ namespace SandstormModLauncher.Game
                         throw new LaunchException("The game is not running. Start Insurgency: Sandstorm, or turn on \"Start the game automatically\" in Settings.");
                     bool steamCold = state.Install.Store != "Epic" && Process.GetProcessesByName("steam").Length == 0;
                     Report(2, StepState.Active, steamCold ? "Starting Steam, then the game" : "Starting through " + state.Install.Store);
+                    if (restart) WriteGameIni(plan); // the closing game has just rewritten it
                     PrepareConsoleKey();
                     StartGame(plan);
+                    startedNow = true;
                     state.Settings.GameStartedWithRulesHash = plan.RestartKey;
                     var sw = Stopwatch.StartNew();
                     while (!monitor.IsRunning && sw.Elapsed < TimeSpan.FromSeconds(Math.Max(120, state.Settings.StartTimeoutSec)))
@@ -185,8 +189,7 @@ namespace SandstormModLauncher.Game
                     current = 5;
                     Report(5, StepState.Active, "Loading " + (plan.Map?.DisplayName ?? plan.Level));
                     await WaitForMap(level, loadLines, sent.Verified ? 240 : 20, ct);
-                    await Task.Delay(1500, ct);
-                    monitor.Poll();
+                    await WaitForLoadingScreen(ct);
                     List<string> snapshot;
                     lock (loadLines) snapshot = new List<string>(loadLines);
                     report.Warnings.AddRange(MutatorWarnings(plan, snapshot));
@@ -199,7 +202,7 @@ namespace SandstormModLauncher.Game
                         var again = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
                         if (!again.Sent) throw new LaunchException("The reload was not sent: " + again.Detail);
                         await WaitForMap(level, loadLines, 240, ct);
-                        await Task.Delay(1500, ct);
+                        await WaitForLoadingScreen(ct);
                         Report(5, StepState.Done, "Map loaded (reloaded)");
                     }
                 }
@@ -207,10 +210,12 @@ namespace SandstormModLauncher.Game
 
                 // 7. After-load commands
                 current = 6;
-                if (plan.AfterLoad.Count > 0)
+                // A game started by this launch already read the rules from Game.ini; sending them again is not needed.
+                var afterLoad = startedNow ? plan.AfterLoad.Where(c => !c.StartsWith("AdminSetGamemodeProperty ", StringComparison.OrdinalIgnoreCase)).ToList() : plan.AfterLoad;
+                if (afterLoad.Count > 0)
                 {
-                    Report(6, StepState.Active, plan.AfterLoad.Count + " command(s)");
-                    var res = await console.Run(string.Join(" | ", plan.AfterLoad), ct, null, TimeSpan.FromSeconds(3));
+                    Report(6, StepState.Active, afterLoad.Count + " command(s)");
+                    var res = await console.Run(string.Join(" | ", afterLoad), ct, null, TimeSpan.FromSeconds(3));
                     if (!res.Sent) { report.Warnings.Add("Live settings were not applied: " + res.Detail); Report(6, StepState.Warning, res.Detail); }
                     else
                     {
@@ -219,7 +224,7 @@ namespace SandstormModLauncher.Game
                         Report(6, bad.Count > 0 ? StepState.Warning : StepState.Done, bad.Count > 0 ? bad.Count + " not recognised" : "Applied");
                     }
                 }
-                else Report(6, StepState.Skipped, "Nothing to apply");
+                else Report(6, StepState.Skipped, startedNow && plan.AfterLoad.Count > 0 ? "Rules were read from Game.ini at game start" : "Nothing to apply");
 
                 report.Success = true;
                 report.Message = "You're in. Have a good fight.";
@@ -247,6 +252,25 @@ namespace SandstormModLauncher.Game
             }
         }
 
+        /// <summary>The loading picture stays up for a few seconds after the map is loaded; the console cannot open under it.</summary>
+        private async Task WaitForLoadingScreen(CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            await Task.Delay(500, ct);
+            monitor.Poll();
+            while (monitor.LoadingScreenUp && sw.Elapsed < TimeSpan.FromSeconds(45))
+            {
+                if (!monitor.IsRunning) throw new LaunchException("The game closed while loading the map.");
+                await Task.Delay(250, ct);
+                monitor.Poll();
+            }
+            AppLog.Debug("Loading screen " + (monitor.LoadingScreenUp ? "still up after 45 s" : "gone") + " after " + sw.ElapsedMilliseconds + " ms");
+            await Task.Delay(1200, ct);
+            monitor.Poll();
+        }
+
+        private bool GameProcessRunning() => monitor.IsRunning || Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0;
+
         /// <summary>Waits until the log says the level finished loading (lines already collected count too).</summary>
         private async Task WaitForMap(string level, List<string> lines, int timeoutSec, CancellationToken ct)
         {
@@ -272,22 +296,22 @@ namespace SandstormModLauncher.Game
             var p = plan.Profile;
             string path = GameInstall.GameIniPath;
             string current = UeIni.ReadText(path);
-            string block = plan.GameIniBlock;
-            string updated;
-            if (string.Equals(p.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase))
-            {
-                string body = block;
-                if (!string.IsNullOrWhiteSpace(p.CustomIniText) && !body.Contains(p.CustomIniText.Trim())) body = (body + "\r\n\r\n" + p.CustomIniText.Trim()).Trim();
-                updated = UeIni.BlockStart + "\r\n" + body + "\r\n" + UeIni.BlockEnd + "\r\n";
-            }
-            else updated = UeIni.WithManagedBlock(current, block);
-            int sections = Regex.Matches(block, @"^\[", RegexOptions.Multiline).Count;
+            var db = state.Rules;
+            // Extra lines the player added last time are the launcher's too, so removing them from the profile removes them here.
+            var earlier = new HashSet<string>(state.Settings.ManagedIniKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+            string updated = string.Equals(p.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)
+                ? UeIni.Render(plan.IniSections) + "\r\n"
+                : UeIni.MergeSections(current, plan.IniSections, (s, k) => LaunchPlanner.IsManagedIniKey(db, s, k) || earlier.Contains(s + "\n" + k));
+            int sections = plan.IniSections.Count(s => s.Values.Count > 0);
             if (Normalize(updated) != Normalize(current))
             {
                 ConsoleBridge.BackupFile(path);
                 UeIni.WriteText(path, updated);
-                AppLog.Info("Game.ini updated (" + sections + " section(s))");
+                AppLog.Info("Game.ini updated (" + sections + " section(s), " + UeIni.Split(current).Count + " -> " + UeIni.Split(updated).Count + " lines)");
+                AppLog.Debug("Game.ini rules:\r\n" + plan.GameIniBlock);
             }
+            state.Settings.ManagedIniKeys = plan.IniSections.SelectMany(s => s.Values.Where(v => !LaunchPlanner.IsManagedIniKey(db, s.Name, v.Key)).Select(v => s.Name + "\n" + v.Key))
+                                                             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             state.Settings.LastWrittenRulesHash = plan.RestartKey;
             state.Settings.LastRulesWriteUtc = DateTime.UtcNow;
             return plan.Overrides.Count == 0 && sections == 0 ? "Game defaults" : $"{plan.Overrides.Count} change{(plan.Overrides.Count == 1 ? "" : "s")} for {plan.ModeTitle}";

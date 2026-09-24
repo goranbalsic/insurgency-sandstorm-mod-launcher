@@ -1,7 +1,7 @@
 <UserControl x:Class="SandstormModLauncher.Views.Pages.PlaylistsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="20,18,20,16">
+    <Grid Margin="0,14,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -9,14 +9,8 @@
         </Grid.RowDefinitions>
 
         <DockPanel LastChildFill="False">
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Style="{StaticResource Kicker}">
-                    <Run Text="{Binding PlaylistCount, Mode=OneWay}" /><Run Text=" OFFICIAL PLAYLISTS" />
-                </TextBlock>
-                <TextBlock Text="Every online playlist, offline" Style="{StaticResource H1}" FontSize="28" Margin="0,2,0,0" />
-                <TextBlock Style="{StaticResource Mute}" FontSize="13" Margin="0,4,0,0"
-                           Text="The game's own playlists with their mutators, lighting and rulesets. Set one up, then tune the bots for solo, co-op or lone wolf play." />
-            </StackPanel>
+            <TextBlock DockPanel.Dock="Left" Style="{StaticResource Mute}" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"
+                       Text="The game's own online playlists with their mutators, lighting and rulesets. Set one up, then tune the squad on the Map tab." />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
                 <Grid Width="260">
                     <TextBox Text="{Binding PlaylistSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search playlists, mutators, features" Padding="30,6,8,6" />

@@ -39,12 +39,17 @@ namespace SandstormModLauncher.ViewModels
         public ICommand SetupPlaylistCommand { get; private set; }
         public ICommand PlayPlaylistCommand { get; private set; }
         public ICommand AddMutatorByIdCommand { get; private set; }
-        private string modSearch = "", playlistFilter = "All", playlistSearch = "";
+        public ICommand ModsTabCommand { get; private set; }
+        private string modSearch = "", playlistFilter = "All", playlistSearch = "", modsTab = "Mutators";
         private ModItem selectedMod;
+
+        /// <summary>Mutators or Installed: the views of the Mods page.</summary>
+        public string ModsTab { get => modsTab; set => Set(ref modsTab, string.IsNullOrEmpty(value) ? "Mutators" : value); }
 
         private void InitModCommands()
         {
             RescanModsCommand = new AsyncCommand(() => RescanMods(false));
+            ModsTabCommand = new RelayCommand(p => { Page = "Mods"; ModsTab = p as string ?? "Mutators"; });
             OpenModFolderCommand = new RelayCommand(p =>
             {
                 string folder = (p as ModItem)?.Info.Folder;
@@ -94,7 +99,7 @@ namespace SandstormModLauncher.ViewModels
             var usable = item.Info.Mutators.Where(m => m.Registered && !m.IsBaseClass).ToList();
             if (usable.Count == 0) { ShowToast("This mod has no mutators to add"); return; }
             if (usable.Count == 1) SetMutatorActive(usable[0].Id, true);
-            else { Page = "Mutators"; MutatorSearch = item.Name; ShowToast("Pick which of the " + usable.Count + " mutators to use"); return; }
+            else { Page = "Mods"; ModsTab = "Mutators"; MutatorSearch = item.Name; ShowToast("Pick which of the " + usable.Count + " mutators to use"); return; }
             ShowToast(usable[0].DisplayName + " added to your mutators");
         }
 
@@ -163,7 +168,7 @@ namespace SandstormModLauncher.ViewModels
             string note = def.Missing.Count > 0 ? " (" + string.Join(", ", def.Missing) + " left out: not in the current game)" : "";
             ShowToast(def.Title + " is set up on " + map.Name + note);
             if (launch) LaunchCommand.Execute(null);
-            else Page = "Play";
+            else PlayTab = "Map";
         }
     }
 }

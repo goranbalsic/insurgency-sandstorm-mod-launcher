@@ -93,7 +93,7 @@ namespace SandstormModLauncher.ViewModels
                 lastPhase = Monitor.Phase;
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
-                Page = State.Settings.LastPage == "Rules" || State.Settings.LastPage == null ? "Play" : State.Settings.LastPage;
+                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 if (!State.Install.IsValid)
@@ -180,7 +180,7 @@ namespace SandstormModLauncher.ViewModels
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();
-                if (value == "Live") RefreshLive();
+
             }
         }
 

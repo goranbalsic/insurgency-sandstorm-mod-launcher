@@ -40,6 +40,8 @@ namespace SandstormModLauncher.Game
         public string CurrentUrl { get; private set; }
         public string RoundState { get; private set; }
         public int ModsMounted { get; private set; }
+        /// <summary>The game's loading picture is covering the viewport (the console cannot open under it).</summary>
+        public bool LoadingScreenUp { get; private set; }
         public int ProcessId { get; private set; }
         public DateTime? ProcessStartUtc { get; private set; }
         public IntPtr Window { get; private set; }
@@ -77,7 +79,7 @@ namespace SandstormModLauncher.Game
             if (p == null)
             {
                 if (ProcessId == 0) return false;
-                ProcessId = 0; ProcessStartUtc = null; Window = IntPtr.Zero;
+                ProcessId = 0; ProcessStartUtc = null; Window = IntPtr.Zero; LoadingScreenUp = false;
                 Phase = GamePhase.NotRunning; CurrentLevel = null; RoundState = null; mapLoaded = false;
                 return true;
             }
@@ -157,7 +159,9 @@ namespace SandstormModLauncher.Game
 
         private bool Parse(string line)
         {
-            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
+            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; LoadingScreenUp = false; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
+            if (line.Contains("LoadingScreen: EndLoadingScreen")) { LoadingScreenUp = false; return true; }
+            if (line.Contains("LogLoad: BeginLoadingScreen") || line.Contains("Restoring loading screen widget")) { LoadingScreenUp = true; return true; }
             // The game logs "-> Playing" just after a map finishes loading, so it only means
             // "loading" while the map is still on its way.
             var t = Transition.Match(line);

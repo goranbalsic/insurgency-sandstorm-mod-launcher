@@ -22,6 +22,8 @@ namespace SandstormModLauncher.Game
         public string Layout;
         public List<string> ActiveKeys = new List<string>();
         public bool ExtraKeyPending; // the launcher's extra key was written after the game started
+        public string AltKeyName;    // second console key, tried when the first press shows nothing
+        public ushort AltVirtualKey;
     }
 
     public sealed class CommandResult
@@ -155,14 +157,16 @@ namespace SandstormModLauncher.Game
                 if (!isDefault && addedAfterStart && IsFunctionKey(k)) { plan.ExtraKeyPending = true; continue; }
                 usable.Add(k);
             }
-            // Function keys do not depend on the keyboard layout, so they go first.
-            foreach (var k in usable.OrderBy(k => IsFunctionKey(k) ? 0 : 1))
+            // The game's own key (`/~) first when this keyboard layout has it, the layout-free function key otherwise;
+            // the other one is kept for a second try.
+            foreach (var k in usable.OrderBy(k => IsFunctionKey(k) ? 1 : 0))
             {
                 ushort vk = input.VirtualKeyFor(k);
                 if (vk == 0) continue;
-                plan.KeyName = k; plan.VirtualKey = vk;
-                return plan;
+                if (plan.VirtualKey == 0) { plan.KeyName = k; plan.VirtualKey = vk; }
+                else if (vk != plan.VirtualKey) { plan.AltKeyName = k; plan.AltVirtualKey = vk; break; }
             }
+            if (plan.Ok) return plan;
             string keys = string.Join(", ", usable.Select(PrettyKey));
             plan.Problem = plan.ExtraKeyPending
                 ? $"The {plan.Layout} keyboard layout has no {keys} key, and F10 (added for this) only works after the game restarts. Close the game and launch from here, or switch the keyboard to English (Win+Space) for now."
@@ -189,6 +193,21 @@ namespace SandstormModLauncher.Game
                     AppLog.Warn($"Console #{id} not sent: {plan.Problem}");
                     return result;
                 }
+                // The console cannot open while the loading picture covers the game.
+                var waitLoading = Stopwatch.StartNew();
+                while (monitor.LoadingScreenUp && waitLoading.Elapsed < TimeSpan.FromSeconds(30))
+                {
+                    await Task.Delay(250, ct).ConfigureAwait(false);
+                    monitor.Poll();
+                }
+                if (monitor.LoadingScreenUp)
+                {
+                    result.Detail = "The game is still showing its loading screen, so the console cannot open. Try again once it is gone.";
+                    result.NothingTyped = true;
+                    AppLog.Warn($"Console #{id} not sent: loading screen still up after 30 s");
+                    return result;
+                }
+                if (waitLoading.ElapsedMilliseconds > 300) await Task.Delay(1200, ct).ConfigureAwait(false);
                 KeyBindings.Backup("before console #" + id);
                 var words = commandLine.Split('|').Select(p => p.Trim().Split(' ')[0]).ToList();
                 var cfg = settings();
@@ -325,28 +344,45 @@ namespace SandstormModLauncher.Game
             if (held != null) throw new ConsoleSendException("A keyboard key is held down (" + held + "). Let go of the keyboard and try again.", true);
             Step("focused");
 
-            // 1. Open the console and see it on screen.
-            input.Tap(plan.VirtualKey);
-            ConsoleBar bar = null;
-            Frame opened = null, last = null;
-            string why = "no picture";
+            // 1. Open the console and see it on screen (or use it when it is already open).
+            ConsoleBar bar = ConsoleProbe.FindOpenConsole(before, out string why);
+            Frame opened = bar != null ? before : null, last = before;
             var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 1500)
+            string pressed = "";
+            Frame reference = before;
+            foreach (var (keyName, vk) in new[] { (plan.KeyName, plan.VirtualKey), (plan.AltKeyName ?? plan.KeyName, plan.AltKeyName != null ? plan.AltVirtualKey : plan.VirtualKey) })
             {
-                Thread.Sleep(50);
-                var f = Grab(hwnd);
-                if (f == null) continue;
-                last = f;
-                bar = ConsoleProbe.DetectOpened(before, f, out why);
-                if (bar != null) { opened = f; break; }
+                if (bar != null) break;
+                if (pressed.Length > 0)
+                {
+                    // Nothing showed after the first key: look once more (a late frame), then try again.
+                    Thread.Sleep(400);
+                    var late = Grab(hwnd);
+                    bar = ConsoleProbe.FindOpenConsole(late, out why);
+                    if (bar != null) { opened = late; break; }
+                    if (HeldKey() != null) break;
+                    reference = late ?? reference;
+                }
+                input.Tap(vk);
+                pressed += (pressed.Length > 0 ? ", then " : "") + PrettyKey(keyName);
+                sw.Restart();
+                while (sw.ElapsedMilliseconds < 1500)
+                {
+                    Thread.Sleep(50);
+                    var f = Grab(hwnd);
+                    if (f == null) continue;
+                    last = f;
+                    bar = ConsoleProbe.DetectOpened(reference, f, out why) ?? ConsoleProbe.FindOpenConsole(f, out _);
+                    if (bar != null) { opened = f; break; }
+                }
             }
             if (bar == null)
             {
                 SaveShots(id, "not-open", before, last);
-                throw new ConsoleSendException("The game's console did not open when " + PrettyKey(plan.KeyName) + " was pressed, so nothing was typed (" + why + "). " +
+                throw new ConsoleSendException("The game's console did not open when " + pressed + " was pressed, so nothing was typed (" + why + "). " +
                                                "If a menu, message or loading screen is showing in the game, close it and try again.", true);
             }
-            Step("console open " + bar + " (" + why + ")");
+            Step((pressed.Length > 0 ? "console opened with " + pressed : "console was already open") + " " + bar + " (" + why + ")");
             Thread.Sleep(40);
             var settled = Grab(hwnd);
             if (settled != null && ConsoleProbe.BarStillThere(opened, settled, bar)) opened = settled;

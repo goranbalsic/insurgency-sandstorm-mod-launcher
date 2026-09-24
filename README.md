@@ -11,7 +11,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 ## Features
 
 - All official maps and scenarios plus mod maps, day or night, Hardcore Checkpoint
-- One Play page: map, scenario, squad, enemies and every match rule of the selected mode
+- Three pages. Play: map, squad and enemies, every match rule of the selected mode, the official playlists and live control of the running match. Mods: all mutators (official ones grouped by the co-op and versus playlists that use them) and the installed mods. Settings
 - Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults. Versus with bots as 1v1, 5v5, 10v10 or any team size
 - All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
@@ -21,7 +21,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - One click: starts the game, waits for the main menu and loads the match
 - Fully offline: no accounts, no network access, no telemetry
 
-| Match rules | Mutators |
+| Match rules | Mods and mutators |
 | --- | --- |
 | ![Rules](docs/screenshots/rules.png) | ![Mutators](docs/screenshots/mutators.png) |
 | **Live match control** | **Settings** |
@@ -35,12 +35,12 @@ Requirements: Windows 10 or 11, Insurgency: Sandstorm, .NET Framework 4.8 (part 
 
 ## How it works
 
-1. Rules you change are written to your `Game.ini` inside a marked block (backed up first), so bots spawn with your values from the first second.
+1. Rules you change are written to your `Game.ini` while the game is closed (backed up first), one line per setting, so bots spawn with your values from the first second. Older copies of the same settings are removed, because the game uses the first value it finds. When the game is already running, the rules are sent with admin commands after the map loads.
 2. The launcher starts the game if needed and follows the game log until the main menu is up.
 3. It presses the console key and checks on screen that the console line opened. Only then does it paste the `open` command (map, scenario, lighting, mutators) and press Enter. If the console is not clearly open it stops without pressing anything else, so no key can land in the game's menus.
-4. After the map loads it applies your rules again with admin commands.
+4. If the game was already running, it sends your rules with admin commands once the map and its loading screen are done.
 
-The ` key is missing on many keyboard layouts (Serbian, German, French and others). While the game is closed the launcher adds F10 as an extra console key, which works on every layout.
+The launcher uses the ` key when your keyboard layout has it. It is missing on many layouts (Serbian, German, French and others), so while the game is closed the launcher also adds F10 as a console key, which works on every layout.
 
 ## Is it safe?
 
@@ -49,7 +49,7 @@ All source code is in this repository, and every release is built from it by [Gi
 What the program does on your PC:
 
 - Reads the game's .pak files, configs and log, and the game's mod folder (read only)
-- Writes only its own block in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
+- Writes only match rules (game mode settings) in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
 - Keeps copies of your game key bindings before it sends any key to the game, and can put them back (Settings > Game key bindings). It never edits them itself
 - Sends keystrokes only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
 - Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
@@ -60,10 +60,10 @@ The exe is not code-signed, so SmartScreen may show "Windows protected your PC" 
 
 ```powershell
 # compare with the SHA-256 on the release page
-Get-FileHash .\SandstormModLauncher-v1.1.0.zip -Algorithm SHA256
+Get-FileHash .\SandstormModLauncher-v1.2.0.zip -Algorithm SHA256
 
 # check that the file was built by this repository's workflow (GitHub CLI)
-gh attestation verify .\SandstormModLauncher-v1.1.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
+gh attestation verify .\SandstormModLauncher-v1.2.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
 ```
 
 Or build it yourself and use your own exe.

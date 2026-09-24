@@ -211,6 +211,8 @@ namespace SandstormModLauncher.ViewModels
             if (report.Success)
             {
                 AppLog.Info("Launched " + plan.Title);
+                Page = "Play";
+                PlayTab = "Live";
                 if (State.Settings.MinimizeOnLaunch && Application.Current?.MainWindow != null) Application.Current.MainWindow.WindowState = WindowState.Minimized;
                 if (LaunchWarnings.Count == 0)
                 {

@@ -77,6 +77,98 @@ namespace SandstormModLauncher.Core
 
         public static List<string> Split(string text) => (text ?? "").Replace("\r\n", "\n").Split('\n').ToList();
 
+        /// <summary>One [Section] with its Key=Value lines.</summary>
+        public sealed class Section
+        {
+            public string Name;
+            public List<KeyValuePair<string, string>> Values = new List<KeyValuePair<string, string>>();
+            public Section(string name) { Name = name; }
+        }
+
+        /// <summary>Key of a "Key=Value" line (array operators + - . ! removed), or null for comments, blanks and headers.</summary>
+        public static string KeyOf(string line)
+        {
+            string t = line.Trim();
+            if (t.Length == 0 || t.StartsWith(";") || t.StartsWith("#") || t.StartsWith("[")) return null;
+            if (t[0] == '+' || t[0] == '-' || t[0] == '.' || t[0] == '!') t = t.Substring(1);
+            int eq = t.IndexOf('=');
+            return (eq >= 0 ? t.Substring(0, eq) : t).Trim();
+        }
+
+        /// <summary>Sections and values of config text (for merging lines typed by the player).</summary>
+        public static List<Section> Parse(string text)
+        {
+            var list = new List<Section>();
+            Section current = null;
+            foreach (var raw in Split(text))
+            {
+                string t = raw.Trim();
+                if (t.StartsWith("[") && t.EndsWith("]")) { current = new Section(t.Substring(1, t.Length - 2)); list.Add(current); continue; }
+                string key = KeyOf(raw);
+                if (key == null || current == null) continue;
+                int eq = t.IndexOf('=');
+                current.Values.Add(new KeyValuePair<string, string>(t.Substring(0, eq >= 0 ? eq : t.Length).Trim(), eq >= 0 ? t.Substring(eq + 1).Trim() : ""));
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Writes the given values into the file by key, not by marker comments: the game rewrites its own
+        /// config files and drops comments, so markers cannot be relied on. Every existing line for a key the
+        /// launcher manages (isManaged) or writes now is removed from its section first, so each key ends up
+        /// exactly once (the game uses the first value it finds). Everything else is kept as it was.
+        /// </summary>
+        public static string MergeSections(string text, IList<Section> ours, Func<string, string, bool> isManaged)
+        {
+            var writing = new HashSet<string>(ours.SelectMany(s => s.Values.Select(v => s.Name + "\n" + v.Key)), StringComparer.OrdinalIgnoreCase);
+            bool Drop(string section, string key) =>
+                section != null && key != null && (writing.Contains(section + "\n" + key) || isManaged(section, key));
+
+            // Parse into blocks: preamble (section null) and sections, keeping every other line untouched.
+            var blocks = new List<(string Name, List<string> Lines)> { (null, new List<string>()) };
+            foreach (var line in Split(StripManagedBlocks(text)))
+            {
+                string t = line.Trim();
+                if (t.StartsWith("[") && t.EndsWith("]")) { blocks.Add((t.Substring(1, t.Length - 2), new List<string> { line })); continue; }
+                var b = blocks[blocks.Count - 1];
+                if (Drop(b.Name, KeyOf(line))) continue;
+                b.Lines.Add(line);
+            }
+            foreach (var s in ours)
+            {
+                if (s.Values.Count == 0) continue;
+                var target = blocks.FirstOrDefault(b => string.Equals(b.Name, s.Name, StringComparison.OrdinalIgnoreCase));
+                if (target.Lines == null) { target = (s.Name, new List<string> { "[" + s.Name + "]" }); blocks.Add(target); }
+                int at = target.Lines.Count;
+                while (at > 1 && target.Lines[at - 1].Trim().Length == 0) at--;
+                target.Lines.InsertRange(at, s.Values.Select(v => v.Key + "=" + v.Value));
+            }
+            var sb = new StringBuilder();
+            foreach (var b in blocks)
+            {
+                var lines = b.Lines;
+                while (lines.Count > 0 && lines[lines.Count - 1].Trim().Length == 0) lines.RemoveAt(lines.Count - 1);
+                // A section left with nothing but its header is dropped.
+                if (b.Name != null && lines.Count(l => l.Trim().Length > 0) <= 1) continue;
+                if (lines.Count == 0) continue;
+                foreach (var l in lines) sb.Append(l).Append("\r\n");
+                sb.Append("\r\n");
+            }
+            return sb.ToString().TrimEnd('\r', '\n') + "\r\n";
+        }
+
+        public static string Render(IEnumerable<Section> sections)
+        {
+            var sb = new StringBuilder();
+            foreach (var s in sections.Where(s => s.Values.Count > 0))
+            {
+                sb.Append('[').Append(s.Name).Append("]\r\n");
+                foreach (var v in s.Values) sb.Append(v.Key).Append('=').Append(v.Value).Append("\r\n");
+                sb.Append("\r\n");
+            }
+            return sb.ToString().TrimEnd('\r', '\n');
+        }
+
         /// <summary>Values of a key inside a section, following Unreal array operators (+ - . !).</summary>
         public static List<string> ReadArray(string text, string section, string key, List<string> initial = null)
         {

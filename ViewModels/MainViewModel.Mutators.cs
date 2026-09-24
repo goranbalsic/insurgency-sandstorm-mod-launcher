@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
+using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
 
 namespace SandstormModLauncher.ViewModels
@@ -51,7 +52,30 @@ namespace SandstormModLauncher.ViewModels
         {
             MutatorItems.Clear();
             var active = new HashSet<string>(Profile.Mutators, StringComparer.OrdinalIgnoreCase);
-            foreach (var m in State.AllMutators) MutatorItems.Add(new MutatorItem(m, active.Contains(m.Id), OnMutatorToggled));
+            // Official mutators are grouped by the official playlists that use them.
+            var coop = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var versus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pl in State.Rules?.Playlists ?? new List<PlaylistDef>())
+                foreach (var name in pl.Mutators)
+                {
+                    var info = State.FindMutator(name);
+                    if (info != null) (pl.IsCoop ? coop : versus).Add(info.Id);
+                }
+            var items = new List<MutatorItem>();
+            foreach (var m in State.AllMutators)
+            {
+                var item = new MutatorItem(m, active.Contains(m.Id), OnMutatorToggled);
+                if (m.Source == ContentSource.Official)
+                {
+                    bool c = coop.Contains(m.Id), v = versus.Contains(m.Id);
+                    item.OfficialGroup = c && v ? "Official · co-op and versus playlists" : c ? "Official · co-op playlists" : v ? "Official · versus playlists" : "Official · other";
+                    item.GroupRank = c && !v ? 0 : v && !c ? 1 : c ? 2 : 3;
+                }
+                else item.GroupRank = m.Source == ContentSource.Mod ? 4 : 5;
+                items.Add(item);
+            }
+            foreach (var item in items.OrderBy(i => i.GroupRank).ThenBy(i => i.Group, StringComparer.OrdinalIgnoreCase).ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase))
+                MutatorItems.Add(item);
             MutatorsView = CollectionViewSource.GetDefaultView(MutatorItems);
             MutatorsView.GroupDescriptions.Clear();
             MutatorsView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MutatorItem.Group)));
