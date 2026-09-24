@@ -62,7 +62,7 @@ namespace SandstormModLauncher.ViewModels
             LiveGroup G(string title, bool cheat, params (string label, string cmd, string tip)[] actions) => new LiveGroup
             {
                 Title = title, Cheat = cheat, Badge = cheat ? "CHEAT" : "ADMIN",
-                Actions = actions.Select(a => new LiveAction { Group = title, Label = a.label, Command = a.cmd, Tip = a.tip, Cheat = cheat }).ToList()
+                Actions = actions.Select(a => new LiveAction { Label = a.label, Command = a.cmd, Tip = a.tip }).ToList()
             };
             LiveGroups.Add(G("ROUND", false,
                 ("Restart round", "AdminRestartRound 0", "Starts the round again with the current settings."),
@@ -230,13 +230,13 @@ namespace SandstormModLauncher.ViewModels
             try
             {
                 var values = await Console.ReadLive(liveModeCls, LiveRules.Select(r => r.Key), CancellationToken.None);
-                foreach (var r in LiveRules) r.Current = values.TryGetValue(r.Key, out var v) ? Trim(v) : "?";
+                foreach (var r in LiveRules) r.Current = values.TryGetValue(r.Key, out var v) ? TrimNumber(v) : "?";
                 LiveOutput = values.Count > 0 ? "Read " + values.Count + " live values from the match." : "No values came back. Make sure the match has finished loading.";
             }
             finally { LiveBusy = false; }
         }
 
-        private static string Trim(string v)
+        private static string TrimNumber(string v)
         {
             if (double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) && v.Contains("."))
                 return d.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
@@ -278,7 +278,11 @@ namespace SandstormModLauncher.ViewModels
                 var b = Regex.Match(l, @"(INSPlayerState_\d+)\.bIsABot = (True|False)");
                 if (b.Success) bots[b.Groups[1].Value] = b.Groups[2].Value == "True";
             }
-            if (teams.Count == 0) return;
+            if (teams.Count == 0)
+            {
+                if (res.Sent) LiveOutput = "No players came back. Make sure the match has finished loading.";
+                return;
+            }
             if (bots.Count > 0 && bots.Values.All(b => !b))
             {
                 LiveOutput = "No bots have joined yet. They join when the round starts (after you pick a class).";

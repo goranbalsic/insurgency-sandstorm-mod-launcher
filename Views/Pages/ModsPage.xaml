@@ -43,193 +43,193 @@
         <p:MutatorsPage Grid.Row="1" Visibility="{Binding ModsTab, Converter={StaticResource Vis}, ConverterParameter=Mutators}" />
 
         <Grid Grid.Row="1" Visibility="{Binding ModsTab, Converter={StaticResource Vis}, ConverterParameter=Installed}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid Margin="0,14,0,14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                <Grid Width="230">
-                    <TextBox Text="{Binding ModSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search mods" Padding="30,6,8,6" />
-                    <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
-                </Grid>
-                <Button Margin="8,0,0,0" Command="{Binding RescanModsCommand}" ToolTip="Read the mod folders again">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" />
-                        <TextBlock Text="Rescan" />
-                    </StackPanel>
-                </Button>
-                <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding OpenPathCommand}" CommandParameter="Modio" Content="Mod folder" />
-            </StackPanel>
-            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Mute}" FontSize="13" Margin="0,0,16,0" VerticalAlignment="Center" TextWrapping="Wrap"
-                       Text="Read from the game's own mod folder on this PC. Mods you subscribe to in the game's mod menu show up here after the game has downloaded them." />
-        </Grid>
+            <Grid Margin="0,14,0,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Grid Width="230">
+                        <TextBox Text="{Binding ModSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search mods" Padding="30,6,8,6" />
+                        <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
+                    </Grid>
+                    <Button Margin="8,0,0,0" Command="{Binding RescanModsCommand}" ToolTip="Read the mod folders again">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" />
+                            <TextBlock Text="Rescan" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding OpenPathCommand}" CommandParameter="Modio" Content="Mod folder" />
+                </StackPanel>
+                <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Mute}" FontSize="13" Margin="0,0,16,0" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Text="Read from the game's own mod folder on this PC. Mods you subscribe to in the game's mod menu show up here after the game has downloaded them." />
+            </Grid>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="430" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="430" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-            <Border Style="{StaticResource Card}" Padding="0">
-                <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding ModsView}" SelectedItem="{Binding SelectedMod}" Padding="8"
-                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Cursor" Value="Hand" />
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b" CornerRadius="8" Padding="10,8" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
-                                            <ContentPresenter />
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding ModsView}" SelectedItem="{Binding SelectedMod}" Padding="8"
+                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="b" CornerRadius="8" Padding="10,8" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{StaticResource Bg3}" /></Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="b" Property="Background" Value="{StaticResource SelectedBg}" />
+                                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBorder}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Width="64" Height="36" Margin="0,0,12,0" VerticalAlignment="Top">
+                                        <Border CornerRadius="5" Background="{StaticResource Bg4}">
+                                            <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="16" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{StaticResource Bg3}" /></Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="b" Property="Background" Value="#1C1A15" />
-                                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBorder}" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
+                                        <Border CornerRadius="5">
+                                            <Border.Background>
+                                                <ImageBrush ImageSource="{Binding Logo, Converter={StaticResource ImgSmall}}" Stretch="UniformToFill" />
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel Grid.Column="1">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="&#xE7BA;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource Warn}" Margin="6,0,0,0"
+                                                       Visibility="{Binding HasWarnings, Converter={StaticResource Vis}}" ToolTip="{Binding WarningText}" />
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding Counts}" FontSize="11.5" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Author}" FontSize="11" Foreground="{StaticResource TextFaint}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0" Visibility="{Binding SelectedMod, Converter={StaticResource Vis}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
+                        <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Grid Width="64" Height="36" Margin="0,0,12,0" VerticalAlignment="Top">
-                                    <Border CornerRadius="5" Background="{StaticResource Bg4}">
-                                        <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="16" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Grid Width="160" Height="90" Margin="0,0,16,0" VerticalAlignment="Top">
+                                    <Border CornerRadius="8" Background="{StaticResource Bg4}">
+                                        <TextBlock Text="{Binding SelectedMod.Initials}" FontFamily="{StaticResource Display}" FontSize="34" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <Border CornerRadius="5">
+                                    <Border CornerRadius="8">
                                         <Border.Background>
-                                            <ImageBrush ImageSource="{Binding Logo, Converter={StaticResource ImgSmall}}" Stretch="UniformToFill" />
+                                            <ImageBrush ImageSource="{Binding SelectedMod.Logo, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                         </Border.Background>
                                     </Border>
                                 </Grid>
                                 <StackPanel Grid.Column="1">
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" Text="&#xE7BA;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource Warn}" Margin="6,0,0,0"
-                                                   Visibility="{Binding HasWarnings, Converter={StaticResource Vis}}" ToolTip="{Binding WarningText}" />
-                                        <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    </DockPanel>
-                                    <TextBlock Text="{Binding Counts}" FontSize="11.5" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding Author}" FontSize="11" Foreground="{StaticResource TextFaint}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SelectedMod.Name}" Style="{StaticResource H1}" FontSize="24" TextWrapping="Wrap" />
+                                    <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0">
+                                        <Run Text="{Binding SelectedMod.Author, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Version, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Updated, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Info.SizeOnDisk, Mode=OneWay, Converter={StaticResource Bytes}}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedMod.Tags}" FontSize="11.5" Foreground="{StaticResource AccentSoftFg}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                    <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0">
+                                        <Run Text="State: " /><Run Text="{Binding SelectedMod.Info.State, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <WrapPanel Margin="0,10,0,0">
+                                        <Button Style="{StaticResource AccentButton}" Content="Use its mutators" Margin="0,0,8,6" Command="{Binding UseModMutatorsCommand}" CommandParameter="{Binding SelectedMod}"
+                                                Visibility="{Binding SelectedMod.MutatorCount, Converter={StaticResource Vis}}" />
+                                        <Button Content="Open folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenModFolderCommand}" CommandParameter="{Binding SelectedMod}" />
+                                    </WrapPanel>
                                 </StackPanel>
                             </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Border>
 
-            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0" Visibility="{Binding SelectedMod, Converter={StaticResource Vis}}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid Width="160" Height="90" Margin="0,0,16,0" VerticalAlignment="Top">
-                                <Border CornerRadius="8" Background="{StaticResource Bg4}">
-                                    <TextBlock Text="{Binding SelectedMod.Initials}" FontFamily="{StaticResource Display}" FontSize="34" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <Border CornerRadius="8">
-                                    <Border.Background>
-                                        <ImageBrush ImageSource="{Binding SelectedMod.Logo, Converter={StaticResource Img}}" Stretch="UniformToFill" />
-                                    </Border.Background>
-                                </Border>
-                            </Grid>
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="{Binding SelectedMod.Name}" Style="{StaticResource H1}" FontSize="24" TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0">
-                                    <Run Text="{Binding SelectedMod.Author, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Version, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Updated, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding SelectedMod.Info.SizeOnDisk, Mode=OneWay, Converter={StaticResource Bytes}}" />
-                                </TextBlock>
-                                <TextBlock Text="{Binding SelectedMod.Tags}" FontSize="11.5" Foreground="{StaticResource AccentSoftFg}" Margin="0,6,0,0" TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0">
-                                    <Run Text="State: " /><Run Text="{Binding SelectedMod.Info.State, Mode=OneWay}" />
-                                </TextBlock>
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Button Style="{StaticResource AccentButton}" Content="Use its mutators" Margin="0,0,8,6" Command="{Binding UseModMutatorsCommand}" CommandParameter="{Binding SelectedMod}"
-                                            Visibility="{Binding SelectedMod.MutatorCount, Converter={StaticResource Vis}}" />
-                                    <Button Content="Open folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenModFolderCommand}" CommandParameter="{Binding SelectedMod}" />
-                                </WrapPanel>
-                            </StackPanel>
-                        </Grid>
+                            <Border Background="{StaticResource BadBg}" CornerRadius="6" Padding="12,8" Margin="0,12,0,0" Visibility="{Binding SelectedMod.HasWarnings, Converter={StaticResource Vis}}">
+                                <TextBlock Text="{Binding SelectedMod.WarningText}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" FontSize="12" />
+                            </Border>
 
-                        <Border Background="{StaticResource BadBg}" CornerRadius="6" Padding="12,8" Margin="0,12,0,0" Visibility="{Binding SelectedMod.HasWarnings, Converter={StaticResource Vis}}">
-                            <TextBlock Text="{Binding SelectedMod.WarningText}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" FontSize="12" />
-                        </Border>
+                            <TextBlock Text="{Binding SelectedMod.Summary}" Style="{StaticResource Dim}" Margin="0,14,0,0" FontSize="13" />
 
-                        <TextBlock Text="{Binding SelectedMod.Summary}" Style="{StaticResource Dim}" Margin="0,14,0,0" FontSize="13" />
-
-                        <StackPanel Visibility="{Binding SelectedMod.Info.Mutators.Count, Converter={StaticResource Vis}}">
-                            <TextBlock Text="MUTATORS IN THIS MOD" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
-                            <ItemsControl ItemsSource="{Binding SelectedMod.Info.Mutators}" Focusable="False">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="10,7" Margin="0,0,0,4">
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Right" Content="Add" Padding="12,4" VerticalAlignment="Center"
-                                                        Command="{Binding DataContext.AddMutatorByIdCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                <StackPanel>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
-                                                        <TextBlock Text="  base class" FontSize="11" Foreground="{StaticResource TextFaint}" Visibility="{Binding IsBaseClass, Converter={StaticResource Vis}}" VerticalAlignment="Center" />
+                            <StackPanel Visibility="{Binding SelectedMod.Info.Mutators.Count, Converter={StaticResource Vis}}">
+                                <TextBlock Text="MUTATORS IN THIS MOD" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
+                                <ItemsControl ItemsSource="{Binding SelectedMod.Info.Mutators}" Focusable="False">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="10,7" Margin="0,0,0,4">
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Content="Add" Padding="12,4" VerticalAlignment="Center"
+                                                            Command="{Binding DataContext.AddMutatorByIdCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" />
+                                                            <TextBlock Text="  base class" FontSize="11" Foreground="{StaticResource TextFaint}" Visibility="{Binding IsBaseClass, Converter={StaticResource Vis}}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Id}" Style="{StaticResource MonoText}" FontSize="11" />
+                                                        <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Visibility="{Binding Description, Converter={StaticResource Vis}}" />
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding Id}" Style="{StaticResource MonoText}" FontSize="11" />
-                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Visibility="{Binding Description, Converter={StaticResource Vis}}" />
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
 
-                        <StackPanel Visibility="{Binding SelectedMod.Info.Scenarios.Count, Converter={StaticResource Vis}}">
-                            <TextBlock Text="SCENARIOS (PLAYABLE ON THE PLAY PAGE)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
-                            <ItemsControl ItemsSource="{Binding SelectedMod.Info.Scenarios}" Focusable="False">
+                            <StackPanel Visibility="{Binding SelectedMod.Info.Scenarios.Count, Converter={StaticResource Vis}}">
+                                <TextBlock Text="SCENARIOS (PLAYABLE ON THE PLAY PAGE)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
+                                <ItemsControl ItemsSource="{Binding SelectedMod.Info.Scenarios}" Focusable="False">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12.5" Margin="0,2">
+                                                <Run Text="{Binding GameModeName, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text="  " /><Run Text="{Binding Id, Mode=OneWay}" Foreground="{StaticResource TextMute}" FontFamily="{StaticResource Mono}" FontSize="11" />
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <TextBlock Text="FILES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
+                            <TextBlock Text="{Binding SelectedMod.Info.Folder}" Style="{StaticResource MonoText}" TextWrapping="Wrap" />
+                            <ItemsControl ItemsSource="{Binding SelectedMod.Info.Paks}" Focusable="False" Margin="0,4,0,0">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock FontSize="12.5" Margin="0,2">
-                                            <Run Text="{Binding GameModeName, Mode=OneWay}" Foreground="{StaticResource Text}" /><Run Text="  " /><Run Text="{Binding Id, Mode=OneWay}" Foreground="{StaticResource TextMute}" FontFamily="{StaticResource Mono}" FontSize="11" />
-                                        </TextBlock>
-                                    </DataTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource MonoText}" Foreground="{StaticResource TextFaint}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-
-                        <TextBlock Text="FILES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,18,0,6" />
-                        <TextBlock Text="{Binding SelectedMod.Info.Folder}" Style="{StaticResource MonoText}" TextWrapping="Wrap" />
-                        <ItemsControl ItemsSource="{Binding SelectedMod.Info.Paks}" Focusable="False" Margin="0,4,0,0">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource MonoText}" Foreground="{StaticResource TextFaint}" TextTrimming="CharacterEllipsis" /></DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
-            <TextBlock Grid.Column="2" Style="{StaticResource Dim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="420"
-                       Visibility="{Binding ModCount, Converter={StaticResource VisNot}}"
-                       Text="No mods found. Subscribe to mods in the game's mod menu, start the game once so they download, then press Rescan." />
-        </Grid>
+                    </ScrollViewer>
+                </Border>
+                <TextBlock Grid.Column="2" Style="{StaticResource Dim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="420"
+                           Visibility="{Binding ModCount, Converter={StaticResource VisNot}}"
+                           Text="No mods found. Subscribe to mods in the game's mod menu, start the game once so they download, then press Rescan." />
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

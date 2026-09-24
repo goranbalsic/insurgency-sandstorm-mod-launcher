@@ -19,7 +19,6 @@ namespace SandstormModLauncher.ViewModels
         public ObservableCollection<ScenarioItem> ScenarioSides { get; } = new ObservableCollection<ScenarioItem>();
         public ICommand SelectScenarioModeCommand { get; private set; }
         public ICollectionView MapsView { get; private set; }
-        public ICollectionView ScenariosView { get; private set; }
         public ICommand SelectMapCommand { get; private set; }
         public ICommand SelectScenarioCommand { get; private set; }
         public ICommand RandomMissionCommand { get; private set; }
@@ -119,10 +118,6 @@ namespace SandstormModLauncher.ViewModels
                 Profile.MapKey = value.Info.Key;
                 foreach (var s in value.Info.Scenarios) Scenarios.Add(new ScenarioItem(s));
             }
-            ScenariosView = CollectionViewSource.GetDefaultView(Scenarios);
-            ScenariosView.GroupDescriptions.Clear();
-            ScenariosView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ScenarioItem.Category)));
-            Raise(nameof(ScenariosView));
             BuildScenarioModes();
             var keep = Scenarios.FirstOrDefault(s => s.Id.Equals(Profile.ScenarioId ?? "", StringComparison.OrdinalIgnoreCase));
             if (keep == null && user && selectedScenario != null)
@@ -334,7 +329,7 @@ namespace SandstormModLauncher.ViewModels
         public int SoloEnemies { get => EffectiveInt("SoloEnemies"); set => SetInt("SoloEnemies", value, 0, 64); }
         public int MinEnemies { get => EffectiveInt("MinimumEnemies"); set => SetInt("MinimumEnemies", value, 0, 64); }
         public int MaxEnemies { get => EffectiveInt("MaximumEnemies"); set => SetInt("MaximumEnemies", value, 0, 64); }
-        public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 0, 64); }
+        public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 0, 32); }
         public string TeammatesHint => "FriendlyBotQuota · mode default " + DefaultInt("FriendlyBotQuota");
         public string SoloEnemiesHint => "SoloEnemies · mode default " + DefaultInt("SoloEnemies");
         public string MinEnemiesHint => "MinimumEnemies · default " + DefaultInt("MinimumEnemies");
@@ -382,7 +377,8 @@ namespace SandstormModLauncher.ViewModels
                 var mode = CurrentMode;
                 double v = Math.Round(Math.Max(0, Math.Min(1, value)) * 20) / 20;
                 string s = v.ToString("0.##", CultureInfo.InvariantCulture);
-                if (mode != null && mode.Coop) { SetSquadValue("AIDifficulty", s, (m, x) => Math.Abs(v - 0.5) < 0.001 ? null : x); return; }
+                // Stored only where it differs from that mode's own default.
+                if (mode != null && mode.Coop) { SetSquadValue("AIDifficulty", s, (m, x) => LaunchPlanner.Same(State.Rules.DefaultValue(m.Cls, "AIDifficulty"), x, null) ? null : x); return; }
                 RuleSet("*", "AIDifficulty", Math.Abs(v - 0.5) < 0.001 ? null : s);
                 RaiseSquad();
                 RefreshRuleItems();

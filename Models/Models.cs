@@ -112,7 +112,6 @@ namespace SandstormModLauncher.Models
         public bool MutatorsEnabled { get; set; } = true;
         public List<string> Mutators { get; set; } = new List<string>();
         public string MutatorPreset { get; set; }
-        public string PlayStyle { get; set; } = "Defaults";   // LoneWolf / Squad / Defaults / Custom
         public Dictionary<string, Dictionary<string, string>> Rules { get; set; } = new Dictionary<string, Dictionary<string, string>>();
         public string RulesPresetName { get; set; }
         public string LaunchRuleset { get; set; }            // official ruleset applied with -ruleset= at game start
@@ -150,7 +149,6 @@ namespace SandstormModLauncher.Models
         public int StartTimeoutSec { get; set; } = 300;
         public bool MinimizeOnLaunch { get; set; } = true;
         public string RestartPolicy { get; set; } = "Ask";      // Ask / Always / Never
-        public bool VerifyLaunch { get; set; } = true;
         public bool SoloGameFlag { get; set; } = true;
         public bool ApplyLiveRules { get; set; } = true;
         public string LaunchArgs { get; set; } = "";

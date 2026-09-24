@@ -55,84 +55,82 @@
 
             <!-- list -->
             <Border Style="{StaticResource Card}" Padding="0">
-                <Grid>
-                    <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding MutatorsView}" SelectedItem="{Binding SelectedMutator}" Padding="10,4,10,10"
-                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel">
-                        <ListBox.GroupStyle>
-                            <GroupStyle>
-                                <GroupStyle.HeaderTemplate>
-                                    <DataTemplate>
-                                        <DockPanel Margin="6,14,6,6">
-                                            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Bottom">
-                                                <Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=" shown" />
-                                            </TextBlock>
-                                            <TextBlock Text="{Binding Name, Converter={StaticResource Upper}}" FontFamily="{StaticResource Display}" FontSize="14" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-                                    </DataTemplate>
-                                </GroupStyle.HeaderTemplate>
-                            </GroupStyle>
-                        </ListBox.GroupStyle>
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Cursor" Value="Hand" />
-                                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="b" CornerRadius="8" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
-                                                <ContentPresenter />
+                <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding MutatorsView}" SelectedItem="{Binding SelectedMutator}" Padding="10,4,10,10"
+                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="6,14,6,6">
+                                        <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Bottom">
+                                            <Run Text="{Binding ItemCount, Mode=OneWay}" /><Run Text=" shown" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Name, Converter={StaticResource Upper}}" FontFamily="{StaticResource Display}" FontSize="14" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Cursor" Value="Hand" />
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="b" CornerRadius="8" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Line}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBorder}" />
+                                                <Setter TargetName="b" Property="Background" Value="{StaticResource SelectedBg}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding IsActive}" VerticalAlignment="Top" Margin="0,2,12,0" ToolTip="Use this mutator" />
+                                <StackPanel Grid.Column="1">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                            <Border Style="{StaticResource Badge}" Background="{StaticResource Bg4}" Margin="6,0,0,0" Visibility="{Binding IsBase, Converter={StaticResource Vis}}">
+                                                <TextBlock Text="BASE CLASS" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
                                             </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Line}" />
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentBorder}" />
-                                                    <Setter TargetName="b" Property="Background" Value="#1C1A15" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox IsChecked="{Binding IsActive}" VerticalAlignment="Top" Margin="0,2,12,0" ToolTip="Use this mutator" />
-                                    <StackPanel Grid.Column="1">
-                                        <DockPanel>
-                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                                                <Border Style="{StaticResource Badge}" Background="{StaticResource Bg4}" Margin="6,0,0,0" Visibility="{Binding IsBase, Converter={StaticResource Vis}}">
-                                                    <TextBlock Text="BASE CLASS" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
-                                                </Border>
-                                                <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding NotRegistered, Converter={StaticResource Vis}}"
-                                                        ToolTip="The mod does not register this folder for mutators, so the game may not find it.">
-                                                    <TextBlock Text="NOT REGISTERED" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
-                                                </Border>
-                                                <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding Warning, Converter={StaticResource Vis}}" ToolTip="{Binding Warning}">
-                                                    <TextBlock Text="CHECK" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
-                                                </Border>
-                                                <Border Style="{StaticResource Badge}" Margin="6,0,0,0" Visibility="{Binding IsActive, Converter={StaticResource Vis}}">
-                                                    <TextBlock Text="ACTIVE" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-                                        <TextBlock Text="{Binding Id}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="0,1,0,0"
-                                                   Visibility="{Binding ShowId, Converter={StaticResource Vis}}" />
-                                        <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,4,0,0" MaxHeight="34" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
+                                            <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding NotRegistered, Converter={StaticResource Vis}}"
+                                                    ToolTip="The mod does not register this folder for mutators, so the game may not find it.">
+                                                <TextBlock Text="NOT REGISTERED" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                            </Border>
+                                            <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding Warning, Converter={StaticResource Vis}}" ToolTip="{Binding Warning}">
+                                                <TextBlock Text="CHECK" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                            </Border>
+                                            <Border Style="{StaticResource Badge}" Margin="6,0,0,0" Visibility="{Binding IsActive, Converter={StaticResource Vis}}">
+                                                <TextBlock Text="ACTIVE" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Id}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="0,1,0,0"
+                                               Visibility="{Binding ShowId, Converter={StaticResource Vis}}" />
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,4,0,0" MaxHeight="34" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Border>
 
             <!-- side -->

@@ -27,7 +27,6 @@ namespace SandstormModLauncher.Game
         public static string ConfigDir => Path.Combine(SavedDir, "Config", "WindowsClient");
         public static string GameIniPath => Path.Combine(ConfigDir, "Game.ini");
         public static string InputIniPath => Path.Combine(ConfigDir, "Input.ini");
-        public static string EngineIniPath => Path.Combine(ConfigDir, "Engine.ini");
         public static string LogPath => Path.Combine(SavedDir, "Logs", "Insurgency.log");
 
         public static string ModioRoot

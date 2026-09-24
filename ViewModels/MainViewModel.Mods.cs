@@ -35,7 +35,6 @@ namespace SandstormModLauncher.ViewModels
         public ICommand RescanModsCommand { get; private set; }
         public ICommand OpenModFolderCommand { get; private set; }
         public ICommand UseModMutatorsCommand { get; private set; }
-        public ICommand SelectModCommand { get; private set; }
         public ICommand SetupPlaylistCommand { get; private set; }
         public ICommand PlayPlaylistCommand { get; private set; }
         public ICommand AddMutatorByIdCommand { get; private set; }
@@ -59,7 +58,6 @@ namespace SandstormModLauncher.ViewModels
                 if (!string.IsNullOrEmpty(folder)) ShowToast("This mod's folder is not on disk, so its parent folder was opened");
             });
             UseModMutatorsCommand = new RelayCommand(p => UseModMutators(p as ModItem));
-            SelectModCommand = new RelayCommand(p => { if (p is ModItem m) SelectedMod = m; });
             SetupPlaylistCommand = new RelayCommand(p => SetupPlaylist(p as PlaylistItem, false));
             PlayPlaylistCommand = new RelayCommand(p => SetupPlaylist(p as PlaylistItem, true));
             AddMutatorByIdCommand = new RelayCommand(p => { if (p is MutatorInfo m) { SetMutatorActive(m.Id, true); ShowToast(m.DisplayName + " added"); } });
@@ -120,10 +118,8 @@ namespace SandstormModLauncher.ViewModels
                        || p.MutatorText.IndexOf(playlistSearch, StringComparison.OrdinalIgnoreCase) >= 0
                        || string.Join(" ", p.Features).IndexOf(playlistSearch, StringComparison.OrdinalIgnoreCase) >= 0;
             };
-            RaiseMany(nameof(PlaylistsView), nameof(PlaylistCount));
+            Raise(nameof(PlaylistsView));
         }
-
-        public int PlaylistCount => PlaylistItems.Count;
         public string PlaylistFilter { get => playlistFilter; set { if (Set(ref playlistFilter, value)) PlaylistsView?.Refresh(); } }
         public string PlaylistSearch { get => playlistSearch; set { if (Set(ref playlistSearch, value ?? "")) PlaylistsView?.Refresh(); } }
 
@@ -153,22 +149,25 @@ namespace SandstormModLauncher.ViewModels
             foreach (var m in MutatorItems) m.SetActiveSilently(Profile.Mutators.Contains(m.Id, StringComparer.OrdinalIgnoreCase));
             BuildActiveMutators();
             Profile.MutatorsEnabled = true;
+            Profile.MutatorPreset = null;
+            BuildMutatorPresets();
 
             if (def.CoopRules.Count > 0)
                 foreach (var cls in State.Rules.Modes.Where(m => m.Coop).Select(m => m.Cls))
-                    foreach (var kv in def.CoopRules) RuleSet(cls, kv.Key, kv.Value);
+                    foreach (var kv in def.CoopRules) SetRuleOverride(cls, kv.Key, kv.Value);
             if (!string.IsNullOrEmpty(def.Ruleset))
             {
                 var rs = State.Rules.Rulesets.FirstOrDefault(r => r.Id == def.Ruleset);
-                if (rs != null) foreach (var mode in rs.Rules) foreach (var kv in mode.Value) RuleSet(mode.Key, kv.Key, kv.Value);
+                if (rs != null) foreach (var mode in rs.Rules) foreach (var kv in mode.Value) SetRuleOverride(mode.Key, kv.Key, kv.Value);
             }
             RefreshRuleItems();
             RaiseProfileFields();
             ProfileChanged();
             string note = def.Missing.Count > 0 ? " (" + string.Join(", ", def.Missing) + " left out: not in the current game)" : "";
             ShowToast(def.Title + " is set up on " + map.Name + note);
-            if (launch) LaunchCommand.Execute(null);
-            else PlayTab = "Map";
+            if (!launch) PlayTab = "Map";
+            else if (LaunchCommand.CanExecute(null)) LaunchCommand.Execute(null);
+            else ShowToast(def.Title + " is set up. " + (PlanError ?? "Launch is not possible right now."));
         }
     }
 }

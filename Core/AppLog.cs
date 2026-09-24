@@ -13,10 +13,7 @@ namespace SandstormModLauncher.Core
     public static class AppLog
     {
         private static readonly object sync = new object();
-        private static readonly LinkedList<string> recent = new LinkedList<string>();
         private static string filePath, sessionPath;
-
-        public static event Action<string> Line;
 
         public static void Init(string directory)
         {
@@ -51,8 +48,6 @@ namespace SandstormModLauncher.Core
             string line = DateTime.Now.ToString("HH:mm:ss.fff") + " " + level + " " + msg;
             lock (sync)
             {
-                recent.AddLast(line);
-                while (recent.Count > 1000) recent.RemoveFirst();
                 if (main && filePath != null)
                 {
                     try { File.AppendAllText(filePath, line + Environment.NewLine, Encoding.UTF8); } catch { }
@@ -62,12 +57,6 @@ namespace SandstormModLauncher.Core
                     try { File.AppendAllText(sessionPath, line + Environment.NewLine, Encoding.UTF8); } catch { }
                 }
             }
-            try { Line?.Invoke(line); } catch { }
-        }
-
-        public static string Recent()
-        {
-            lock (sync) return string.Join(Environment.NewLine, recent);
         }
 
         public static string FilePath => filePath;

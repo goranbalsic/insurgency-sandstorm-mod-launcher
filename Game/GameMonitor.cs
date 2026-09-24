@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using SandstormModLauncher.Core;
 
 namespace SandstormModLauncher.Game
@@ -26,7 +25,6 @@ namespace SandstormModLauncher.Game
         private string partial = "";
         private bool firstPoll = true;
         private bool mapLoaded;
-        private readonly List<(Func<string, bool> Match, TaskCompletionSource<string> Tcs)> waiters = new List<(Func<string, bool>, TaskCompletionSource<string>)>();
         private static readonly Regex Transition = new Regex(@"State transition: '(\w+)' -> '(\w+)'", RegexOptions.Compiled);
         private static readonly Regex LoadMap = new Regex(@"LogLoad: LoadMap: (\S+)", RegexOptions.Compiled);
         private static readonly Regex LoadDone = new Regex(@"Took [\d\.]+ seconds to LoadMap\(([^\)]+)\)", RegexOptions.Compiled);
@@ -46,7 +44,6 @@ namespace SandstormModLauncher.Game
         public DateTime? ProcessStartUtc { get; private set; }
         public IntPtr Window { get; private set; }
         public bool IsRunning => ProcessId != 0;
-        public bool AtMenu => Phase == GamePhase.Menu;
 
         public GameMonitor()
         {
@@ -152,7 +149,6 @@ namespace SandstormModLauncher.Game
                 if (line.Length == 0 || LogSanitizer.IsSensitive(line)) continue;
                 changed |= Parse(line);
                 try { LineReceived?.Invoke(line); } catch { }
-                CheckWaiters(line);
             }
             return changed;
         }
@@ -206,52 +202,6 @@ namespace SandstormModLauncher.Game
             if (line.Contains("LogINSModioGame: MountPak:") && line.Contains("was successful")) { ModsMounted++; return true; }
             if (line.Contains("LogExit: Exiting") || line.Contains("LogExit: Game engine shut down")) { Phase = GamePhase.NotRunning; return true; }
             return false;
-        }
-
-        private void CheckWaiters(string line)
-        {
-            lock (waiters)
-            {
-                for (int i = waiters.Count - 1; i >= 0; i--)
-                {
-                    bool hit;
-                    try { hit = waiters[i].Match(line); } catch { hit = false; }
-                    if (!hit) continue;
-                    waiters[i].Tcs.TrySetResult(line);
-                    waiters.RemoveAt(i);
-                }
-            }
-        }
-
-        /// <summary>Waits for a future log line matching the predicate. Returns null on timeout.</summary>
-        public async Task<string> WaitForLine(Func<string, bool> match, TimeSpan timeout, CancellationToken ct)
-        {
-            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            lock (waiters) waiters.Add((match, tcs));
-            using (ct.Register(() => tcs.TrySetCanceled()))
-            {
-                var done = await Task.WhenAny(tcs.Task, Task.Delay(timeout, CancellationToken.None)).ConfigureAwait(false);
-                lock (waiters) waiters.RemoveAll(w => w.Tcs == tcs);
-                if (done == tcs.Task) return await tcs.Task.ConfigureAwait(false);
-                ct.ThrowIfCancellationRequested();
-                return null;
-            }
-        }
-
-        /// <summary>Collects every non-sensitive log line written while the action runs plus a settle time.</summary>
-        public async Task<List<string>> Capture(Func<Task> action, TimeSpan settle, CancellationToken ct)
-        {
-            var lines = new List<string>();
-            void Handler(string l) { lock (lines) lines.Add(l); }
-            LineReceived += Handler;
-            try
-            {
-                await action().ConfigureAwait(false);
-                await Task.Delay(settle, ct).ConfigureAwait(false);
-                Poll();
-            }
-            finally { LineReceived -= Handler; }
-            lock (lines) return new List<string>(lines);
         }
 
         public string Describe()

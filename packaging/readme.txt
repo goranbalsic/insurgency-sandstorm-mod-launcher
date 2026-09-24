@@ -28,7 +28,8 @@ How to use
 What it does on your PC
 -----------------------
 - Reads the game files, the game log and the game's mod folder (read only).
-- Writes its own marked block in Game.ini. A backup is made first.
+- Writes only match rules (game mode settings) to Game.ini, one line per
+  setting, while the game is closed. A backup is made first.
 - Adds F10 as a console key to Input.ini while the game is closed (backup
   first). The ` key is missing on many keyboard layouts; F10 works on all.
 - Keeps copies of your game key bindings before it sends any key to the game,

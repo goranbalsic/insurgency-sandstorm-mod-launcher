@@ -59,7 +59,7 @@
                         <Rectangle Width="1" Height="28" Fill="{StaticResource Bg4}" Margin="20,0" />
                         <TextBlock Text="PROFILE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" VerticalAlignment="Center" Margin="0,0,10,0" />
                         <ComboBox Width="230" ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding SelectedProfile}" WindowChrome.IsHitTestVisibleInChrome="True"
-                                  IsEnabled="{Binding LaunchRunning, Converter={StaticResource Not}}" ToolTip="A profile keeps a whole setup: map, bots, rules and mutators" />
+                                  IsEnabled="{Binding CanSwitchProfile}" ToolTip="A profile keeps a whole setup: map, bots, rules and mutators" />
                         <Button x:Name="profileMenuButton" Style="{StaticResource IconButton}" Content="&#xE712;" Margin="6,0,0,0" Click="ProfileMenu_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="New, duplicate, rename or delete profiles">
                             <Button.ContextMenu>
