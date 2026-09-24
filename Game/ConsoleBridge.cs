@@ -336,7 +336,7 @@ namespace SandstormModLauncher.Game
             bool wasInFront = input.IsForeground;
             if (!input.Focus(4000)) throw new ConsoleSendException("Could not bring the game to the front. Click the game once and try again.", true);
             // Coming back from the background, fullscreen needs a moment before the game draws again.
-            Thread.Sleep(wasInFront ? 150 : 700);
+            Thread.Sleep(wasInFront ? 150 : 1500);
             Frame before = WaitSteady(hwnd, 3500);
             if (before == null) throw new ConsoleSendException("Could not see the game picture (it stayed empty), so no keys were sent. Click the game once and try again.", true);
             if (!input.IsForeground) throw new ConsoleSendException("The game lost focus before the console could be opened, so no keys were sent.", true);
@@ -349,6 +349,7 @@ namespace SandstormModLauncher.Game
             Frame opened = bar != null ? before : null, last = before;
             var sw = Stopwatch.StartNew();
             string pressed = "";
+            ushort openVk = plan.VirtualKey;
             Frame reference = before;
             foreach (var (keyName, vk) in new[] { (plan.KeyName, plan.VirtualKey), (plan.AltKeyName ?? plan.KeyName, plan.AltKeyName != null ? plan.AltVirtualKey : plan.VirtualKey) })
             {
@@ -364,6 +365,7 @@ namespace SandstormModLauncher.Game
                     reference = late ?? reference;
                 }
                 input.Tap(vk);
+                openVk = vk;
                 pressed += (pressed.Length > 0 ? ", then " : "") + PrettyKey(keyName);
                 sw.Restart();
                 while (sw.ElapsedMilliseconds < 1500)
@@ -411,37 +413,53 @@ namespace SandstormModLauncher.Game
             // 3. Put the command on the line and see it appear.
             bool usePaste = !string.Equals(cfg.InputMethod, "Type", StringComparison.OrdinalIgnoreCase);
             Frame typed = null;
-            TextCheck check = TextCheck.None;
             int textPixels = 0;
-            if (usePaste)
+
+            // Pastes (or types) the command onto an open, empty console line and checks it shows.
+            TextCheck PutLine(Frame emptyLine, out Frame shown, out int px)
             {
-                string savedClipboard = null;
-                try
+                TextCheck result = TextCheck.None;
+                shown = null; px = 0;
+                if (usePaste)
                 {
-                    savedClipboard = OnUi(() => Clipboard.ContainsText() ? Clipboard.GetText() : null);
-                    OnUi(() => { SetClipboard(commandLine); return true; });
-                    Thread.Sleep(60);
-                    if (HeldKey() != null) { WaitForKeysReleased(1500); input.TapRepeat(VK_BACK, 30); }
-                    input.Chord(VK_CONTROL, VK_V);
-                    check = WaitForText(hwnd, empty, bar, 900, out typed, out textPixels);
+                    string savedClipboard = null;
+                    try
+                    {
+                        savedClipboard = OnUi(() => Clipboard.ContainsText() ? Clipboard.GetText() : null);
+                        OnUi(() => { SetClipboard(commandLine); return true; });
+                        Thread.Sleep(60);
+                        if (HeldKey() != null) { WaitForKeysReleased(1500); input.TapRepeat(VK_BACK, 30); }
+                        input.Chord(VK_CONTROL, VK_V);
+                        result = WaitForText(hwnd, emptyLine, bar, 900, out shown, out px);
+                    }
+                    finally
+                    {
+                        try { OnUi(() => { if (savedClipboard != null) SetClipboard(savedClipboard); else Clipboard.Clear(); return true; }); } catch { }
+                    }
+                    Step("pasted: " + result + " (" + px + " px)");
                 }
-                finally
+                if (result == TextCheck.None)
                 {
-                    try { OnUi(() => { if (savedClipboard != null) SetClipboard(savedClipboard); else Clipboard.Clear(); return true; }); } catch { }
+                    var f = Grab(hwnd);
+                    if (ConsoleProbe.BarStillThere(opened, f, bar) && ConsoleProbe.TextIn(emptyLine, f, bar, out _) == TextCheck.None)
+                    {
+                        input.TypeText(commandLine);
+                        Thread.Sleep(120);
+                        result = WaitForText(hwnd, emptyLine, bar, 900, out shown, out px);
+                        Step("typed: " + result + " (" + px + " px)");
+                    }
                 }
-                Step("pasted: " + check + " (" + textPixels + " px)");
+                if (result == TextCheck.Appeared)
+                {
+                    // Let the whole line draw.
+                    Thread.Sleep(70);
+                    var full = Grab(hwnd);
+                    if (full != null && ConsoleProbe.TextIn(emptyLine, full, bar, out int more) == TextCheck.Appeared && more >= px) { shown = full; px = more; }
+                }
+                return result;
             }
-            if (check == TextCheck.None)
-            {
-                var f = Grab(hwnd);
-                if (ConsoleProbe.BarStillThere(opened, f, bar) && ConsoleProbe.TextIn(empty, f, bar, out _) == TextCheck.None)
-                {
-                    input.TypeText(commandLine);
-                    Thread.Sleep(120);
-                    check = WaitForText(hwnd, empty, bar, 900, out typed, out textPixels);
-                    Step("typed: " + check + " (" + textPixels + " px)");
-                }
-            }
+
+            TextCheck check = PutLine(empty, out typed, out textPixels);
             if (check != TextCheck.Appeared)
             {
                 var f = Grab(hwnd);
@@ -454,10 +472,57 @@ namespace SandstormModLauncher.Game
                 }
                 throw new ConsoleSendException(check == TextCheck.Gone ? "The console closed before the command could be sent." : "The command could not be put on the console line, so it was not sent.", false);
             }
-            // Let the whole line draw, then make sure nothing changed before pressing Enter.
-            Thread.Sleep(70);
-            var full = Grab(hwnd);
-            if (full != null && ConsoleProbe.TextIn(empty, full, bar, out int px2) == TextCheck.Appeared && px2 >= textPixels) { typed = full; textPixels = px2; }
+
+            // 4. The game's menus can take the keyboard back after the console opened (window activation,
+            // menu set-up). Other keys still reach the console then, but Enter presses the focused menu button
+            // instead of running the line. The console takes the keyboard whenever it opens, so close it and
+            // open it again right before Enter, and check the line is still there.
+            bool reopened = false;
+            for (int press = 0; press < 4 && !reopened; press++)
+            {
+                input.Tap(openVk);
+                Frame f = null;
+                ConsoleBar now = null;
+                var wait = Stopwatch.StartNew();
+                bool wantOpen = press > 0;
+                while (wait.ElapsedMilliseconds < 800)
+                {
+                    Thread.Sleep(60);
+                    f = Grab(hwnd);
+                    now = ConsoleProbe.FindOpenConsole(f, out _);
+                    if ((now != null) == wantOpen) break;
+                }
+                if (now == null) continue;              // closed (or the big console): the next press moves on
+                if (!wantOpen) continue;                // did not close yet: keep cycling
+                reopened = true;
+                bar = now;
+                opened = f;
+                Thread.Sleep(60);
+                var back = Grab(hwnd);
+                double kept = ConsoleProbe.TextRemaining(empty, typed, back, bar);
+                Step("console opened again for Enter after " + (press + 1) + " key presses, line kept " + kept.ToString("0.00"));
+                if (kept < 0.8)
+                {
+                    // The game cleared the line when it closed: clear leftovers and put the command back.
+                    input.Tap(VK_END);
+                    input.TapRepeat(VK_BACK, 30);
+                    for (int i = 0; i < 4; i++) { if (!ConsoleProbe.BarStillThere(opened, Grab(hwnd), bar)) break; input.TapRepeat(VK_BACK, 30); }
+                    Thread.Sleep(60);
+                    empty = Grab(hwnd);
+                    if (!ConsoleProbe.BarStillThere(opened, empty, bar))
+                        throw new ConsoleSendException("The console closed while the launcher was using it, so the command was not sent.", false);
+                    if (PutLine(empty, out typed, out textPixels) != TextCheck.Appeared)
+                    {
+                        SaveShots(id, "no-text-after-reopen", before, opened, empty, Grab(hwnd));
+                        throw new ConsoleSendException("The command could not be put back on the console line, so it was not sent.", false);
+                    }
+                }
+            }
+            if (!reopened)
+            {
+                SaveShots(id, "reopen-failed", before, opened, typed, Grab(hwnd));
+                throw new ConsoleSendException("The console could not be opened again right before Enter, so Enter was not pressed. Click once into the game and try again.", false);
+            }
             var pre = Grab(hwnd);
             double keep = ConsoleProbe.TextRemaining(empty, typed, pre, bar);
             if (keep < 0.8)
@@ -466,7 +531,7 @@ namespace SandstormModLauncher.Game
                 throw new ConsoleSendException("The console line changed before Enter, so Enter was not pressed.", false);
             }
 
-            // 4. Enter, then see the line go away.
+            // 5. Enter, then see the line go away.
             input.Tap(VK_RETURN);
             Step("enter");
             bool freeze = ExpectsFreeze(commandLine);

@@ -1,5 +1,10 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.2.1**
+
+- Fixed: the command was typed into the console but Enter did not run it. Right after the game window comes to the front, the game's menu can take the keyboard back, and then Enter presses a menu button instead. The launcher now closes and reopens the console right before Enter (the console takes the keyboard when it opens) and checks the line is still there. Checked in the game at the main menu and in a match.
+- Waits longer for the main menu to settle before using the console.
+
 **Changes in 1.2**
 
 - AI teammates work again: Game.ini had collected many copies of the same settings (the game rewrites the file and drops the launcher's markers), and the game used the oldest one. Settings are now written by key, one line each, and old copies are cleaned up. Game.ini is only written while the game is closed.

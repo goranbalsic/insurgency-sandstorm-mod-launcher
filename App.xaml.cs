@@ -102,6 +102,13 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 3 && eArgs[0] == "--live-test")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                RunLiveTest(eArgs[1], eArgs[2]);
+                return;
+            }
+
             if (eArgs.Length >= 3 && eArgs[0] == "--ini-test")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -137,6 +144,13 @@ namespace SandstormModLauncher
             var window = new Views.MainWindow();
             MainWindow = window;
             window.Show();
+        }
+
+        private async void RunLiveTest(string script, string outFile)
+        {
+            try { await Services.LiveTest.Run(script, outFile); }
+            catch (Exception ex) { File.AppendAllText(outFile, "\r\nLIVE TEST CRASHED: " + ex); }
+            finally { Shutdown(); }
         }
 
         /// <summary>

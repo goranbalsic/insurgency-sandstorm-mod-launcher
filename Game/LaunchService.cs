@@ -157,7 +157,8 @@ namespace SandstormModLauncher.Game
                     await Task.Delay(500, ct);
                     monitor.Poll();
                 }
-                if (wait.Elapsed > TimeSpan.FromSeconds(2)) await Task.Delay(1500, ct); // let the menu settle
+                // The main menu sets up its widgets (and the keyboard focus) for a few seconds after it shows.
+                if (wait.Elapsed > TimeSpan.FromSeconds(2)) await Task.Delay(5000, ct);
                 while (monitor.Window == IntPtr.Zero && wait.Elapsed < TimeSpan.FromSeconds(state.Settings.StartTimeoutSec)) { await Task.Delay(300, ct); monitor.Poll(); }
                 Report(3, StepState.Done, monitor.Phase == GamePhase.InMatch ? "In a match - it will switch maps" : (monitor.ModsMounted + " mods mounted"));
 
