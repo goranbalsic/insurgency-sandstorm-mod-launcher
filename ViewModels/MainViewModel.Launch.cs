@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -28,7 +28,7 @@ namespace SandstormModLauncher.ViewModels
         private LaunchPlan currentPlan;
         private CancellationTokenSource launchCts;
         private bool launchOverlayOpen, launchRunning, launchSucceeded;
-        private string launchResult, launchTitle = "LAUNCH", launchSubtitle = "", launchHeadline = "";
+        private string launchResult, launchTitle = "Launch", launchSubtitle = "", launchHeadline = "";
         private double launchProgress;
 
         private void InitLaunchCommands()
@@ -107,26 +107,26 @@ namespace SandstormModLauncher.ViewModels
         private void UpdateLaunchButton()
         {
             Raise(nameof(CanLaunch));
-            if (Monitor == null) { LaunchTitle = "LAUNCH"; LaunchSubtitle = "Getting ready..."; return; }
-            if (launchRunning) { LaunchTitle = "LAUNCHING..."; LaunchSubtitle = "Follow the steps in the window"; return; }
-            if (currentPlan != null && !currentPlan.IsValid) { LaunchTitle = "LAUNCH"; LaunchSubtitle = currentPlan.Error; return; }
+            if (Monitor == null) { LaunchTitle = "Launch"; LaunchSubtitle = "Getting ready..."; return; }
+            if (launchRunning) { LaunchTitle = "Launching..."; LaunchSubtitle = "Follow the steps in the window"; return; }
+            if (currentPlan != null && !currentPlan.IsValid) { LaunchTitle = "Launch"; LaunchSubtitle = currentPlan.Error; return; }
             bool restart = currentPlan != null && Launcher != null && Launcher.NeedsRestart(currentPlan);
             switch (Monitor.Phase)
             {
                 case GamePhase.NotRunning:
-                    LaunchTitle = State.Settings.AutoStartGame ? "START & LAUNCH" : "LAUNCH";
+                    LaunchTitle = State.Settings.AutoStartGame ? "Start and launch" : "Launch";
                     LaunchSubtitle = State.Settings.AutoStartGame ? "Starts the game, then loads your match" : "Start the game first, then press Launch";
                     break;
                 case GamePhase.InMatch:
-                    LaunchTitle = "LAUNCH";
+                    LaunchTitle = "Launch";
                     LaunchSubtitle = restart ? "Restarts the game so the AI teammate count applies" : "Switches the running match to this setup";
                     break;
                 case GamePhase.Menu:
-                    LaunchTitle = "LAUNCH";
+                    LaunchTitle = "Launch";
                     LaunchSubtitle = restart ? "Restarts the game so the AI teammate count applies" : "Game is ready at the main menu";
                     break;
                 default:
-                    LaunchTitle = "LAUNCH";
+                    LaunchTitle = "Launch";
                     LaunchSubtitle = "Waits for the game to finish loading";
                     break;
             }

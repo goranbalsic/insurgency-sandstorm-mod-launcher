@@ -1,5 +1,11 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.1**
+
+- New look: plain Windows-style layout with square corners, normal text and classic tabs.
+- The Play tabs no longer jump around: the tab row is fixed, and the scenario and squad column stays on every tab.
+- Console: faster and calmer. The line is only cleared as far as needed, the quick console reopen before Enter no longer waits on a step that never shows, and the launch waits 2 s less for the main menu.
+
 **Changes in 1.3.0**
 
 - Updates itself: every few hours the launcher looks at this project's GitHub releases, checks the new zip against its SHA-256 and quietly puts the new exe in place. It is used from the next start; "Update ready" next to the version (bottom left) restarts right away. Settings > About turns it off.
