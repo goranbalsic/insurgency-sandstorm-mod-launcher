@@ -36,7 +36,7 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="SectionLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="11.5" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextMute}" />
             <Setter Property="Margin" Value="0,16,0,6" />
@@ -112,7 +112,7 @@
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Advanced}"
-                                     ToolTip="Official ruleset at start, extra Game.ini lines, commands after loading, and exactly what the launcher will do">
+                                     ToolTip="Ruleset, extra Game.ini lines, commands after loading">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE713;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
                                 <TextBlock Text="Advanced" />
@@ -130,8 +130,13 @@
             </Grid.RowDefinitions>
 
             <!-- ============================================================ map toolbar -->
-            <DockPanel Grid.Row="0" Margin="0,14,0,12" LastChildFill="False" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+            <Grid Grid.Row="0" Margin="0,14,0,12" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource Chip}" IsChecked="{Binding MapFilter, Converter={StaticResource Eq}, ConverterParameter=All}">
                         <TextBlock><Run Text="All " /><Run Text="{Binding AllMapCount, Mode=OneWay}" /></TextBlock>
                     </RadioButton>
@@ -146,11 +151,12 @@
                         <TextBlock><Run Text="Custom " /><Run Text="{Binding CustomMapCount, Mode=OneWay}" /></TextBlock>
                     </RadioButton>
                 </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Grid Width="200">
-                        <TextBox Text="{Binding MapSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search maps" Padding="30,6,8,6" />
-                        <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
-                    </Grid>
+                <!-- the search box gives up width first when the window is narrow or the text is large -->
+                <Grid Grid.Column="1" MaxWidth="200" Margin="8,0,0,0" HorizontalAlignment="Stretch">
+                    <TextBox Text="{Binding MapSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search maps" Padding="30,6,8,6" />
+                    <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
+                </Grid>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding RandomMissionCommand}" ToolTip="Pick a random map and scenario (same kind as the current one)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B1;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
@@ -158,14 +164,14 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource GhostButton}" Command="{Binding AddCustomMapCommand}" Margin="8,0,0,0"
-                            ToolTip="Add a map by its level and scenario name (for mod maps the launcher cannot read, or special test scenarios)">
+                            ToolTip="Add a map by its level and scenario name">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" />
                             <TextBlock Text="Custom map" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
 
             <!-- ============================================================ rules toolbar -->
             <DockPanel Grid.Row="0" Margin="0,14,0,10" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
@@ -194,7 +200,7 @@
                                                 <TextBlock x:Name="t" Text="{Binding Name}" FontSize="12" Foreground="{StaticResource TextDim}" />
                                                 <Border x:Name="n" CornerRadius="2" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
                                                         Visibility="{Binding Changes, Converter={StaticResource Vis}}" ToolTip="Changed settings">
-                                                    <TextBlock Text="{Binding Changes}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
+                                                    <TextBlock Text="{Binding Changes}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                 </Border>
                                             </StackPanel>
                                         </Border>
@@ -262,7 +268,7 @@
                                                         </StackPanel>
                                                         <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="2" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
                                                                 Visibility="{Binding Tag, Converter={StaticResource Vis}}">
-                                                            <TextBlock Text="{Binding Tag}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
+                                                            <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                         </Border>
                                                     </Grid>
                                                     <Button Style="{StaticResource IconButton}" Content="&#xE70F;" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
@@ -312,7 +318,7 @@
                         </Grid.RowDefinitions>
                         <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="2,2,0,0" Padding="14,8">
                             <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource InfoFg}">
-                                <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode picked on the map. Bots, enemies and difficulty are in the squad card on the right. Gold values differ from the game default; they are written to Game.ini before the game starts and sent again after the map loads." />
+                                <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode. Gold = changed from the game default. Bots and enemies are in the squad card." />
                             </TextBlock>
                         </Border>
                         <ListBox Grid.Row="1" Style="{StaticResource PlainList}" ItemsSource="{Binding RuleItemsView}" Margin="0,0,0,6"
@@ -332,7 +338,7 @@
                                                 <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource Vis}}" />
                                                 <TextBlock Text="{Binding AvailabilityNote}" FontSize="12" Foreground="{StaticResource Warn}" TextWrapping="Wrap" Margin="0,2,0,0"
                                                            Visibility="{Binding AvailabilityNote, Converter={StaticResource Vis}}" />
-                                                <TextBlock Style="{StaticResource MonoText}" FontSize="10.5" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0">
+                                                <TextBlock Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0">
                                                     <Run Text="{Binding Key, Mode=OneWay}" /><Run Text="  ·  default " /><Run Text="{Binding DisplayDefault, Mode=OneWay}" />
                                                 </TextBlock>
                                             </StackPanel>
@@ -363,7 +369,7 @@
                         </Grid.RowDefinitions>
                         <StackPanel Margin="14,12,14,8">
                             <TextBlock Text="Presets" Style="{StaticResource H2}" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="One click sets many rules. Official rulesets are the exact values from the game files." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="One click sets many rules." />
                             <Border Style="{StaticResource SegmentHost}">
                                 <UniformGrid Rows="1">
                                     <RadioButton Style="{StaticResource Segment}" Content="Styles" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Styles}" />
@@ -380,7 +386,7 @@
                                             <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="11,9" Margin="0,0,0,8">
                                                 <StackPanel>
                                                     <DockPanel>
-                                                        <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24" FontSize="10" Content="&#xE74D;" ToolTip="Delete preset"
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24" FontSize="11" Content="&#xE74D;" ToolTip="Delete preset"
                                                                 Visibility="{Binding Group, Converter={StaticResource Vis}, ConverterParameter='My preset'}"
                                                                 Command="{Binding DataContext.DeleteRulesPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                                                         <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -394,7 +400,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <TextBlock Style="{StaticResource Mute}" Visibility="{Binding HasNoPresets, Converter={StaticResource Vis}}" Margin="4,4,4,0" TextWrapping="Wrap"
-                                           Text="No presets yet. Change some rules and press &quot;Save my changes as a preset&quot;." />
+                                           Text="No presets yet." />
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="2" Margin="14,4,14,12">
@@ -417,7 +423,7 @@
                         <DockPanel>
                             <ComboBox Width="240" ItemsSource="{Binding OfficialRulesetChoices}" SelectedItem="{Binding LaunchRuleset}" DockPanel.Dock="Left" />
                             <TextBlock Style="{StaticResource Mute}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
-                                       Text="Starts the game with -ruleset=, exactly like the official playlist. Also changes things the rules list can't, like movement speed. Needs a game start." />
+                                       Text="Starts the game with -ruleset= like the official playlist. Needs a game start." />
                         </DockPanel>
 
                         <TextBlock Text="Extra Game.ini lines" Style="{StaticResource SectionLabel}" />
@@ -430,7 +436,7 @@
                                 </StackPanel>
                             </Border>
                             <TextBlock Style="{StaticResource Mute}" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
-                                       Text="For mutator settings and anything else. Replace keeps only the launcher's rules and these lines." />
+                                       Text="Replace keeps only the launcher's rules and these lines." />
                         </DockPanel>
                         <TextBox Style="{StaticResource CodeBox}" Height="150" Text="{Binding CustomIniText, UpdateSourceTrigger=LostFocus}"
                                  Tag="[/Script/Insurgency.INSCheckpointGameMode]&#x0a;SomeSetting=Value" />
@@ -499,7 +505,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
+                                        <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
                                         <ItemsControl ItemsSource="{Binding Modes}" Focusable="False">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -517,7 +523,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <StackPanel Visibility="{Binding HasScenarioSides, Converter={StaticResource Vis}}" Margin="0,6,0,0">
-                            <TextBlock Text="Side" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
+                            <TextBlock Text="Side" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
                             <Border Style="{StaticResource SegmentHost}">
                                 <ItemsControl ItemsSource="{Binding ScenarioSides}" Focusable="False">
                                     <ItemsControl.ItemsPanel>
@@ -532,7 +538,7 @@
                                 </ItemsControl>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding SelectedScenarioId}" Style="{StaticResource MonoText}" FontSize="10.5" Foreground="{StaticResource TextFaint}" Margin="1,8,0,0"
+                        <TextBlock Text="{Binding SelectedScenarioId}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="1,8,0,0"
                                    TextTrimming="CharacterEllipsis" ToolTip="Scenario ID" />
                         <Grid Margin="0,12,0,0">
                             <Grid.ColumnDefinitions>
@@ -572,7 +578,7 @@
                             <TextBlock Text="Squad and enemies" Style="{StaticResource H2}" />
                         </DockPanel>
                         <TextBlock Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap">
-                            <Run Text="{Binding CurrentModeName, Mode=OneWay}" /><Run Text=" defaults are used unless you change them. Changed values turn gold." />
+                            <Run Text="{Binding CurrentModeName, Mode=OneWay}" /><Run Text=" defaults unless changed (gold)." />
                         </TextBlock>
 
                         <!-- co-op -->
@@ -590,7 +596,7 @@
                                 </UniformGrid>
                             </Border>
                             <c:Stepper Margin="0,10,0,0" Label="AI teammates" Hint="{Binding TeammatesHint}" Value="{Binding Teammates}" Changed="{Binding TeammatesChanged}" Maximum="32"
-                                       ToolTip="Bots on your team. The game reads this when it starts, so changing it may need a game restart (the launcher handles it)." />
+                                       ToolTip="Bots on your team. Read at game start (the launcher restarts it if needed)." />
                             <c:Stepper Label="Enemies when playing alone" Hint="{Binding SoloEnemiesHint}" Value="{Binding SoloEnemies}" Changed="{Binding SoloEnemiesChanged}"
                                        ToolTip="Enemy bots alive at once when you are the only human player" />
                             <c:Stepper Label="Minimum enemies" Hint="{Binding MinEnemiesHint}" Value="{Binding MinEnemies}" Changed="{Binding MinEnemiesChanged}"
@@ -631,12 +637,12 @@
                             <Slider Minimum="0" Maximum="1" Value="{Binding AiDifficulty}" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0"
                                     ToolTip="How well bots aim, spot and react. 0.5 is the game default." />
                             <Grid Margin="0,2,0,0">
-                                <TextBlock Text="Recruit" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
-                                <TextBlock Text="Default 0.50" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
-                                <TextBlock Text="Nightmare" FontSize="10" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
+                                <TextBlock Text="Recruit" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
+                                <TextBlock Text="Default 0.50" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Nightmare" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
                             </Grid>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}"
-                                       Text="In versus modes the difficulty is applied right after the map loads." />
+                                       Text="Versus: applied after the map loads." />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -662,7 +668,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" MaxWidth="200" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Center" Margin="7,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />
-                                            <Button Style="{StaticResource IconButton}" Width="22" Height="22" FontSize="9" Content="&#xE711;" Margin="4,0,0,0" ToolTip="Remove"
+                                            <Button Style="{StaticResource IconButton}" Width="22" Height="22" FontSize="11" Content="&#xE711;" Margin="4,0,0,0" ToolTip="Remove"
                                                     Command="{Binding DataContext.RemoveMutatorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                                         </StackPanel>
                                     </Border>
@@ -670,7 +676,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource VisNot}}"
-                                   Text="No mutators. Add some under Mods > Mutators, or pick an official playlist." />
+                                   Text="No mutators." />
                     </StackPanel>
                 </Border>
             </StackPanel>

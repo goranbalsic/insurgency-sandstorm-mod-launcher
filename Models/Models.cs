@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using SandstormModLauncher.Core;
 
@@ -159,6 +159,7 @@ namespace SandstormModLauncher.Models
         public double WindowHeight { get; set; } = 860;
         public bool WindowMaximized { get; set; } = true;
         public string LastPage { get; set; } = "Play";
+        public double UiScale { get; set; } = 1.0;               // size of the whole interface (text and controls), 0.9 - 1.5
         public bool AutoUpdate { get; set; } = true;             // check GitHub releases and install new versions quietly
         public DateTime LastUpdateCheckUtc { get; set; }
         public string SkippedUpdateTag { get; set; }             // a release that cannot be installed (its exe is not newer)

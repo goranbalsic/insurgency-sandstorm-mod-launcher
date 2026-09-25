@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -10,7 +10,10 @@ namespace SandstormModLauncher.ViewModels
 {
     public sealed partial class MainViewModel
     {
-        private static readonly TimeSpan UpdateInterval = TimeSpan.FromHours(3);
+        // A tiny "anything new?" request while the launcher is open (see Updater.Check: usually a 304 with no body).
+        private static readonly TimeSpan UpdateInterval = TimeSpan.FromMinutes(3);
+        private string failedTag, lastCheckError;
+        private DateTime failedAtUtc;
         private DispatcherTimer updateTimer;
         private bool updateBusy, updateReady;
         private string updateStatus = "", updatePage;
@@ -44,8 +47,8 @@ namespace SandstormModLauncher.ViewModels
         public string UpdateStatus { get => updateStatus; private set => Set(ref updateStatus, value); }
         public string UpdateReadyTip => readyVersion == null ? "" : "v" + readyVersion.ToString(3) + " is installed and starts the next time you open the launcher. Click to restart now.";
         public string AutoUpdateHint => Updater.CanInstall
-            ? "Checks this project's GitHub releases every few hours and quietly puts a new version in place. It starts the next time you open the launcher. This is the only network access the launcher makes."
-            : "This exe was built from source, so new releases are only reported, not installed. This check is the only network access the launcher makes.";
+            ? "Looks for a new release every 3 minutes (a tiny request) and puts it in place for the next start. The launcher's only network access."
+            : "Built from source: new releases are only reported. The launcher's only network access.";
 
         /// <summary>Called once the window is up (not for command-line tools or test runs).</summary>
         public void StartUpdateChecks()
@@ -66,14 +69,16 @@ namespace SandstormModLauncher.ViewModels
         private async Task CheckForUpdates(bool manual)
         {
             if (updateBusy || (!manual && !State.Settings.AutoUpdate)) return;
+            if (!manual && launchRunning) return;   // never during a launch
             updateBusy = true;
             CommandManager.InvalidateRequerySuggested();
             if (manual) UpdateStatus = "Checking for updates...";
             try
             {
                 var info = await Task.Run(() => Updater.Check());
-                State.Settings.LastUpdateCheckUtc = DateTime.UtcNow;
-                SaveSettingsSoon();
+                // Saved at most once an hour: a check every few minutes should not keep writing the settings file.
+                if (DateTime.UtcNow - State.Settings.LastUpdateCheckUtc > TimeSpan.FromHours(1)) { State.Settings.LastUpdateCheckUtc = DateTime.UtcNow; SaveSettingsSoon(); }
+                if (lastCheckError != null) { AppLog.Info("Update check works again"); lastCheckError = null; }
                 var have = readyVersion ?? Updater.Current;
                 if (info.Version <= have)
                 {
@@ -86,7 +91,10 @@ namespace SandstormModLauncher.ViewModels
                     SetDownloadOnly(info, v + " is available.");
                     return;
                 }
+                // A download that failed is not tried again for an hour (it can be up to 50 MB).
+                if (!manual && info.Tag == failedTag && DateTime.UtcNow - failedAtUtc < TimeSpan.FromHours(1)) return;
                 var result = await Task.Run(() => Updater.Install(info));
+                if (!result.Ok) { failedTag = info.Tag; failedAtUtc = DateTime.UtcNow; }
                 if (result.Ok)
                 {
                     readyVersion = info.Version;
@@ -102,7 +110,9 @@ namespace SandstormModLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                AppLog.Warn("Update check failed: " + ex.Message);
+                // Offline or GitHub unreachable: logged once, then quiet until it works again.
+                if (manual || ex.Message != lastCheckError) AppLog.Warn("Update check failed: " + ex.Message);
+                lastCheckError = ex.Message;
                 if (manual || string.IsNullOrEmpty(updateStatus)) UpdateStatus = "Could not check for updates: " + ex.Message;
             }
             finally

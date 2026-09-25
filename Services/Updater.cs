@@ -57,10 +57,68 @@ namespace SandstormModLauncher.Services
                 try { if (File.Exists(f)) File.Delete(f); } catch { }
         }
 
-        /// <summary>The latest release. Blocking; call it off the UI thread.</summary>
+        private static string etag;
+        private static UpdateInfo lastInfo;
+
+        /// <summary>
+        /// The latest release. Blocking; call it off the UI thread. First a HEAD request to the release page, which only
+        /// redirects to the newest tag (no body, not an API call). The release details come from the API only when that
+        /// tag differs from the last answer, asked with its ETag so an unchanged release is a bodiless 304.
+        /// </summary>
         public static UpdateInfo Check()
         {
-            string json = Encoding.UTF8.GetString(Download("https://api.github.com/repos/" + Repo + "/releases/latest", 1024 * 1024, "application/vnd.github+json"));
+            if (lastInfo != null)
+            {
+                string tag = LatestTag();
+                if (tag != null && string.Equals(tag, lastInfo.Tag, StringComparison.OrdinalIgnoreCase)) return lastInfo;
+            }
+            var req = (HttpWebRequest)WebRequest.Create("https://api.github.com/repos/" + Repo + "/releases/latest");
+            req.UserAgent = "SandstormModLauncher/" + Current.ToString(3);
+            req.Accept = "application/vnd.github+json";
+            req.Timeout = 10000;
+            req.ReadWriteTimeout = 10000;
+            if (etag != null && lastInfo != null) req.Headers[HttpRequestHeader.IfNoneMatch] = etag;
+            string json;
+            try
+            {
+                using (var resp = (HttpWebResponse)req.GetResponse())
+                using (var r = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    json = r.ReadToEnd();
+                    if (json.Length > 1024 * 1024) throw new InvalidDataException("answer too large");
+                    etag = resp.Headers[HttpResponseHeader.ETag];
+                }
+            }
+            catch (WebException ex) when ((ex.Response as HttpWebResponse)?.StatusCode == HttpStatusCode.NotModified && lastInfo != null)
+            {
+                return lastInfo;
+            }
+            lastInfo = Parse(json);
+            return lastInfo;
+        }
+
+        /// <summary>The newest release tag from where github.com/.../releases/latest redirects to, or null.</summary>
+        private static string LatestTag()
+        {
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create("https://github.com/" + Repo + "/releases/latest");
+                req.Method = "HEAD";
+                req.AllowAutoRedirect = false;
+                req.UserAgent = "SandstormModLauncher/" + Current.ToString(3);
+                req.Timeout = 10000;
+                using (var resp = (HttpWebResponse)req.GetResponse())
+                {
+                    string location = resp.Headers[HttpResponseHeader.Location] ?? "";
+                    int i = location.LastIndexOf("/tag/", StringComparison.OrdinalIgnoreCase);
+                    return i < 0 ? null : Uri.UnescapeDataString(location.Substring(i + 5)).Trim('/');
+                }
+            }
+            catch { return null; }
+        }
+
+        private static UpdateInfo Parse(string json)
+        {
             var root = Json.Parse(json);
             string tag = root.Get("tag_name").Str();
             if (tag == null || !Version.TryParse(tag.TrimStart('v', 'V'), out var version)) throw new InvalidDataException("The latest release has no version tag.");

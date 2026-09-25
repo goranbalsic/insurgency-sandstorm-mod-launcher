@@ -10,7 +10,7 @@
 
         <DockPanel LastChildFill="False">
             <TextBlock DockPanel.Dock="Left" Style="{StaticResource Mute}" FontSize="13" VerticalAlignment="Center"
-                       Text="Tick mutators to load them with the match, in order. Official ones are grouped by the playlists that use them." />
+                       Text="Tick mutators to load them with the match." />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
                 <Grid Width="260">
                     <TextBox Text="{Binding MutatorSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search name, ID, mod or description" Padding="30,6,8,6" />
@@ -43,7 +43,7 @@
                 </RadioButton>
             </StackPanel>
             <CheckBox DockPanel.Dock="Right" Content="Show base classes and helpers" IsChecked="{Binding ShowBaseClasses}" Foreground="{StaticResource TextDim}"
-                      ToolTip="Some mods ship parent classes that other mutators build on. They normally do nothing on their own." />
+                      ToolTip="Parent classes other mutators build on. They do nothing alone." />
         </DockPanel>
 
         <Grid Grid.Row="2">
@@ -108,17 +108,17 @@
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource Bg4}" Margin="6,0,0,0" Visibility="{Binding IsBase, Converter={StaticResource Vis}}">
-                                                <TextBlock Text="Base class" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
+                                                <TextBlock Text="Base class" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextDim}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding NotRegistered, Converter={StaticResource Vis}}"
                                                     ToolTip="The mod does not register this folder for mutators, so the game may not find it.">
-                                                <TextBlock Text="Not registered" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                                <TextBlock Text="Not registered" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Background="{StaticResource BadBg}" Margin="6,0,0,0" Visibility="{Binding Warning, Converter={StaticResource Vis}}" ToolTip="{Binding Warning}">
-                                                <TextBlock Text="Check" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
+                                                <TextBlock Text="Check" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource BadFg}" />
                                             </Border>
                                             <Border Style="{StaticResource Badge}" Margin="6,0,0,0" Visibility="{Binding IsActive, Converter={StaticResource Vis}}">
-                                                <TextBlock Text="Active" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
+                                                <TextBlock Text="Active" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -171,9 +171,9 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource VisNot}}"
-                                       Text="Tick mutators on the left to use them. Their order here is the load order." />
+                                       Text="Tick mutators on the left. Order here = load order." />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource Vis}}"
-                                       Text="Mutators load top to bottom. If a mod asks to load first or last, move it here." />
+                                       Text="Loaded top to bottom." />
                         </StackPanel>
                     </Border>
 
@@ -198,7 +198,7 @@
                             <TextBlock Text="{Binding SelectedMutator.Warning}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" FontSize="12" Margin="0,8,0,0"
                                        Visibility="{Binding SelectedMutator.Warning, Converter={StaticResource Vis}}" />
 
-                            <TextBlock Text="Mutator ID" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,12,0,4" />
+                            <TextBlock Text="Mutator ID" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,12,0,4" />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Copy" Command="{Binding CopyTextCommand}" CommandParameter="{Binding SelectedMutator.Id}" />
                                 <Border Style="{StaticResource Well}" Padding="8,5">
@@ -206,7 +206,7 @@
                                 </Border>
                             </DockPanel>
                             <StackPanel Visibility="{Binding SelectedMutator.Info.ConfigSection, Converter={StaticResource Vis}, FallbackValue=Collapsed}">
-                                <TextBlock Text="Game.ini section for its settings" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,10,0,4" />
+                                <TextBlock Text="Game.ini section for its settings" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="0,10,0,4" />
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE8C8;" ToolTip="Copy" Command="{Binding CopyTextCommand}" CommandParameter="{Binding SelectedMutator.Info.ConfigSection}" />
                                     <Border Style="{StaticResource Well}" Padding="8,5">
@@ -226,7 +226,7 @@
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="Add by name" Style="{StaticResource H2}" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" Text="For a mutator the launcher can't see, type its ID exactly as the mod author gives it." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" Text="Type a mutator ID the launcher can't see." />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Add" Margin="8,0,0,0" Command="{Binding AddCustomMutatorCommand}" />
                                 <TextBox Text="{Binding CustomMutatorText, UpdateSourceTrigger=PropertyChanged}" Tag="MutatorID" FontFamily="{StaticResource Mono}" />

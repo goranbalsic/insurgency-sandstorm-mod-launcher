@@ -53,6 +53,9 @@
     <FontFamily x:Key="Mono">Cascadia Mono, Consolas</FontFamily>
     <FontFamily x:Key="Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
+    <!-- Interface size (Settings > Text size, Ctrl +/-): replaced at run time by App.Resources["UiScaleTransform"] -->
+    <ScaleTransform x:Key="UiScaleTransform" ScaleX="1" ScaleY="1" />
+
     <CornerRadius x:Key="Radius">2</CornerRadius>
     <CornerRadius x:Key="RadiusLg">3</CornerRadius>
 
@@ -69,7 +72,7 @@
         <Setter Property="Foreground" Value="{StaticResource Text}" />
     </Style>
     <Style x:Key="Kicker" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontSize" Value="11.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextMute}" />
     </Style>
@@ -79,7 +82,7 @@
     </Style>
     <Style x:Key="Mute" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource TextMute}" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="12.5" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style x:Key="MonoText" TargetType="TextBlock">
@@ -251,7 +254,7 @@
         <Setter Property="Height" Value="34" />
         <Setter Property="Foreground" Value="{StaticResource TextDim}" />
         <Setter Property="FontFamily" Value="{StaticResource Icons}" />
-        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontSize" Value="11.5" />
         <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
@@ -568,7 +571,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="b" Background="{StaticResource Bg1}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="2">
-                        <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Icons}" FontSize="10" Foreground="{StaticResource TextMute}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Icons}" FontSize="11" Foreground="{StaticResource TextMute}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="BorderBrush" Value="{StaticResource LineStrong}" /></Trigger>
@@ -593,7 +596,7 @@
                         <ContentPresenter x:Name="content" Margin="10,0,30,0" VerticalAlignment="Center" IsHitTestVisible="False"
                                           Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
                         <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                            <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="0" Margin="0,1,0,0"
+                            <Border LayoutTransform="{DynamicResource UiScaleTransform}" Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="0" Margin="0,1,0,0"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <ScrollViewer Margin="4" SnapsToDevicePixels="True">
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -706,7 +709,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="0" Padding="8,5">
+                    <Border LayoutTransform="{DynamicResource UiScaleTransform}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="0" Padding="8,5">
                         <ContentPresenter>
                             <ContentPresenter.Resources>
                                 <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
@@ -725,7 +728,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="0" Padding="2">
+                    <Border LayoutTransform="{DynamicResource UiScaleTransform}" Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="0" Padding="2">
                         <StackPanel IsItemsHost="True" />
                     </Border>
                 </ControlTemplate>

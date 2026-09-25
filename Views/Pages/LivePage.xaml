@@ -13,7 +13,7 @@
             <DockPanel>
                 <Ellipse Width="9" Height="9" Fill="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=dot}" VerticalAlignment="Center" Margin="0,0,10,0" />
                 <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Visibility="{Binding InMatch, Converter={StaticResource VisNot}}" Text="These controls start working once you are in a match. Press Launch first." />
+                           Visibility="{Binding InMatch, Converter={StaticResource VisNot}}" Text="Works once you are in a match." />
                 <TextBlock Text="{Binding GameStatus}" Foreground="{Binding GameStatusKind, Converter={StaticResource Status}}" VerticalAlignment="Center" TextWrapping="Wrap" />
             </DockPanel>
         </Border>
@@ -22,7 +22,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="400" />
+                <ColumnDefinition Width="0.8*" MaxWidth="400" />
             </Grid.ColumnDefinitions>
 
             <ScrollViewer x:Name="groupScroll" VerticalScrollBarVisibility="Auto" Focusable="False">
@@ -38,7 +38,7 @@
                                 <StackPanel>
                                     <DockPanel Margin="0,0,0,8">
                                         <Border DockPanel.Dock="Right" x:Name="badge" Style="{StaticResource Badge}" Background="{StaticResource InfoBg}">
-                                            <TextBlock x:Name="badgeText" Text="{Binding Badge}" FontSize="9.5" FontWeight="SemiBold" Foreground="{StaticResource InfoFg}" />
+                                            <TextBlock x:Name="badgeText" Text="{Binding Badge}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource InfoFg}" />
                                         </Border>
                                         <TextBlock Text="{Binding Title}" Style="{StaticResource H2}" />
                                     </DockPanel>
@@ -49,7 +49,7 @@
                                                         Command="{Binding DataContext.RunLiveActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
                                                     <StackPanel>
                                                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Left" />
-                                                        <TextBlock Text="{Binding Command}" Style="{StaticResource MonoText}" FontSize="10.5" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
+                                                        <TextBlock Text="{Binding Command}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
                                                     </StackPanel>
                                                 </Button>
                                             </DataTemplate>
@@ -76,7 +76,7 @@
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding LiveModeName}" Foreground="{StaticResource Accent}" FontSize="12" VerticalAlignment="Bottom" />
                                 <TextBlock Text="Live rule changes" Style="{StaticResource H2}" />
                             </DockPanel>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" Text="AdminSetGamemodeProperty · lasts until the map changes. Leave a box empty to keep the current value." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" Text="Lasts until the map changes. Empty = keep the current value." />
                             <ItemsControl ItemsSource="{Binding LiveRules}" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -88,7 +88,7 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Key}" Style="{StaticResource MonoText}" FontSize="10" Foreground="{StaticResource TextFaint}" />
+                                                <TextBlock Text="{Binding Key}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" />
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Tag="{Binding Default}" FontFamily="{StaticResource Mono}" Padding="6,4" />
                                             <TextBlock Grid.Column="2" Style="{StaticResource MonoText}" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" TextTrimming="CharacterEllipsis"
@@ -113,7 +113,7 @@
                                 <Button DockPanel.Dock="Right" Content="Count bots" Style="{StaticResource GhostButton}" Padding="10,4" Command="{Binding CountBotsCommand}" />
                                 <TextBlock Text="Console" Style="{StaticResource H2}" VerticalAlignment="Center" />
                             </DockPanel>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" Text="Send any console command. Join several with |. Tab completes a suggestion." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" Text="Any console command. Join several with |." />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Send" Margin="8,0,0,0" Command="{Binding SendCustomCommand}" />
                                 <TextBox x:Name="commandBox" Text="{Binding CustomCommand, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Tag="e.g. SetRoundTimer 600"
@@ -147,7 +147,7 @@
                                 </TextBlock>
                                 <TextBlock Text="All game commands" Style="{StaticResource H2}" />
                             </DockPanel>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" Text="Read from the game itself, with the exact parameters. Click one to put it in the console box." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" Text="Click one to put it in the console box." />
                             <TextBox Text="{Binding CommandSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search commands" Margin="0,0,0,6" />
                             <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding GameCommandsView}" ItemContainerStyle="{StaticResource PlainItem}" Height="340"
                                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel">

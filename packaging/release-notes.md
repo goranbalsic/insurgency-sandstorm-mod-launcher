@@ -1,5 +1,11 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.3**
+
+- Text size: Settings > Text size (90% to 150%), or Ctrl + / Ctrl - / Ctrl 0 and Ctrl + mouse wheel anywhere. Scales the whole window, tooltips and menus. The smallest labels are also a bit bigger by default.
+- Shorter descriptions everywhere, so pages are less crowded.
+- New versions are found within minutes: while the launcher is open it checks every 3 minutes with a tiny request (just where the latest release page points to, no data downloaded unless there is a new version). Offline, it stays quiet.
+
 **Changes in 1.3.2**
 
 - Report a problem on GitHub from the launcher: Settings > Something went wrong? > Report on GitHub (or "Report this problem" after a failed launch). You see the whole report first; it has no user or PC name, user folders, Steam IDs, account lines, screenshots or console history. Your browser opens the issue form filled in, and nothing is posted until you press Submit.

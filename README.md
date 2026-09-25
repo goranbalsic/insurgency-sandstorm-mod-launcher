@@ -95,7 +95,7 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 
 ## Releasing
 
-Raise `<Version>` in `SandstormModLauncher.csproj`, add the changes to `packaging/release-notes.md` and push to `main` (or push a `vX.Y.Z` tag). The [release workflow](.github/workflows/release.yml) builds, checksums and publishes the release, and installed launchers update themselves within a few hours.
+Raise `<Version>` in `SandstormModLauncher.csproj`, add the changes to `packaging/release-notes.md` and push to `main` (or push a `vX.Y.Z` tag). The [release workflow](.github/workflows/release.yml) builds, checksums and publishes the release, and installed launchers that are open pick it up within a few minutes.
 
 ## FAQ
 

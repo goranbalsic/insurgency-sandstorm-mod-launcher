@@ -60,6 +60,7 @@ namespace SandstormModLauncher.ViewModels
             DismissKeyWarningCommand = new RelayCommand(() => { KeyBindings.ClearWarning(); KeyBindingsWarning = null; });
             SaveReportCommand = new AsyncCommand(SaveReport);
             InitShareCommands();
+            SetUiScaleCommand = new RelayCommand(p => { if (double.TryParse(p as string, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double s)) UiScale = s; });
             AddCustomMapCommand = new RelayCommand(() => OpenMapEditor(null));
             EditCustomMapCommand = new RelayCommand(p => OpenMapEditor((p as MapItem)?.Custom));
             SaveCustomMapCommand = new RelayCommand(SaveCustomMap, () => !string.IsNullOrWhiteSpace(editMapLevel) && !string.IsNullOrWhiteSpace(editMapScenario));
@@ -84,7 +85,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
                       nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs),
-                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate));
+                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate), nameof(UiScale), nameof(UiScaleText));
         }
 
         // ------------------------------------------------------------------ game install
@@ -175,6 +176,44 @@ namespace SandstormModLauncher.ViewModels
             Raise(name);
             SaveSettingsSoon();
             if (replan) UpdatePlan(); else UpdateLaunchButton();
+        }
+
+        // ------------------------------------------------------------------ interface size
+
+        public static readonly double[] UiScales = { 0.9, 1.0, 1.1, 1.25, 1.4, 1.5 };
+        private static double ClampScale(double s) => double.IsNaN(s) || s <= 0 ? 1.0 : Math.Max(UiScales[0], Math.Min(UiScales[UiScales.Length - 1], s));
+
+        /// <summary>Size of the whole interface. 1 = 100%.</summary>
+        public double UiScale
+        {
+            get => ClampScale(State.Settings.UiScale);
+            set
+            {
+                double s = ClampScale(Math.Round(value, 2));
+                if (Math.Abs(s - UiScale) < 0.001) return;
+                SetSetting(() => State.Settings.UiScale = s);
+                ApplyUiScale(s);
+                Raise(nameof(UiScaleText));
+            }
+        }
+        public string UiScaleText => (int)Math.Round(UiScale * 100) + "%";
+        public ICommand SetUiScaleCommand { get; private set; }
+
+        /// <summary>One step bigger (+1), smaller (-1) or back to 100% (0).</summary>
+        public void StepUiScale(int direction)
+        {
+            if (direction == 0) { UiScale = 1.0; }
+            else if (direction > 0) UiScale = UiScales.FirstOrDefault(v => v > UiScale + 0.001) is double up && up > 0 ? up : UiScale;
+            else UiScale = UiScales.LastOrDefault(v => v < UiScale - 0.001) is double down && down > 0 ? down : UiScale;
+            ShowToast("Text size " + UiScaleText);
+        }
+
+        /// <summary>Scales the window content and its pop-ups (tooltips, menus, drop-downs) through one shared transform.</summary>
+        public static void ApplyUiScale(double s)
+        {
+            var t = new System.Windows.Media.ScaleTransform(s, s);
+            t.Freeze();
+            if (Application.Current != null) Application.Current.Resources["UiScaleTransform"] = t;
         }
 
         public bool AutoStartGame { get => State.Settings.AutoStartGame; set => SetSetting(() => State.Settings.AutoStartGame = value); }
