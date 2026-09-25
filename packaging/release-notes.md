@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.4**
+
+- Fixed: drop-down lists that show a name (saved key binding copies, presets) showed a program name instead of the entry.
+
 **Changes in 1.3.3**
 
 - Text size: Settings > Text size (90% to 150%), or Ctrl + / Ctrl - / Ctrl 0 and Ctrl + mouse wheel anywhere. Scales the whole window, tooltips and menus. The smallest labels are also a bit bigger by default.

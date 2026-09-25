@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,6 +33,7 @@ namespace SandstormModLauncher.Game
         public static OfficialData Load(GameInstall install, string cacheDir, Action<string> progress)
         {
             if (!install.IsValid) return new OfficialData { Warnings = { "Insurgency: Sandstorm was not found." } };
+            if (install.Demo) return Json.Deserialize<OfficialData>(File.ReadAllText(Path.Combine(GameInstall.DemoCacheDir, "official.json")));
             var paks = Directory.GetFiles(install.PaksDir, "*.pak").OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
             string key = string.Join("|", paks.Select(p => { var fi = new FileInfo(p); return fi.Name + ":" + fi.Length + ":" + fi.LastWriteTimeUtc.Ticks; }));
             string cacheFile = Path.Combine(cacheDir, "official.json");

@@ -25,6 +25,13 @@ namespace SandstormModLauncher
                 AppPaths.UseDataDir(args[dataArg + 1]);
                 args.RemoveRange(dataArg, 2);
             }
+            // --render-from-cache <cache folder>: screenshot runs on a PC without the game (only together with --data).
+            int demoArg = args.IndexOf("--render-from-cache");
+            if (demoArg >= 0 && demoArg + 1 < args.Count && isolated)
+            {
+                Game.GameInstall.DemoCacheDir = args[demoArg + 1];
+                args.RemoveRange(demoArg, 2);
+            }
             var eArgs = args.ToArray();
             AppLog.Init(Path.Combine(AppPaths.DataDir, "logs"));
             DispatcherUnhandledException += (s, ex) =>
@@ -228,6 +235,8 @@ namespace SandstormModLauncher
                     vm.Page = parts[0];
                     if (parts[0] == "Play") vm.PlayTab = parts.Length > 1 ? parts[1] : "Map";
                     if (parts[0] == "Mods") vm.ModsTab = parts.Length > 1 ? parts[1] : "Mutators";
+                    // Pictures show a mod whose files are all there, not the first one in the list.
+                    if (page == "Mods-Installed") vm.SelectedMod = vm.ModItems.FirstOrDefault(m => !m.HasWarnings) ?? vm.SelectedMod;
                     await Task.Delay(700);
                     Layout();
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
