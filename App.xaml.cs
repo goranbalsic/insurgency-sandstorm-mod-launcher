@@ -153,6 +153,14 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 2 && eArgs[0] == "--preset-test")
+            {
+                // --preset-test out.txt: what every rules preset changes in the launch plan (no window).
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                RunPresetTest(eArgs[1]);
+                return;
+            }
+
             if (eArgs.Length >= 2 && eArgs[0] == "--plan-test")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -215,6 +223,22 @@ namespace SandstormModLauncher
         /// --render &lt;folder&gt; [Page ...]: draws the launcher pages to PNG files without ever showing a window
         /// (1920x1080 at 125% scaling). Used to check the layout while someone else is using the PC.
         /// </summary>
+        private async void RunPresetTest(string outFile)
+        {
+            try
+            {
+                var vm = new ViewModels.MainViewModel();
+                vm.State.Store.Load();
+                var init = vm.InitializeAsync();
+                for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
+                string text = await vm.PresetSelfTest("Styles") + "\n" + await vm.PresetSelfTest("Official") + "\n" + await vm.PresetSelfTest("Playlists");
+                File.WriteAllText(outFile, text);
+                vm.Dispose();
+            }
+            catch (Exception ex) { File.WriteAllText(outFile, "PRESET TEST CRASHED: " + ex); }
+            finally { Shutdown(); }
+        }
+
         private async void RenderPages(string outDir, System.Collections.Generic.List<string> pages)
         {
             try
@@ -236,13 +260,14 @@ namespace SandstormModLauncher
                 Layout();
                 var init = vm.InitializeAsync();
                 for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
-                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Mods", "Mods-Installed", "Play-Live", "Play-Advanced", "Playlists", "Settings" };
+                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Mods", "Mods-Installed", "Play-Live", "Play-Advanced", "Settings" };
                 foreach (var page in pages)
                 {
                     // "Play-Rules" = page Play, tab Rules
                     var parts = page.Split('-');
                     vm.Page = parts[0];
                     if (parts[0] == "Play") vm.PlayTab = parts.Length > 1 ? parts[1] : "Map";
+                    if (parts[0] == "Play" && parts.Length > 2) vm.PresetFilter = parts[2];   // e.g. Play-Rules-Playlists
                     if (parts[0] == "Mods") vm.ModsTab = parts.Length > 1 ? parts[1] : "Mutators";
                     // Pictures show a mod whose files are all there, not the first one in the list.
                     if (page == "Mods-Installed") vm.SelectedMod = vm.ModItems.FirstOrDefault(m => !m.HasWarnings) ?? vm.SelectedMod;
