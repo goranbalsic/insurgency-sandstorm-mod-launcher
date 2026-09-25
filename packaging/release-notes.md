@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.6**
+
+- New license: source available, all rights reserved. The code stays public so anyone can read and check it, but it may not be copied, redistributed or reused in other projects (personal ones included) without permission. Versions up to 1.3.5 keep their MIT license.
+
 **Changes in 1.3.5**
 
 - Large text sizes: every page scrolls when it no longer fits the window (the Rules tab could not be scrolled at 150%). The Rules categories wrap under the search box, and the setup column, rule rows and live rule rows give up width instead of squeezing their text.

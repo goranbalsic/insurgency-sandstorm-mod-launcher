@@ -9,14 +9,14 @@
     <RootNamespace>SandstormModLauncher</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.3.5</Version>
-    <FileVersion>1.3.5.0</FileVersion>
+    <Version>1.3.6</Version>
+    <FileVersion>1.3.6.0</FileVersion>
     <Product>Sandstorm Mod Launcher</Product>
     <AssemblyTitle>Sandstorm Mod Launcher</AssemblyTitle>
     <Description>Local play launcher with mods and mutators for Insurgency: Sandstorm</Description>
     <Authors>goranbalsic</Authors>
     <Company>goranbalsic</Company>
-    <Copyright>Copyright (c) 2026 goranbalsic. MIT License. Not affiliated with New World Interactive or Focus Entertainment.</Copyright>
+    <Copyright>Copyright (c) 2026 goranbalsic. All rights reserved (source available). Not affiliated with New World Interactive or Focus Entertainment.</Copyright>
     <RepositoryUrl>https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PlatformTarget>AnyCPU</PlatformTarget>
