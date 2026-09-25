@@ -236,7 +236,7 @@ namespace SandstormModLauncher
                 Layout();
                 var init = vm.InitializeAsync();
                 for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
-                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Playlists", "Play-Live", "Mods", "Mods-Installed", "Play-Advanced", "Settings" };
+                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Playlists", "Mods", "Mods-Installed", "Play-Live", "Play-Advanced", "Settings" };
                 foreach (var page in pages)
                 {
                     // "Play-Rules" = page Play, tab Rules

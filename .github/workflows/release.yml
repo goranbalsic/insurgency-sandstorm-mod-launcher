@@ -40,7 +40,10 @@ jobs:
           gh release view $tag --repo "${{ github.repository }}" *> $null
           $released = $LASTEXITCODE -eq 0
           $global:LASTEXITCODE = 0
-          if ($released) { "skip=true" >> $env:GITHUB_OUTPUT; Write-Host "$tag is already released"; exit 0 }
+          # A main push never touches an existing release. Pushing the tag again (moved to a newer commit) rebuilds
+          # that release in place: same version, new files and notes.
+          if ($released -and "${{ github.ref_type }}" -ne "tag") { "skip=true" >> $env:GITHUB_OUTPUT; Write-Host "$tag is already released"; exit 0 }
+          "replace=$($released.ToString().ToLower())" >> $env:GITHUB_OUTPUT
           $version = $tag.TrimStart('v')
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag $tag is not vX.Y.Z" }
           "skip=false" >> $env:GITHUB_OUTPUT
@@ -94,4 +97,10 @@ jobs:
           $notes = $notes.Replace("{VERSION}", $version).Replace("{REPO}", "${{ github.repository }}").Replace("{RUN_URL}", $run)
           $notes = $notes.Replace("{SHA256}", (Get-Content SHA256SUMS.txt -Raw).Trim())
           Set-Content -Path notes.md -Value $notes -Encoding utf8
-          gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --target "${{ github.sha }}" --title "Sandstorm Mod Launcher $version" --notes-file notes.md
+          if ("${{ steps.version.outputs.replace }}" -eq "true") {
+            gh release upload $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --clobber
+            gh release edit $version --notes-file notes.md
+          }
+          else {
+            gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --target "${{ github.sha }}" --title "Sandstorm Mod Launcher $version" --notes-file notes.md
+          }
