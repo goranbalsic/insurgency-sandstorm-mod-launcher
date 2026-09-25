@@ -1,9 +1,14 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.8**
+
+- Playlists has its own page again, in the left bar between Play and Settings, using the full width. Play keeps Map, Rules, Mods, Live and Advanced.
+- The updater also installs a release that was rebuilt without a new version number.
+
 **Changes in 1.3.7**
 
 - Fixed: Ambush and Free For All stayed at "waiting for players" with no bots. Both modes wait for two human players before the match starts, and bots only join after that. With bots on, one player is now enough, the modes get a bot count (5 when none is set) and enough player slots for all bots.
-- Mods are now a tab of Play (Map, Rules, Mods, Live, Advanced), next to everything else you set up for a match. Playlists has its own page in the left bar, between Play and Settings.
+- Mods are now a tab of Play (Map, Rules, Playlists, Mods, Live, Advanced), next to everything else you set up for a match. The left bar has Play and Settings.
 - The Mods tab keeps its lists readable at large text sizes.
 
 **Changes in 1.3.6**
