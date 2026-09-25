@@ -153,6 +153,15 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 2 && eArgs[0] == "--plan-test")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                try { SelfTest.PlanTest(eArgs[1]); }
+                catch (Exception ex) { File.WriteAllText(eArgs[1], "PLAN TEST CRASHED: " + ex); }
+                Shutdown();
+                return;
+            }
+
             if (eArgs.Length >= 2 && eArgs[0] == "--selftest")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -227,7 +236,7 @@ namespace SandstormModLauncher
                 Layout();
                 var init = vm.InitializeAsync();
                 for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
-                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Playlists", "Play-Live", "Play-Advanced", "Mods", "Mods-Installed", "Settings" };
+                if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Play-Playlists", "Play-Live", "Mods", "Mods-Installed", "Play-Advanced", "Settings" };
                 foreach (var page in pages)
                 {
                     // "Play-Rules" = page Play, tab Rules

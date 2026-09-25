@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -179,6 +179,8 @@ namespace SandstormModLauncher.ViewModels
             get => page;
             set
             {
+                // Mods is a tab of Play since 1.3.7 (older settings and links still say "Mods").
+                if (value == "Mods") { value = "Play"; PlayTab = "Mods"; }
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();

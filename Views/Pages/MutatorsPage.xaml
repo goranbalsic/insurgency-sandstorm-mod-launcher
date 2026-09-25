@@ -50,7 +50,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="370" />
+                <ColumnDefinition Width="0.8*" MinWidth="240" MaxWidth="370" />
             </Grid.ColumnDefinitions>
 
             <!-- list -->

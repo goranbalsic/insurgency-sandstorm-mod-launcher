@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -48,7 +48,7 @@ namespace SandstormModLauncher.ViewModels
         private void InitModCommands()
         {
             RescanModsCommand = new AsyncCommand(() => RescanMods(false));
-            ModsTabCommand = new RelayCommand(p => { Page = "Mods"; ModsTab = p as string ?? "Mutators"; });
+            ModsTabCommand = new RelayCommand(p => { Page = "Play"; PlayTab = "Mods"; ModsTab = p as string ?? "Mutators"; });
             OpenModFolderCommand = new RelayCommand(p =>
             {
                 string folder = (p as ModItem)?.Info.Folder;
@@ -97,7 +97,7 @@ namespace SandstormModLauncher.ViewModels
             var usable = item.Info.Mutators.Where(m => m.Registered && !m.IsBaseClass).ToList();
             if (usable.Count == 0) { ShowToast("This mod has no mutators to add"); return; }
             if (usable.Count == 1) SetMutatorActive(usable[0].Id, true);
-            else { Page = "Mods"; ModsTab = "Mutators"; MutatorSearch = item.Name; ShowToast("Pick which of the " + usable.Count + " mutators to use"); return; }
+            else { Page = "Play"; PlayTab = "Mods"; ModsTab = "Mutators"; MutatorSearch = item.Name; ShowToast("Pick which of the " + usable.Count + " mutators to use"); return; }
             ShowToast(usable[0].DisplayName + " added to your mutators");
         }
 

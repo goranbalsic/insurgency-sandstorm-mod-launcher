@@ -72,6 +72,7 @@
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="Match rules" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Playlists"><Setter Property="Text" Value="Official playlists" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="Live match control" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="Mods and mutators" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Advanced"><Setter Property="Text" Value="Advanced options" /></DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -109,6 +110,13 @@
                                              Visibility="{Binding InMatch, Converter={StaticResource Vis}}" />
                                 </Grid>
                                 <TextBlock Text="Live" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Mods}"
+                                     ToolTip="Mutators for the match (official and from mods) and the mods the game has installed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xEA86;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Mods" />
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Advanced}"
@@ -419,6 +427,7 @@
             <!-- ============================================================ playlists + live -->
             <p:PlaylistsPage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Playlists}" />
             <p:LivePage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Live}" />
+            <p:ModsPage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Mods}" />
 
             <!-- ============================================================ advanced -->
             <Border Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource Card}" Padding="0" Margin="0,14,0,0" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Advanced}">

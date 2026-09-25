@@ -117,6 +117,18 @@ namespace SandstormModLauncher.Game
                 && !(p.Rules.TryGetValue(cls, out var own) && own.ContainsKey("bBots")))
                 plan.Overrides["bBots"] = "True";
 
+            // Ambush and Free For All wait for two human players (MinimumPlayers=2) before the match starts, and bots
+            // only join once it has started, so offline they sat at "waiting for players" with no bots. With bots on,
+            // one player is enough (unless the profile sets these itself).
+            bool versusBots = plan.Mode != null && !plan.Mode.Coop && plan.Overrides.TryGetValue("bBots", out var vb) && IsTrue(vb);
+            // Ambush, Defusal and Free For All also default to BotQuota=0: bots "on" but none would come.
+            if (versusBots && !plan.Overrides.ContainsKey("BotQuota") && int.TryParse(db.DefaultValue(cls, "BotQuota"), out int dq) && dq <= 0)
+                plan.Overrides["BotQuota"] = "5";
+            if (versusBots)
+                foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
+                    if (int.TryParse(db.DefaultValue(cls, key), out int min) && min > 1 && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
+                        plan.Overrides[key] = "1";
+
             // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
             if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
                 && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && fbn > 0
@@ -135,6 +147,14 @@ namespace SandstormModLauncher.Game
                 wantsMates = int.TryParse(fb, out int mates) && mates > 0;
                 // Offline nobody else joins, so plenty of slots costs nothing; too few and the AI teammates do not join.
                 if (wantsMates) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Max(8, 1 + mates + 2));
+            }
+            else if (versusBots)
+            {
+                // Versus bots take player slots as well (BotQuota per team, or all the bots in Free For All): a profile
+                // left at 1 slot from Lone Wolf co-op meant no bot could join.
+                string bq = plan.Overrides.TryGetValue("BotQuota", out var bqo) ? bqo : db.DefaultValue(cls, "BotQuota");
+                int quota = int.TryParse(bq, out int q) && q > 0 ? q : 5;
+                plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Min(64, 2 * quota + 2));
             }
             url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
             url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
