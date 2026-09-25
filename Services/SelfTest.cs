@@ -102,6 +102,35 @@ namespace SandstormModLauncher
             File.WriteAllText(outFile + ".plan.txt", "Open: " + plan.OpenCommand + "\r\nPlayer slots: " + plan.PlayerSlots + "\r\n\r\n" + plan.GameIniBlock);
         }
 
+        /// <summary>--plan-test out.txt: the open command and after-load commands for one scenario of every game mode (active profile).</summary>
+        public static void PlanTest(string outFile)
+        {
+            var state = new AppState();
+            state.Store.Load();
+            state.Rules = RulesDb.LoadEmbedded();
+            state.Install = GameInstall.Detect(state.Settings.GameDirOverride);
+            string cache = GameInstall.DemoCacheDir ?? Path.Combine(AppPaths.DataDir, "cache");
+            state.Official = GameCatalog.Load(state.Install, cache, m => { });
+            state.Mods = ModScanner.Scan(state.Install, state.Settings.ExtraModFolders, cache, m => { });
+            state.Rebuild();
+            var sb = new StringBuilder();
+            var p = state.Store.Active;
+            string keepMap = p.MapKey, keepScenario = p.ScenarioId;
+            foreach (var group in state.AllScenarios.Where(s => s.Category != "Training").GroupBy(s => s.GameModeClass))
+            {
+                var sc = group.First();
+                p.ScenarioId = sc.Id;
+                p.MapKey = state.Maps.FirstOrDefault(m => m.Scenarios.Any(x => x.Id == sc.Id))?.Key;
+                var plan = LaunchPlanner.Build(p, state);
+                sb.AppendLine("== " + group.Key + "  (" + sc.Id + ")");
+                sb.AppendLine("   " + plan.OpenCommand);
+                sb.AppendLine("   slots " + plan.PlayerSlots + "   after load: " + string.Join(" | ", plan.AfterLoad));
+                if (plan.Error != null) sb.AppendLine("   ERROR " + plan.Error);
+            }
+            p.MapKey = keepMap; p.ScenarioId = keepScenario;
+            File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
+        }
+
         private static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length > n ? s.Substring(0, n) + "..." : s).Replace("\n", " ");
     }
 }
