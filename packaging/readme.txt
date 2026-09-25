@@ -79,6 +79,7 @@ https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher
 
 License
 -------
-MIT, see LICENSE.txt
+Source available, all rights reserved: see LICENSE.txt. The code is public to
+read and check; copying, redistributing or reusing it needs written permission.
 The Oswald font is under the SIL Open Font License, see OFL-Oswald-font.txt
 Not affiliated with New World Interactive or Focus Entertainment.

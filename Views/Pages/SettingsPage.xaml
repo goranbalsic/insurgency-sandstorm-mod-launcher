@@ -277,7 +277,7 @@
                                 <TextBlock Text="About" Style="{StaticResource H2}" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0"
-                                       Text="Open source (MIT). Not affiliated with New World Interactive or Focus Entertainment." />
+                                       Text="Source available: the code is public to read and check, all rights reserved. Not affiliated with New World Interactive or Focus Entertainment." />
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoUpdate}" Margin="0,12,0,4">
                                 <StackPanel>
                                     <TextBlock Text="Keep the launcher up to date" FontSize="13.5" />

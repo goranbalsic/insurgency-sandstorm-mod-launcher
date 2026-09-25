@@ -4,7 +4,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 
 [![Build](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml/badge.svg)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/goranbalsic/insurgency-sandstorm-mod-launcher)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: source available](https://img.shields.io/badge/license-source%20available-lightgrey.svg)](LICENSE)
 
 ![Play page](docs/screenshots/play.png)
 
@@ -68,13 +68,13 @@ The exe is not code-signed, so SmartScreen may show "Windows protected your PC" 
 
 ```powershell
 # compare with the SHA-256 on the release page
-Get-FileHash .\SandstormModLauncher-v1.3.0.zip -Algorithm SHA256
+Get-FileHash .\SandstormModLauncher-vX.Y.Z.zip -Algorithm SHA256
 
 # check that the file was built by this repository's workflow (GitHub CLI)
-gh attestation verify .\SandstormModLauncher-v1.3.0.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
+gh attestation verify .\SandstormModLauncher-vX.Y.Z.zip --repo goranbalsic/insurgency-sandstorm-mod-launcher
 ```
 
-Or build it yourself and use your own exe.
+Or build it yourself and compare (see below).
 
 ## Troubleshooting
 
@@ -82,9 +82,9 @@ Settings > "Something went wrong?" saves a report to `%APPDATA%\SandstormModLaun
 
 To report it here, use "Report on GitHub" next to it (or "Report this problem" after a failed launch). The launcher shows you the whole report first. It leaves out your Windows user and PC name, user folders, Steam IDs, e-mail and IP addresses, account and online lines, screenshots and console history. Your browser then opens the [problem report form](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues/new?template=problem-report.yml) filled in, and nothing is posted until you press Submit.
 
-## Build from source
+## Build from source (to check it)
 
-Needs the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer on Windows.
+The license lets you build the code on your own PC to check that it matches the released program, nothing more (no redistribution, no reuse in other projects). Needs the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer on Windows.
 
 ```
 git clone https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher.git
@@ -119,6 +119,6 @@ Made and tested with the Steam version. The Epic install is detected too.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The Oswald font is under the SIL Open Font License ([Assets/OFL.txt](Assets/OFL.txt)).
+Source available, all rights reserved: see [LICENSE](LICENSE). You may read the code, build it to check it and use the released program. You may not copy, redistribute or reuse any part of it, not even in personal projects, without written permission. Versions up to 1.3.5 were released under MIT and keep that license. The Oswald font is under the SIL Open Font License ([Assets/OFL.txt](Assets/OFL.txt)).
 
 Insurgency: Sandstorm is a trademark of its owners. This project is not affiliated with New World Interactive or Focus Entertainment.
