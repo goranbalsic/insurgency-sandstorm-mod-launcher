@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.5**
+
+- Large text sizes: every page scrolls when it no longer fits the window (the Rules tab could not be scrolled at 150%). The Rules categories wrap under the search box, and the setup column, rule rows and live rule rows give up width instead of squeezing their text.
+
 **Changes in 1.3.4**
 
 - Fixed: drop-down lists that show a name (saved key binding copies, presets) showed a program name instead of the entry.
