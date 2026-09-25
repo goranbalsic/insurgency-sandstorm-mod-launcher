@@ -24,11 +24,15 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - Updates itself quietly from this repository's releases, checked against the published SHA-256 (can be turned off)
 - Plays offline: no accounts, no telemetry. The only connection is a tiny update check every few minutes while the launcher is open
 
-| Match rules | Mods and mutators |
+| Match rules | Official playlists |
 | --- | --- |
-| ![Rules](docs/screenshots/rules.png) | ![Mutators](docs/screenshots/mutators.png) |
-| **Live match control** | **Settings** |
-| ![Live](docs/screenshots/live.png) | ![Settings](docs/screenshots/settings.png) |
+| ![Rules](docs/screenshots/rules.png) | ![Playlists](docs/screenshots/playlists.png) |
+| **Live match control** | **Advanced** |
+| ![Live](docs/screenshots/live.png) | ![Advanced](docs/screenshots/advanced.png) |
+| **Mutators** | **Installed mods** |
+| ![Mutators](docs/screenshots/mutators.png) | ![Installed mods](docs/screenshots/mods.png) |
+| **Settings** | |
+| ![Settings](docs/screenshots/settings.png) | |
 
 ## Download
 

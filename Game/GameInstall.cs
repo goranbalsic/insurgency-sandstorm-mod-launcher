@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -41,10 +41,19 @@ namespace SandstormModLauncher.Game
 
         public string LegacyModioDir => GameDir == null ? null : Path.Combine(GameDir, "Insurgency", "Mods", "modio");
 
-        public bool IsValid => GameDir != null && Directory.Exists(PaksDir);
+        public bool IsValid => Demo || (GameDir != null && Directory.Exists(PaksDir));
+
+        /// <summary>
+        /// Screenshot runs only (--data together with --render-from-cache): the game counts as installed and its maps,
+        /// scenarios and mods come from a cached catalog, so the store pictures can be made on a PC without the game.
+        /// </summary>
+        public bool Demo { get; private set; }
+        public static string DemoCacheDir;
 
         public static GameInstall Detect(string overrideDir)
         {
+            if (DemoCacheDir != null && AppPaths.TestRun)
+                return new GameInstall { Demo = true, GameDir = @"C:\Program Files (x86)\Steam\steamapps\common\sandstorm", Store = "Steam", BuildId = "24065399" };
             var g = new GameInstall();
             g.SteamExe = FindSteamExe();
 
