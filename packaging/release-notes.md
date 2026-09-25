@@ -1,5 +1,9 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.9**
+
+- Small maintenance release: same launcher as 1.3.8, published for Windows and Linux on mod.io so the page shows the current version everywhere.
+
 **Changes in 1.3.8**
 
 - Playlists has its own page again, in the left bar between Play and Settings, using the full width. Play keeps Map, Rules, Mods, Live and Advanced.
