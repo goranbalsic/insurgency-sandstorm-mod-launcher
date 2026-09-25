@@ -50,7 +50,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="20" />
-            <ColumnDefinition Width="410" />
+            <ColumnDefinition Width="0.6*" MinWidth="330" MaxWidth="410" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -174,15 +174,20 @@
             </Grid>
 
             <!-- ============================================================ rules toolbar -->
-            <DockPanel Grid.Row="0" Margin="0,14,0,10" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                    <Grid Width="200">
+            <!-- search on its own line and the categories wrapping below it, so large text never squeezes them into one tall column -->
+            <StackPanel Grid.Row="0" Margin="0,14,0,10" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Rules}">
+                <DockPanel Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Content="Reset mode" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding ResetModeCommand}"
+                            ToolTip="Put every setting of this game mode back to the game default" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100*" MaxWidth="320" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <TextBox Text="{Binding RuleSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search every setting" Padding="30,6,8,6" />
                         <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource TextFaint}" Margin="11,0,0,0" IsHitTestVisible="False" />
                     </Grid>
-                    <Button Content="Reset mode" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding ResetModeCommand}"
-                            ToolTip="Put every setting of this game mode back to the game default" />
-                </StackPanel>
+                </DockPanel>
                 <ListBox Style="{StaticResource PlainList}" ItemsSource="{Binding RuleCategories}" SelectedItem="{Binding RuleCategory}" Margin="0,0,12,0"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemsPanel>
@@ -222,7 +227,7 @@
                         </Style>
                     </ListBox.ItemContainerStyle>
                 </ListBox>
-            </DockPanel>
+            </StackPanel>
 
             <!-- ============================================================ maps -->
             <Grid Grid.Row="1" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
@@ -308,7 +313,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
-                    <ColumnDefinition Width="262" />
+                    <ColumnDefinition Width="0.45*" MinWidth="210" MaxWidth="262" />
                 </Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}" Padding="0">
                     <Grid>
@@ -329,8 +334,8 @@
                                     <Border BorderBrush="{StaticResource Bg4}" BorderThickness="0,0,0,1" Padding="16,10">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="200" />
+                                                <ColumnDefinition Width="*" MinWidth="150" />
+                                                <ColumnDefinition Width="0.8*" MinWidth="110" MaxWidth="200" />
                                                 <ColumnDefinition Width="30" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Margin="0,0,14,0">

@@ -132,11 +132,16 @@
                         </StackPanel>
                     </DockPanel>
                 </Border>
-                <Grid Grid.Column="1">
-                    <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
-                    <p:ModsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Mods}" />
-                    <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
-                </Grid>
+                <!-- Pages fill the space (their own lists scroll). Only when the window is smaller than a page can work
+                     with (large text size, small screen) does the whole page scroll instead of being cut off. -->
+                <ScrollViewer x:Name="pageScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Focusable="False">
+                    <Grid MinWidth="980" MinHeight="600"
+                          Width="{Binding ViewportWidth, ElementName=pageScroll}" Height="{Binding ViewportHeight, ElementName=pageScroll}">
+                        <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
+                        <p:ModsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Mods}" />
+                        <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
+                    </Grid>
+                </ScrollViewer>
             </Grid>
 
             <!-- ======================================================== launch bar -->
