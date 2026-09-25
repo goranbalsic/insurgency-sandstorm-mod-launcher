@@ -94,7 +94,7 @@ namespace SandstormModLauncher.ViewModels
                 lastPhase = Monitor.Phase;
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
-                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
+                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 if (!State.Install.IsValid)

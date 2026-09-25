@@ -126,7 +126,8 @@
                             <TextBlock Text="{Binding AppVersion}" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Margin="0,10,0,0">
-                            <RadioButton Style="{StaticResource NavButton}" Content="Play" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, official playlists and live control of the match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="Play" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, mods and live control of the match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="Playlists" Tag="&#xE8FD;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Playlists}" ToolTip="Every official online playlist, playable offline" />
                             <RadioButton Style="{StaticResource NavButton}" Content="Settings" Tag="&#xE713;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Settings}" ToolTip="Game folder, console key, launch options" />
                         </StackPanel>
                     </DockPanel>
@@ -137,6 +138,20 @@
                     <Grid MinWidth="980" MinHeight="600"
                           Width="{Binding ViewportWidth, ElementName=pageScroll}" Height="{Binding ViewportHeight, ElementName=pageScroll}">
                         <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
+                        <!-- Playlists: its own page (since 1.3.8), full width -->
+                        <Grid Margin="20,18,20,16" Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Playlists}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Border Style="{StaticResource TabStrip}">
+                                <StackPanel Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource Kicker}" Text="Set one up, then fine-tune it under Play" />
+                                    <TextBlock Text="Official playlists" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <p:PlaylistsPage Grid.Row="1" />
+                        </Grid>
                         <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
                     </Grid>
                 </ScrollViewer>

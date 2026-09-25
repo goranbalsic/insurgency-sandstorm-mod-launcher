@@ -165,7 +165,7 @@ namespace SandstormModLauncher.ViewModels
             ProfileChanged();
             string note = def.Missing.Count > 0 ? " (" + string.Join(", ", def.Missing) + " left out: not in the current game)" : "";
             ShowToast(def.Title + " is set up on " + map.Name + note);
-            if (!launch) PlayTab = "Map";
+            if (!launch) { Page = "Play"; PlayTab = "Map"; }
             else if (LaunchCommand.CanExecute(null)) LaunchCommand.Execute(null);
             else ShowToast(def.Title + " is set up. " + (PlanError ?? "Launch is not possible right now."));
         }
