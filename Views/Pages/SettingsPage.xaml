@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="Label" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="11.5" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource TextMute}" />
             <Setter Property="Margin" Value="0,14,0,6" />
@@ -52,7 +52,7 @@
                                 <Button Content="Find automatically" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ResetGameDirCommand}" />
                                 <Button Content="Open game folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenPathCommand}" CommandParameter="Game" />
                             </WrapPanel>
-                            <TextBlock Style="{StaticResource Mute}" Text="The launcher never changes game files. It only edits your own Game.ini and Input.ini (with backups), so it is safe with anti-cheat." />
+                            <TextBlock Style="{StaticResource Mute}" Text="Game files are never changed, only Game.ini and Input.ini (backed up)." />
                         </StackPanel>
                     </Border>
 
@@ -61,7 +61,7 @@
                         <StackPanel>
                             <TextBlock Text="Console key" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                       Text="The launcher opens the game console to send the match. It checks on screen that the console line is open before it types anything, and stops if it is not." />
+                                       Text="Used to send the match. Nothing is typed unless the console is seen open." />
                             <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">
@@ -73,7 +73,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoConsoleKey}" Margin="0,10,0,4">
                                 <StackPanel>
                                     <TextBlock Text="Add F10 as a console key automatically" FontSize="13.5" />
-                                    <TextBlock Text="Written to Input.ini (with a backup) while the game is closed. Works on every keyboard layout, unlike the ` key." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                    <TextBlock Text="Works on every keyboard layout, unlike the ` key." Style="{StaticResource Mute}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </CheckBox>
                             <WrapPanel Margin="0,6,0,0">
@@ -101,7 +101,7 @@
                         <StackPanel>
                             <TextBlock Text="Game key bindings" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                       Text="The launcher never edits your key bindings. It keeps copies of them (at start-up and before it sends any key to the game), so if they are ever lost you can put them back here." />
+                                       Text="Never edited. Copies are kept, so you can put them back if they are lost." />
                             <Border Background="{StaticResource BadBg}" CornerRadius="2" Padding="12,9" Margin="0,10,0,0" Visibility="{Binding KeyBindingsWarning, Converter={StaticResource Vis}}">
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Dismiss" Command="{Binding DismissKeyWarningCommand}" VerticalAlignment="Top" />
@@ -113,7 +113,7 @@
                                 <Button DockPanel.Dock="Right" Content="Restore" Margin="8,0,0,0" Command="{Binding RestoreKeyBindingsCommand}" />
                                 <ComboBox ItemsSource="{Binding KeyBindingBackups}" SelectedItem="{Binding SelectedKeyBackup}" DisplayMemberPath="Label" />
                             </DockPanel>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Text="No copies yet. One is made the first time the launcher starts with the game installed."
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Text="No copies yet."
                                        Visibility="{Binding KeyBindingBackups.Count, Converter={StaticResource VisNot}}" />
                         </StackPanel>
                     </Border>
@@ -157,6 +157,26 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
+                    <!-- text size -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" Text="Ctrl + / Ctrl - / Ctrl 0, or Ctrl + mouse wheel" />
+                                <TextBlock Text="Text size" Style="{StaticResource H2}" />
+                            </DockPanel>
+                            <Border Style="{StaticResource SegmentHost}" Margin="0,10,0,0">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Style="{StaticResource Segment}" Content="90%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=90%}" Command="{Binding SetUiScaleCommand}" CommandParameter="0.9" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="100%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=100%}" Command="{Binding SetUiScaleCommand}" CommandParameter="1.0" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="110%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=110%}" Command="{Binding SetUiScaleCommand}" CommandParameter="1.1" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="125%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=125%}" Command="{Binding SetUiScaleCommand}" CommandParameter="1.25" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="140%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=140%}" Command="{Binding SetUiScaleCommand}" CommandParameter="1.4" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="150%" IsChecked="{Binding UiScaleText, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=150%}" Command="{Binding SetUiScaleCommand}" CommandParameter="1.5" />
+                                </UniformGrid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <!-- launching -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -164,7 +184,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoStartGame}" Margin="0,12,0,6">
                                 <StackPanel>
                                     <TextBlock Text="Start the game automatically" FontSize="13.5" />
-                                    <TextBlock Text="Launch starts Insurgency: Sandstorm through Steam or Epic when it is not running" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="Through Steam or Epic when it is not running" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding MinimizeOnLaunch}">
@@ -176,13 +196,13 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ApplyLiveRules}">
                                 <StackPanel>
                                     <TextBlock Text="Apply rules again after the map loads" FontSize="13.5" />
-                                    <TextBlock Text="Sends your rule changes as admin commands too, so they apply even without a restart" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="Also sends rules as admin commands, no restart needed" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding SoloGameFlag}">
                                 <StackPanel>
                                     <TextBlock Text="Mark matches as solo games (bSoloGame)" FontSize="13.5" />
-                                    <TextBlock Text="What the game itself uses for offline play. Turn off to host friends over LAN" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="Turn off to host friends over LAN" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <TextBlock Text="When AI teammates need a game restart" Style="{StaticResource Label}" />
@@ -229,13 +249,13 @@
                                 <TextBox Text="{Binding ReportNote, UpdateSourceTrigger=PropertyChanged}" Tag="What happened? (optional)" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Save report keeps the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots in logs\reports on this PC (Open > Problem reports). A report is also saved automatically when a launch fails. Report on GitHub shows you a cleaned report first (no user or PC name, no user folders, Steam IDs, account lines, screenshots or console history); your browser then opens the project's issue form with it filled in. You need a GitHub account, and nothing is posted until you press Submit there." />
+                                       Text="Save report keeps logs on this PC. Report on GitHub shows a cleaned report first (no names, IDs or screenshots); nothing is posted until you press Submit." />
                             <Border x:Name="sharePanel" Style="{StaticResource Well}" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding ShareReportOpen, Converter={StaticResource Vis}}"
                                     IsVisibleChanged="SharePanel_IsVisibleChanged">
                                 <StackPanel>
                                     <TextBlock Text="This is everything that would be posted publicly" FontWeight="SemiBold" />
                                     <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8"
-                                               Text="The short part is filled into the form; the full text goes on your clipboard to paste into it. Read it, change nothing you don't want to, and cancel if anything looks private." />
+                                               Text="The full text goes on your clipboard to paste into the form. Cancel if anything looks private." />
                                     <TextBox Style="{StaticResource CodeBox}" IsReadOnly="True" Height="240" Text="{Binding ShareReportText, Mode=OneWay}" FontSize="11.5" />
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                                         <Button Content="Cancel" Command="{Binding CancelShareCommand}" />
@@ -244,7 +264,7 @@
                                 </StackPanel>
                             </Border>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">
-                                <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=". Put an empty file called &quot;portable&quot; next to the exe to keep it beside the exe instead." />
+                                <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=" (an empty file named &quot;portable&quot; next to the exe keeps it there)." />
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -257,7 +277,7 @@
                                 <TextBlock Text="About" Style="{StaticResource H2}" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0"
-                                       Text="Local play with bots, mods, mutators and full rule control for Insurgency: Sandstorm. Open source under the MIT license. Not affiliated with New World Interactive or Focus Entertainment." />
+                                       Text="Open source (MIT). Not affiliated with New World Interactive or Focus Entertainment." />
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoUpdate}" Margin="0,12,0,4">
                                 <StackPanel>
                                     <TextBlock Text="Keep the launcher up to date" FontSize="13.5" />

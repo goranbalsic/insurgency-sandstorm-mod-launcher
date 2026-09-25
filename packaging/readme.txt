@@ -58,7 +58,7 @@ You can also build it yourself from the source code.
 
 Updates
 -------
-The launcher updates itself. Every few hours it checks the GitHub releases,
+The launcher updates itself. Every 3 minutes while it is open it checks the GitHub releases (a tiny request),
 verifies the new zip against its SHA-256 and replaces its own exe. The new
 version is used the next time you open it (or click "Update ready" at the
 bottom left). Nothing is installed anywhere else.

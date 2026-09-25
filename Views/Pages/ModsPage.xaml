@@ -71,7 +71,7 @@
                     <Button Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding OpenPathCommand}" CommandParameter="Modio" Content="Mod folder" />
                 </StackPanel>
                 <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Mute}" FontSize="13" Margin="0,0,16,0" VerticalAlignment="Center" TextWrapping="Wrap"
-                           Text="Read from the game's own mod folder on this PC. Mods you subscribe to in the game's mod menu show up here after the game has downloaded them." />
+                           Text="Mods the game has downloaded. Subscribe in the game's mod menu." />
             </Grid>
 
             <Grid Grid.Row="1">
@@ -229,7 +229,7 @@
                 </Border>
                 <TextBlock Grid.Column="2" Style="{StaticResource Dim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" MaxWidth="420"
                            Visibility="{Binding ModCount, Converter={StaticResource VisNot}}"
-                           Text="No mods found. Subscribe to mods in the game's mod menu, start the game once so they download, then press Rescan." />
+                           Text="No mods yet. Subscribe in the game, start it once, then Rescan." />
             </Grid>
         </Grid>
     </Grid>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,6 +21,7 @@ namespace SandstormModLauncher.Views
             try { vm.State.Store.Load(); }
             catch (Exception ex) { AppLog.Error("Settings load failed", ex); }
             ApplySavedSize();
+            MainViewModel.ApplyUiScale(vm.UiScale);
             DataContext = vm;
             Loaded += async (s, e) =>
             {
@@ -30,6 +31,7 @@ namespace SandstormModLauncher.Views
             StateChanged += (s, e) => UpdateChrome();
             Closing += OnClosing;
             PreviewKeyDown += OnPreviewKeyDown;
+            PreviewMouseWheel += OnPreviewMouseWheel;
             vm.PropertyChanged += OnViewModelChanged;
             UpdateChrome();
         }
@@ -89,6 +91,12 @@ namespace SandstormModLauncher.Views
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
+            // Ctrl + / Ctrl - / Ctrl 0: interface size.
+            if (Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                int step = e.Key == Key.OemPlus || e.Key == Key.Add ? 1 : e.Key == Key.OemMinus || e.Key == Key.Subtract ? -1 : e.Key == Key.D0 || e.Key == Key.NumPad0 ? 0 : 2;
+                if (step != 2) { vm.StepUiScale(step); e.Handled = true; return; }
+            }
             bool overlay = vm.DialogOpen || vm.MapEditorOpen || vm.LaunchOverlayOpen;
             if (e.Key == Key.F5 && overlay) { e.Handled = true; return; }
             if (vm.DialogOpen)
@@ -100,6 +108,14 @@ namespace SandstormModLauncher.Views
             if (e.Key != Key.Escape) return;
             if (vm.MapEditorOpen) { vm.MapEditorOpen = false; e.Handled = true; }
             else if (vm.LaunchOverlayOpen && vm.CloseLaunchCommand.CanExecute(null)) { vm.CloseLaunchCommand.Execute(null); e.Handled = true; }
+        }
+
+        // Ctrl + mouse wheel: interface size.
+        private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (Keyboard.Modifiers != ModifierKeys.Control || e.Delta == 0) return;
+            vm.StepUiScale(e.Delta > 0 ? 1 : -1);
+            e.Handled = true;
         }
 
         private void ProfileMenu_Click(object sender, RoutedEventArgs e)
