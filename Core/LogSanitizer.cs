@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace SandstormModLauncher.Core
@@ -27,6 +29,27 @@ namespace SandstormModLauncher.Core
             line = Email.Replace(line, "<email>");
             line = UserPath.Replace(line, "$1<user>");
             return line;
+        }
+
+        private static readonly Regex AnyUserPath = new Regex(@"(?i)([A-Z]:\\(Users|Documents and Settings)\\)[^\\""\r\n]+", RegexOptions.Compiled);
+        private static Regex ownNames;
+
+        /// <summary>
+        /// Clean, plus everything that could name this PC or person, for text that leaves the PC (a GitHub issue):
+        /// the Windows user name and PC name wherever they appear, and user folders on any drive.
+        /// </summary>
+        public static string Public(string line)
+        {
+            line = Clean(line);
+            if (line == null) return null;
+            line = AnyUserPath.Replace(line, "$1<user>");
+            if (ownNames == null)
+            {
+                var names = new[] { Environment.UserName, Environment.MachineName }
+                    .Where(n => !string.IsNullOrWhiteSpace(n) && n.Trim().Length >= 3).Select(n => Regex.Escape(n.Trim())).ToList();
+                ownNames = names.Count == 0 ? new Regex("(?!)") : new Regex(@"(?i)(?<![A-Za-z0-9])(" + string.Join("|", names) + @")(?![A-Za-z0-9])", RegexOptions.Compiled);
+            }
+            return ownNames.Replace(line, "<name>");
         }
     }
 }

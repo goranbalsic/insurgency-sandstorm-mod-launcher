@@ -1,0 +1,28 @@
+name: Problem report
+description: A problem with the launcher. Easiest from the launcher itself (Settings > Something went wrong? > Report on GitHub), which fills this in.
+title: "Problem: "
+labels: ["problem-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The launcher cleans its report before it gets here: no Windows user or PC name, no user folders, Steam IDs, e-mail or IP addresses, no account or online lines from the game log, no screenshots and no console history. Please read it once more before you press Submit, since issues are public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw (the error text helps a lot).
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Launcher summary
+      description: Filled in by the launcher.
+      render: text
+  - type: textarea
+    id: full
+    attributes:
+      label: Full report
+      description: The launcher copied the full report to your clipboard. Click in this box and press Ctrl+V (optional, but it helps).
+      render: text

@@ -1,5 +1,10 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.3.2**
+
+- Report a problem on GitHub from the launcher: Settings > Something went wrong? > Report on GitHub (or "Report this problem" after a failed launch). You see the whole report first; it has no user or PC name, user folders, Steam IDs, account lines, screenshots or console history. Your browser opens the issue form filled in, and nothing is posted until you press Submit.
+- Fixed "A keyboard key is held down" when no key is pressed: a key Windows reports as held for seconds while you are in the launcher (a remapping tool, macro software or a controller mapped to keys) is now ignored. Shift, Ctrl, Alt and Windows still have to be let go, and a key held while you are in the game still stops the send. The message now names the key.
+
 **Changes in 1.3.1**
 
 - New look: plain Windows-style layout with square corners, normal text and classic tabs.

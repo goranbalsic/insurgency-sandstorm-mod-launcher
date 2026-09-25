@@ -283,6 +283,8 @@
                         </ItemsControl>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                             <Button Content="Cancel" Command="{Binding CancelLaunchCommand}" Visibility="{Binding LaunchRunning, Converter={StaticResource Vis}}" />
+                            <Button Content="Report this problem..." Style="{StaticResource GhostButton}" Command="{Binding ReportLaunchProblemCommand}"
+                                    ToolTip="Opens Settings with a cleaned report to check before anything is sent" Visibility="{Binding LaunchFailed, Converter={StaticResource Vis}}" />
                             <Button Content="Settings" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding NavigateCommand}" CommandParameter="Settings" Click="CloseLaunch_Click"
                                     Visibility="{Binding LaunchFailed, Converter={StaticResource Vis}}" />
                             <Button Content="Try again" Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding RetryLaunchCommand}"

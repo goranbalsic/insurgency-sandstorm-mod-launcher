@@ -74,6 +74,8 @@ Or build it yourself and use your own exe.
 
 Settings > "Something went wrong?" saves a report to `%APPDATA%\SandstormModLauncher\logs\reports`: launcher logs, settings, the end of the game log (account lines removed) and the console pictures. A report is also saved automatically when a launch fails. Every run of the launcher has its own log in `logs\sessions`.
 
+To report it here, use "Report on GitHub" next to it (or "Report this problem" after a failed launch). The launcher shows you the whole report first. It leaves out your Windows user and PC name, user folders, Steam IDs, e-mail and IP addresses, account and online lines, screenshots and console history. Your browser then opens the [problem report form](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues/new?template=problem-report.yml) filled in, and nothing is posted until you press Submit.
+
 ## Build from source
 
 Needs the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer on Windows.

@@ -1,0 +1,20 @@
+name: Labels
+
+# Makes sure the label the problem report form uses exists (issue forms only apply labels that exist).
+on:
+  push:
+    branches: [main]
+    paths: [".github/ISSUE_TEMPLATE/**", ".github/workflows/labels.yml"]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: problem-report label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create problem-report --repo "${{ github.repository }}" --color D9822B --description "Sent from the launcher (Settings > Something went wrong?)" --force

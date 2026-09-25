@@ -86,6 +86,133 @@ namespace SandstormModLauncher.Services
             }
         }
 
+        // ------------------------------------------------------------------ report for GitHub
+
+        public const string IssueForm = "problem-report.yml";
+
+        /// <summary>
+        /// A report that can be posted publicly: versions, settings, the active setup, the launcher's own log lines
+        /// and the game's map/mode log lines, all passed through LogSanitizer.Public (no user or PC name, no user
+        /// folders, no Steam IDs, IPs, e-mail addresses or account/online lines). No screenshots, no console history.
+        /// Short: fits in the GitHub link. Full: goes on the clipboard for the player to paste into the form.
+        /// </summary>
+        public static void BuildPublic(string note, AppState state, GameMonitor monitor, out string shortText, out string fullText)
+        {
+            var head = new StringBuilder();
+            head.AppendLine("Launcher " + typeof(DebugReport).Assembly.GetName().Version.ToString(3) + " | " + Environment.OSVersion.VersionString + " | .NET " + Environment.Version);
+            head.AppendLine("Keyboard: " + ConsoleBridge.LayoutName(Native.GetKeyboardLayout(0)) + " (installed: " + string.Join(", ", KeyboardLayouts()) + ")");
+            var install = state?.Install;
+            head.AppendLine("Game: " + (install?.IsValid == true ? "found" : "not found") + ", " + install?.Store + " build " + install?.BuildId);
+            if (monitor != null)
+                head.AppendLine($"Game state: {monitor.Phase}, running {monitor.IsRunning}, window {(monitor.Window != IntPtr.Zero ? "yes" : "no")}, level {monitor.CurrentLevel}, round {monitor.RoundState}, mods mounted {monitor.ModsMounted}");
+            try { head.AppendLine("Console keys: " + string.Join(", ", ConsoleBridge.ConfiguredKeys(state?.Official))); } catch { }
+            head.AppendLine("Display: " + string.Join("  ", ReadLines(Path.Combine(GameInstall.ConfigDir, "GameUserSettings.ini"))
+                .Where(l => l.StartsWith("FullscreenMode") || l.StartsWith("ResolutionSize"))));
+            head.AppendLine("Key bindings: " + string.Join("; ", KeyBindings.ControlFiles().Select(f => { try { return KeyBindings.BoundCount(File.ReadAllText(f)) + " keys bound"; } catch { return "?"; } }))
+                            + (KeyBindings.DropWarning != null ? " WARNING " + KeyBindings.DropWarning : ""));
+
+            var launcherLines = Clean(ReadLines(AppLog.SessionPath)).ToList();
+            // Reported right after a restart of the launcher: the problem is in the previous run's log.
+            if (launcherLines.Count(l => l.Contains(" WARN ") || l.Contains(" ERROR ") || l.Contains("Launch")) == 0)
+            {
+                try
+                {
+                    string prev = Directory.GetFiles(Path.GetDirectoryName(AppLog.SessionPath), "*.log").OrderBy(f => f)
+                                           .LastOrDefault(f => string.CompareOrdinal(f, AppLog.SessionPath) < 0);
+                    if (prev != null) launcherLines = Clean(ReadLines(prev)).Concat(new[] { "---- launcher restarted" }).Concat(launcherLines).ToList();
+                }
+                catch { }
+            }
+            var history = Clean(ReadLines(AppLog.FilePath)).ToList();
+            var problems = history.Where(l => l.Contains(" WARN ") || l.Contains(" ERROR ")).ToList();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Launcher problem report (names, user folders, IDs and account lines removed)");
+            if (!string.IsNullOrWhiteSpace(note)) sb.AppendLine("Note: " + LogSanitizer.Public(note.Trim()));
+            sb.Append(head);
+            sb.AppendLine();
+            sb.AppendLine("-- recent warnings and errors");
+            foreach (var l in problems.Skip(Math.Max(0, problems.Count - 12))) sb.AppendLine(Cut(l, 400));
+            sb.AppendLine();
+            sb.AppendLine("-- end of this run's log");
+            string top = sb.ToString();
+            // Fill with the newest log lines while the link stays short enough for GitHub (about 7 KB once encoded).
+            var tail = new List<string>();
+            int budget = 6000 - Uri.EscapeDataString(top).Length;
+            for (int i = launcherLines.Count - 1; i >= 0; i--)
+            {
+                string l = Cut(launcherLines[i], 400);
+                budget -= Uri.EscapeDataString(l).Length + 6;
+                if (budget < 0) break;
+                tail.Insert(0, l);
+            }
+            shortText = top + string.Join(Environment.NewLine, tail);
+
+            var full = new StringBuilder();
+            full.AppendLine("Launcher problem report, full (names, user folders, IDs and account lines removed)");
+            if (!string.IsNullOrWhiteSpace(note)) full.AppendLine("Note: " + LogSanitizer.Public(note.Trim()));
+            full.Append(head);
+            if (state?.Store?.IsLoaded == true)
+            {
+                full.AppendLine().AppendLine("== settings");
+                full.AppendLine(string.Join(Environment.NewLine, Clean(Json.Serialize(state.Settings, true).Split('\n'))));
+                full.AppendLine().AppendLine("== active profile");
+                full.AppendLine(string.Join(Environment.NewLine, Clean(Json.Serialize(state.Store.Active, true).Split('\n'))));
+            }
+            full.AppendLine().AppendLine("== launcher log, this run (last 300 lines)");
+            foreach (var l in launcherLines.Skip(Math.Max(0, launcherLines.Count - 300))) full.AppendLine(Cut(l, 600));
+            full.AppendLine().AppendLine("== launcher warnings and errors, earlier runs (last 40)");
+            foreach (var l in problems.Skip(Math.Max(0, problems.Count - 40))) full.AppendLine(Cut(l, 600));
+            full.AppendLine().AppendLine("== Game.ini (game mode and mutator lines)");
+            string section = "";
+            foreach (var l in ReadLines(GameInstall.GameIniPath))
+            {
+                if (l.StartsWith("[")) { section = l; continue; }
+                if (l.Trim().Length == 0 || section.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) < 0 && section.IndexOf("Mutator", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                string c = LogSanitizer.Public(section + " " + l);
+                if (c != null) full.AppendLine(Cut(c, 300));
+            }
+            full.AppendLine().AppendLine("== Input.ini console keys");
+            foreach (var l in ReadLines(GameInstall.InputIniPath).Where(l => l.IndexOf("ConsoleKeys", StringComparison.OrdinalIgnoreCase) >= 0)) full.AppendLine(l.Trim());
+            full.AppendLine().AppendLine("== game log: map, mode, loading and command lines (last 80)");
+            // Same message again and again (bot quota spam): kept once with a count.
+            var game = new List<string>();
+            string lastMsg = null;
+            int repeats = 0;
+            foreach (var l in Clean(ReadLines(GameInstall.LogPath)).Where(l => GameLine.IsMatch(l)))
+            {
+                string msg = System.Text.RegularExpressions.Regex.Replace(l, @"^(\[[^\]]*\])+", "");
+                if (msg == lastMsg) { repeats++; continue; }
+                if (repeats > 0) game.Add("    (same line " + repeats + " more times)");
+                game.Add(l);
+                lastMsg = msg;
+                repeats = 0;
+            }
+            if (repeats > 0) game.Add("    (same line " + repeats + " more times)");
+            foreach (var l in game.Skip(Math.Max(0, game.Count - 80))) full.AppendLine(Cut(l, 300));
+            fullText = full.ToString();
+        }
+
+        // Game log lines about loading maps, game modes, mods and console commands; nothing about the account or network.
+        private static readonly System.Text.RegularExpressions.Regex GameLine = new System.Text.RegularExpressions.Regex(
+            @"LogLoad|LogGameMode|LogGameState|Browse:|BeginLoadingScreen|EndLoadingScreen|Command not recognized|LoadMap|Mount|LogINSGameMode|LogMutator|Fatal|Error",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static IEnumerable<string> Clean(IEnumerable<string> lines) =>
+            lines.Select(l => LogSanitizer.Public(l.TrimEnd('\r'))).Where(l => !string.IsNullOrWhiteSpace(l));
+
+        private static string Cut(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "...";
+
+        /// <summary>The new-issue link with the form filled in (title, note and the short report).</summary>
+        public static string IssueUrl(string note, string shortText)
+        {
+            string title = "Problem: " + (string.IsNullOrWhiteSpace(note) ? "(describe it)" : Cut(LogSanitizer.Public(note.Trim()) ?? "", 80));
+            return "https://github.com/" + Updater.Repo + "/issues/new?template=" + IssueForm +
+                   "&title=" + Uri.EscapeDataString(title) +
+                   "&what=" + Uri.EscapeDataString(LogSanitizer.Public(note ?? "") ?? "") +
+                   "&summary=" + Uri.EscapeDataString(shortText);
+        }
+
         private static IEnumerable<string> ReadLines(string path)
         {
             try
