@@ -101,6 +101,13 @@
                                 <TextBlock Text="Playlists" />
                             </StackPanel>
                         </RadioButton>
+                        <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Mods}"
+                                     ToolTip="Mutators for the match (official and from mods) and the mods the game has installed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xEA86;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Mods" />
+                            </StackPanel>
+                        </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Live}"
                                      ToolTip="Control the running match: round, clock, bots, cheats and every console command">
                             <StackPanel Orientation="Horizontal">
@@ -110,13 +117,6 @@
                                              Visibility="{Binding InMatch, Converter={StaticResource Vis}}" />
                                 </Grid>
                                 <TextBlock Text="Live" />
-                            </StackPanel>
-                        </RadioButton>
-                        <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Mods}"
-                                     ToolTip="Mutators for the match (official and from mods) and the mods the game has installed">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xEA86;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
-                                <TextBlock Text="Mods" />
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Advanced}"
