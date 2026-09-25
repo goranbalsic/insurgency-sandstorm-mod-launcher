@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -123,6 +123,25 @@ namespace SandstormModLauncher
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 try { SelfTest.IniTest(eArgs[1], eArgs[2]); }
                 catch (Exception ex) { File.WriteAllText(eArgs[2], "INI TEST CRASHED: " + ex); }
+                Shutdown();
+                return;
+            }
+
+            if (eArgs.Length >= 2 && eArgs[0] == "--share-report")
+            {
+                // --share-report out.txt ["note"]: the public GitHub report (short part, full part, link length), no window.
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                try
+                {
+                    var state = new AppState();
+                    state.Store.Load();
+                    state.Install = Game.GameInstall.Detect(state.Settings.GameDirOverride);
+                    string note = eArgs.Length >= 3 ? eArgs[2] : "";
+                    Services.DebugReport.BuildPublic(note, state, null, out string s, out string f);
+                    string url = Services.DebugReport.IssueUrl(note, s);
+                    File.WriteAllText(eArgs[1], "URL LENGTH " + url.Length + "\r\n\r\n==== SHORT (in the link)\r\n" + s + "\r\n\r\n==== FULL (clipboard)\r\n" + f);
+                }
+                catch (Exception ex) { File.WriteAllText(eArgs[1], "SHARE REPORT CRASHED: " + ex); }
                 Shutdown();
                 return;
             }

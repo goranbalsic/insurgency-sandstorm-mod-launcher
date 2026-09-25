@@ -221,13 +221,28 @@
                                 <Button Content="Desktop shortcut" Margin="0,0,8,6" Command="{Binding CreateShortcutCommand}" />
                                 <Button Content="Remove launcher rules from Game.ini" Style="{StaticResource DangerButton}" Margin="0,0,8,6" Command="{Binding RemoveIniRulesCommand}" />
                             </WrapPanel>
-                            <TextBlock Text="SOMETHING WENT WRONG?" Style="{StaticResource Label}" />
+                            <TextBlock Text="Something went wrong?" Style="{StaticResource Label}" />
                             <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Report on GitHub..." Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding PrepareShareCommand}"
+                                        ToolTip="Shows the report first. Nothing is sent until you press Submit on GitHub." />
                                 <Button DockPanel.Dock="Right" Content="Save report" Margin="8,0,0,0" Command="{Binding SaveReportCommand}" />
                                 <TextBox Text="{Binding ReportNote, UpdateSourceTrigger=PropertyChanged}" Tag="What happened? (optional)" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Saves the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots to logs\reports on this PC (Open > Problem reports). Nothing is uploaded. A report is also saved automatically when a launch fails." />
+                                       Text="Save report keeps the launcher logs, your settings, the end of the game log (account lines removed) and console screenshots in logs\reports on this PC (Open > Problem reports). A report is also saved automatically when a launch fails. Report on GitHub shows you a cleaned report first (no user or PC name, no user folders, Steam IDs, account lines, screenshots or console history); your browser then opens the project's issue form with it filled in. You need a GitHub account, and nothing is posted until you press Submit there." />
+                            <Border x:Name="sharePanel" Style="{StaticResource Well}" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding ShareReportOpen, Converter={StaticResource Vis}}"
+                                    IsVisibleChanged="SharePanel_IsVisibleChanged">
+                                <StackPanel>
+                                    <TextBlock Text="This is everything that would be posted publicly" FontWeight="SemiBold" />
+                                    <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8"
+                                               Text="The short part is filled into the form; the full text goes on your clipboard to paste into it. Read it, change nothing you don't want to, and cancel if anything looks private." />
+                                    <TextBox Style="{StaticResource CodeBox}" IsReadOnly="True" Height="240" Text="{Binding ShareReportText, Mode=OneWay}" FontSize="11.5" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                        <Button Content="Cancel" Command="{Binding CancelShareCommand}" />
+                                        <Button Content="Open the GitHub form" Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding SendShareCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">
                                 <Run Text="Launcher data is stored in " /><Run Text="{Binding DataDir, Mode=OneWay}" Foreground="{StaticResource TextDim}" /><Run Text=". Put an empty file called &quot;portable&quot; next to the exe to keep it beside the exe instead." />
                             </TextBlock>

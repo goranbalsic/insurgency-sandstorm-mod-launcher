@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -272,20 +272,68 @@ namespace SandstormModLauncher.Game
             return false;
         }
 
-        /// <summary>Name of a keyboard key the player is holding, or null when the keyboard is idle.</summary>
-        private static string HeldKey()
+        // Keys Windows reports as held although nobody is pressing them (a remapping tool, a controller mapped to
+        // keys, a key-up that never arrived). Found per send; they are skipped by HeldKey.
+        private readonly HashSet<int> stuckKeys = new HashSet<int>();
+
+        // Codes that are not typing keys: reserved, gamepad buttons (0xC3-0xDA), IME/OEM-specific.
+        private static bool NotAKey(int vk) =>
+            vk == 0x0A || vk == 0x0B || vk == 0x5E || (vk >= 0x88 && vk <= 0x8F) || (vk >= 0xC1 && vk <= 0xDA) || vk == 0xE5 || vk == 0xE7 || vk >= 0xE9;
+
+        // Held modifiers change what every other key does, so they always have to be let go.
+        private static bool IsModifier(int vk) => (vk >= 0x10 && vk <= 0x12) || (vk >= 0xA0 && vk <= 0xA5) || vk == 0x5B || vk == 0x5C;
+
+        public static string KeyName(int vk)
         {
-            for (int vk = 0x08; vk <= 0xFE; vk++)
-                if ((Native.GetAsyncKeyState(vk) & 0x8000) != 0) return "key 0x" + vk.ToString("X2");
-            return null;
+            if ((vk >= 0x30 && vk <= 0x39) || (vk >= 0x41 && vk <= 0x5A)) return ((char)vk).ToString();
+            if (vk >= 0x70 && vk <= 0x87) return "F" + (vk - 0x6F);
+            switch (vk)
+            {
+                case 0x10: case 0xA0: case 0xA1: return "Shift";
+                case 0x11: case 0xA2: case 0xA3: return "Ctrl";
+                case 0x12: case 0xA4: case 0xA5: return "Alt";
+                case 0x5B: case 0x5C: return "Windows";
+                case 0x20: return "Space";
+                case 0x0D: return "Enter";
+                case 0x09: return "Tab";
+                case 0x1B: return "Esc";
+                default: return "0x" + vk.ToString("X2");
+            }
         }
 
-        private static string WaitForKeysReleased(int timeoutMs)
+        /// <summary>A keyboard key the player is holding (not one found stuck), or 0 when the keyboard is idle.</summary>
+        private int HeldKey()
+        {
+            for (int vk = 0x08; vk <= 0xFE; vk++)
+                if (!NotAKey(vk) && !stuckKeys.Contains(vk) && (Native.GetAsyncKeyState(vk) & 0x8000) != 0) return vk;
+            return 0;
+        }
+
+        private static string Describe(int vk) => "key " + KeyName(vk) + " (0x" + vk.ToString("X2") + ")";
+
+        private static string HeldMessage(string held) =>
+            "Windows reports a keyboard " + held + " as held down, so nothing was typed (it would mix into the command). " +
+            "Let go of the keyboard and try again. If you are not pressing it, a key remapping tool, macro software or a " +
+            "controller mapped to keys may be holding it: tap that key once, or click Launch while the launcher window is in front.";
+
+        /// <summary>
+        /// Waits for the keyboard to be idle. A non-modifier key still down after the wait while the game is NOT in
+        /// front is taken as stuck (the player is at the launcher, not holding a key for seconds) and ignored from
+        /// then on. Returns the held key's description when the send has to stop, else null.
+        /// </summary>
+        private string WaitForKeysReleased(int timeoutMs, bool gameInFront)
         {
             var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            string held;
-            while ((held = HeldKey()) != null && DateTime.UtcNow < until) Thread.Sleep(40);
-            return held;
+            int held;
+            while ((held = HeldKey()) != 0 && DateTime.UtcNow < until) Thread.Sleep(40);
+            while (held != 0 && !gameInFront && !IsModifier(held))
+            {
+                stuckKeys.Add(held);
+                AppLog.Warn("Console: Windows reports " + Describe(held) + " as held for " + timeoutMs / 1000.0 +
+                            " s while the launcher was in front; treated as stuck and ignored");
+                held = HeldKey();
+            }
+            return held == 0 ? null : Describe(held);
         }
 
         private static Frame Grab(IntPtr hwnd) => ScreenGrab.BottomOfWindow(hwnd);
@@ -331,18 +379,19 @@ namespace SandstormModLauncher.Game
             void Step(string s) => log.Append(log.Length == 0 ? "" : "; ").Append(total.ElapsedMilliseconds).Append("ms ").Append(s);
 
             // Keys the player still holds would end up in the command.
-            string held = WaitForKeysReleased(3000);
-            if (held != null) throw new ConsoleSendException("A keyboard key is held down (" + held + "). Let go of the keyboard and try again.", true);
+            stuckKeys.Clear();
             bool wasInFront = input.IsForeground;
+            string held = WaitForKeysReleased(3000, wasInFront);
+            if (held != null) throw new ConsoleSendException(HeldMessage(held), true);
             if (!input.Focus(4000)) throw new ConsoleSendException("Could not bring the game to the front. Click the game once and try again.", true);
             // Coming back from the background, fullscreen needs a moment before the game draws again.
             Thread.Sleep(wasInFront ? 120 : 1000);
             Frame before = WaitSteady(hwnd, 3500);
             if (before == null) throw new ConsoleSendException("Could not see the game picture (it stayed empty), so no keys were sent. Click the game once and try again.", true);
             if (!input.IsForeground) throw new ConsoleSendException("The game lost focus before the console could be opened, so no keys were sent.", true);
-            held = WaitForKeysReleased(1500);
-            if (held != null) throw new ConsoleSendException("A keyboard key is held down (" + held + "). Let go of the keyboard and try again.", true);
-            Step("focused");
+            held = WaitForKeysReleased(1500, true);
+            if (held != null) throw new ConsoleSendException(HeldMessage(held), true);
+            Step("focused" + (stuckKeys.Count > 0 ? " (ignored stuck " + string.Join(", ", stuckKeys.Select(KeyName)) + ")" : ""));
 
             // 1. Open the console and see it on screen (or use it when it is already open).
             ConsoleBar bar = ConsoleProbe.FindOpenConsole(before, out string why);
@@ -361,7 +410,7 @@ namespace SandstormModLauncher.Game
                     var late = Grab(hwnd);
                     bar = ConsoleProbe.FindOpenConsole(late, out why);
                     if (bar != null) { opened = late; break; }
-                    if (HeldKey() != null) break;
+                    if (HeldKey() != 0) break;
                     reference = late ?? reference;
                 }
                 input.Tap(vk);
@@ -430,7 +479,7 @@ namespace SandstormModLauncher.Game
                         savedClipboard = OnUi(() => Clipboard.ContainsText() ? Clipboard.GetText() : null);
                         OnUi(() => { SetClipboard(commandLine); return true; });
                         Thread.Sleep(60);
-                        if (HeldKey() != null) { WaitForKeysReleased(1500); input.TapRepeat(VK_BACK, 30); }
+                        if (HeldKey() != 0) { WaitForKeysReleased(1500, true); input.TapRepeat(VK_BACK, 30); }
                         input.Chord(VK_CONTROL, VK_V);
                         result = WaitForText(hwnd, emptyLine, bar, 900, out shown, out px);
                     }

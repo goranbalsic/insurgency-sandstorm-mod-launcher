@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -59,6 +59,7 @@ namespace SandstormModLauncher.ViewModels
             RestoreKeyBindingsCommand = new AsyncCommand(RestoreKeyBindings, () => SelectedKeyBackup != null);
             DismissKeyWarningCommand = new RelayCommand(() => { KeyBindings.ClearWarning(); KeyBindingsWarning = null; });
             SaveReportCommand = new AsyncCommand(SaveReport);
+            InitShareCommands();
             AddCustomMapCommand = new RelayCommand(() => OpenMapEditor(null));
             EditCustomMapCommand = new RelayCommand(p => OpenMapEditor((p as MapItem)?.Custom));
             SaveCustomMapCommand = new RelayCommand(SaveCustomMap, () => !string.IsNullOrWhiteSpace(editMapLevel) && !string.IsNullOrWhiteSpace(editMapScenario));
@@ -70,7 +71,7 @@ namespace SandstormModLauncher.ViewModels
                 "3. MODS > Mutators: tick what you want, in load order. MODS > Installed mods lists what the game has downloaded.\n\n" +
                 "4. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
                 "5. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
-                "Something wrong? Settings > Something went wrong? saves a report with everything needed to find the cause."));
+                "Something wrong? Settings > Something went wrong? saves a report on this PC, or shows a cleaned one you can post on the project's GitHub."));
         }
 
         public ICommand HelpCommand { get; private set; }
@@ -311,6 +312,55 @@ namespace SandstormModLauncher.ViewModels
             if (dir == null) { ShowToast("Could not save the report. See the launcher log."); return; }
             ReportNote = "";
             ShowToast("Report saved: " + Path.GetFileName(dir));
+        }
+
+        // Report on GitHub: the player sees exactly what would be posted, then the browser opens the issue form
+        // with the short report filled in and the full one on the clipboard. Nothing is sent until they press Submit there.
+        private bool shareOpen;
+        private string shareShort = "", shareFull = "";
+        public bool ShareReportOpen { get => shareOpen; set => Set(ref shareOpen, value); }
+        public string ShareReportText { get => shareFull; private set => Set(ref shareFull, value ?? ""); }
+        public ICommand PrepareShareCommand { get; private set; }
+        public ICommand SendShareCommand { get; private set; }
+        public ICommand CancelShareCommand { get; private set; }
+        public ICommand ReportLaunchProblemCommand { get; private set; }
+
+        private void InitShareCommands()
+        {
+            PrepareShareCommand = new AsyncCommand(PrepareShare);
+            SendShareCommand = new RelayCommand(SendShare, () => shareOpen);
+            CancelShareCommand = new RelayCommand(() => ShareReportOpen = false);
+            ReportLaunchProblemCommand = new AsyncCommand(async () =>
+            {
+                ReportNote = "Launch failed: " + (LaunchResult ?? "");
+                LaunchOverlayOpen = false;
+                Page = "Settings";
+                await PrepareShare();
+            });
+        }
+
+        private async Task PrepareShare()
+        {
+            string note = ReportNote;
+            string s = null, f = null;
+            await Task.Run(() =>
+            {
+                DebugReport.Write("github", note, State, Monitor);   // the same moment, kept on this PC as well
+                DebugReport.BuildPublic(note, State, Monitor, out s, out f);
+            });
+            shareShort = s;
+            ShareReportText = f;
+            ShareReportOpen = true;
+        }
+
+        private void SendShare()
+        {
+            try { Clipboard.SetDataObject(shareFull, true); } catch (Exception ex) { AppLog.Warn("Clipboard: " + ex.Message); }
+            Open(DebugReport.IssueUrl(ReportNote, shareShort));
+            AppLog.Info("Problem report opened as a GitHub issue form (" + shareShort.Length + " + " + shareFull.Length + " chars)");
+            ShareReportOpen = false;
+            ReportNote = "";
+            ShowToast("Your browser shows the filled-in form. The full report is on the clipboard: paste it into \"Full report\", then press Submit.");
         }
 
         // ------------------------------------------------------------------ tools
