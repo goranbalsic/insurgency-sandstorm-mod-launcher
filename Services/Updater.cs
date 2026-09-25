@@ -134,6 +134,18 @@ namespace SandstormModLauncher.Services
             return info;
         }
 
+        /// <summary>
+        /// True when the release has the same version as the exe on disk but a different build (a release rebuilt in
+        /// place, without a new version number): the exe's SHA-256 in the release's SHA256SUMS.txt differs from ours.
+        /// Only the small checksum file is downloaded. Blocking; call it off the UI thread.
+        /// </summary>
+        public static bool IsRebuilt(UpdateInfo info)
+        {
+            if (info?.SumsUrl == null || !File.Exists(ExePath)) return false;
+            var sums = ParseSums(Encoding.UTF8.GetString(Download(info.SumsUrl, 64 * 1024, null)));
+            return sums.TryGetValue(ExeName, out var releaseExe) && releaseExe != Sha256(File.ReadAllBytes(ExePath));
+        }
+
         /// <summary>Downloads, verifies and puts the new version in place. Blocking; call it off the UI thread.</summary>
         public static InstallResult Install(UpdateInfo info)
         {
@@ -156,7 +168,9 @@ namespace SandstormModLauncher.Services
             // Written next to the exe first: same drive, and a folder the launcher cannot write to fails here, before anything moved.
             File.WriteAllBytes(NewPath, exe);
             var built = Normalize(AssemblyName.GetAssemblyName(NewPath).Version);
-            if (built <= Current)
+            // Same version is fine for a rebuilt release, as long as the exe really differs from the one on disk.
+            bool rebuilt = built == Current && File.Exists(ExePath) && Sha256(exe) != Sha256(File.ReadAllBytes(ExePath));
+            if (built < Current || (built == Current && !rebuilt))
             {
                 TryDelete(NewPath);
                 return Fail("release " + info.Tag + " contains version " + built.ToString(3), true);

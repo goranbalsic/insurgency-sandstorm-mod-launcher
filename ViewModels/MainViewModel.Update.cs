@@ -13,7 +13,7 @@ namespace SandstormModLauncher.ViewModels
         // A tiny "anything new?" request while the launcher is open (see Updater.Check: usually a 304 with no body).
         private static readonly TimeSpan UpdateInterval = TimeSpan.FromMinutes(3);
         private string failedTag, lastCheckError;
-        private DateTime failedAtUtc;
+        private DateTime failedAtUtc, lastRebuildCheckUtc;
         private DispatcherTimer updateTimer;
         private bool updateBusy, updateReady;
         private string updateStatus = "", updatePage;
@@ -80,7 +80,15 @@ namespace SandstormModLauncher.ViewModels
                 if (DateTime.UtcNow - State.Settings.LastUpdateCheckUtc > TimeSpan.FromHours(1)) { State.Settings.LastUpdateCheckUtc = DateTime.UtcNow; SaveSettingsSoon(); }
                 if (lastCheckError != null) { AppLog.Info("Update check works again"); lastCheckError = null; }
                 var have = readyVersion ?? Updater.Current;
-                if (info.Version <= have)
+                // A release rebuilt under the same version number: compare the exe checksum, at most every 30 minutes.
+                bool rebuilt = false;
+                if (info.Version == have && readyVersion == null && Updater.CanInstall && (manual || DateTime.UtcNow - lastRebuildCheckUtc > TimeSpan.FromMinutes(30)))
+                {
+                    lastRebuildCheckUtc = DateTime.UtcNow;
+                    rebuilt = await Task.Run(() => Updater.IsRebuilt(info));
+                    if (rebuilt) AppLog.Info("Update: " + info.Tag + " was rebuilt; installing the new build");
+                }
+                if (info.Version <= have && !rebuilt)
                 {
                     if (!updateReady) UpdateStatus = "Up to date (v" + have.ToString(3) + "). Checked " + DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture) + ".";
                     return;
