@@ -181,6 +181,8 @@ namespace SandstormModLauncher.ViewModels
             {
                 // Mods is a tab of Play since 1.3.7 (older settings and links still say "Mods").
                 if (value == "Mods") { value = "Play"; PlayTab = "Mods"; }
+                // Playlists are presets in Play > Rules since 1.4.0.
+                if (value == "Playlists") { value = "Play"; PlayTab = "Playlists"; }
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();

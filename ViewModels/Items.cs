@@ -238,6 +238,13 @@ namespace SandstormModLauncher.ViewModels
         public string Group { get; set; }
         public string Description { get; set; }
         public object Source { get; set; }
+        /// <summary>"Co-op" (PvE: solo or with AI teammates) or "Versus" (PvP, played against bots offline); empty for none.</summary>
+        public string Tag { get; set; } = "";
+        public bool HasTag => Tag.Length > 0;
+        public bool IsVersus => Tag == "Versus";
+        /// <summary>Extra line, e.g. which mode a playlist was made for.</summary>
+        public string Note { get; set; } = "";
+        public bool HasNote => Note.Length > 0;
     }
 
     public sealed class LaunchStepItem : ObservableObject

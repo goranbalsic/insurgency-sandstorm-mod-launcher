@@ -313,7 +313,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
-                    <ColumnDefinition Width="0.45*" MinWidth="210" MaxWidth="262" />
+                    <ColumnDefinition Width="0.5*" MinWidth="250" MaxWidth="320" />
                 </Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}" Padding="0">
                     <Grid>
@@ -377,9 +377,11 @@
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="One click sets many rules." />
                             <Border Style="{StaticResource SegmentHost}">
                                 <UniformGrid Rows="1">
-                                    <RadioButton Style="{StaticResource Segment}" Content="Styles" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Styles}" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Official" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Official}" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Mine" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Mine}" />
+                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Styles" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Styles}" />
+                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Official" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Official}" />
+                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Playlists" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Playlists}"
+                                                 ToolTip="The official online playlists: their mutators and rules, added to the map you picked" />
+                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Mine" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Mine}" />
                                 </UniformGrid>
                             </Border>
                         </StackPanel>
@@ -394,9 +396,40 @@
                                                         <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24" FontSize="11" Content="&#xE74D;" ToolTip="Delete preset"
                                                                 Visibility="{Binding Group, Converter={StaticResource Vis}, ConverterParameter='My preset'}"
                                                                 Command="{Binding DataContext.DeleteRulesPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                                        <!-- Co-op = PvE, solo or with AI teammates; Versus = PvP, played against bots offline -->
+                                                        <Border DockPanel.Dock="Right" Padding="6,1" Margin="6,2,4,0" VerticalAlignment="Top" CornerRadius="2" BorderThickness="1"
+                                                                Visibility="{Binding HasTag, Converter={StaticResource Vis}}">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Background" Value="{StaticResource GoodBg}" />
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource GoodBorder}" />
+                                                                    <Setter Property="ToolTip" Value="Co-op (PvE): play it solo or with AI teammates" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsVersus}" Value="True">
+                                                                            <Setter Property="Background" Value="{StaticResource InfoBg}" />
+                                                                            <Setter Property="BorderBrush" Value="{StaticResource InfoBorder}" />
+                                                                            <Setter Property="ToolTip" Value="Versus (PvP): offline you play it against bots" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{StaticResource GoodFg}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsVersus}" Value="True"><Setter Property="Foreground" Value="{StaticResource InfoFg}" /></DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Border>
                                                         <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
                                                     </DockPanel>
-                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,8" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Note}" Style="{StaticResource Mute}" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                                               Visibility="{Binding HasNote, Converter={StaticResource Vis}}" />
+                                                    <Border Height="8" />
                                                     <Button Content="Apply" HorizontalAlignment="Left" Padding="14,5"
                                                             Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
                                                 </StackPanel>

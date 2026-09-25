@@ -11,11 +11,11 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 ## Features
 
 - All official maps and scenarios plus mod maps, day or night, Hardcore Checkpoint
-- Play page with fixed tabs: Map (map, squad and enemies), Rules (every setting of the selected mode), Mods (all mutators, official ones grouped by the playlists that use them, and the installed mods), Live (control of the running match) and Advanced. Playlists page: all official online playlists
+- Play page with fixed tabs: Map (map, squad and enemies), Rules (every setting of the selected mode, with presets: play styles, official rulesets, the official online playlists and your own), Mods (all mutators, official ones grouped by the playlists that use them, and the installed mods), Live (control of the running match) and Advanced
 - Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults. Separate squad settings for co-op and versus; versus with bots as 1v1, 5v5, 10v10 or any team size
 - All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
-- The official rulesets and all official online playlists, playable offline
+- The official rulesets and the official online playlists as presets, tagged co-op (PvE, solo or with AI) or versus (against bots offline)
 - Live match control: restart rounds, set the clock, respawn or freeze bots, change rules mid-match, and every console command the game has, searchable
 - One click: writes your rules, starts the game, waits for the main menu and loads the match. The console is only typed into after it is seen open on screen, on any keyboard layout (F10 is added as a console key)
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
@@ -24,7 +24,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - Updates itself quietly from this repository's releases, checked against the published SHA-256 (can be turned off)
 - Plays offline: no accounts, no telemetry. The only connection is a tiny update check every few minutes while the launcher is open
 
-| Match rules | Official playlists |
+| Match rules | Presets: official playlists |
 | --- | --- |
 | ![Rules](docs/screenshots/rules.png) | ![Playlists](docs/screenshots/playlists.png) |
 | **Live match control** | **Advanced** |

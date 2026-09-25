@@ -1,5 +1,12 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.4.0**
+
+- Fixed: the Styles presets did nothing when a versus scenario was picked (they only changed co-op modes). Styles now follow the scenario on the map: co-op styles (Lone Wolf, Fireteam, Squad Leader, ...) for co-op, versus styles (1 v 1, 5 v 5, 10 v 10, 16 v 16, relaxed or elite bots, quick rounds, ...) for versus.
+- Playlists are now a preset tab in Play > Rules (Styles, Official, Playlists, Mine) instead of their own page. Applying one adds its mutators and rules to the map you picked; it no longer jumps to a random map.
+- Every preset is tagged Co-op (PvE: solo or with AI teammates) or Versus (played against bots offline).
+- Presets that change nothing are gone: 56 playlists that only picked maps, and official rulesets whose changes only exist in the game-start ruleset option (Advanced).
+
 **Changes in 1.3.9**
 
 - Small maintenance release: same launcher as 1.3.8, published for Windows and Linux on mod.io so the page shows the current version everywhere.
