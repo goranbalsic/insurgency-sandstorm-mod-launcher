@@ -68,7 +68,7 @@ namespace SandstormModLauncher.ViewModels
             CancelCustomMapCommand = new RelayCommand(() => MapEditorOpen = false);
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
                 "1. PLAY > Map: pick a map and scenario, then set your squad and the enemies on the right. Every value starts at that mode's own default. Changed values turn gold.\n\n" +
-                "2. PLAY > Rules has every other match setting of that mode, with play-style presets and the official rulesets. PLAY > Playlists sets up any official online playlist for offline play. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
+                "2. PLAY > Rules has every other match setting of that mode, with play-style presets and the official rulesets. PLAYLISTS (left bar) sets up any official online playlist for offline play. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
                 "3. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded.\n\n" +
                 "4. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
                 "5. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +

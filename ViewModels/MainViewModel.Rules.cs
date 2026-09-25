@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -55,6 +55,8 @@ namespace SandstormModLauncher.ViewModels
             get => playTab;
             set
             {
+                // Playlists is its own page since 1.3.8.
+                if (value == "Playlists") { Page = "Playlists"; return; }
                 if (!Set(ref playTab, string.IsNullOrEmpty(value) ? "Map" : value)) return;
                 SyncRulesModeToScenario();
                 if (playTab == "Live") RefreshLive();
