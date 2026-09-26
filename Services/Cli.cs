@@ -119,7 +119,7 @@ namespace SandstormModLauncher.Services
                         if (File.Exists(A(2))) new FileInfo(A(2)).IsReadOnly = false;
                         File.Copy(A(1), A(2), true);
                         new FileInfo(A(2)).IsReadOnly = new FileInfo(A(1)).IsReadOnly;
-                        UeIni.WriteText(A(2), LaunchPlanner.MergeGameIni(UeIni.ReadText(A(2)), plan, state.Rules, state.Settings.ManagedIniKeys));
+                        UeIni.WriteText(A(2), LaunchPlanner.GameIniForLaunch(UeIni.ReadText(A(2)), plan, state.Rules, state.Settings.ManagedIniKeys, state.Settings));
                         print("Merged into " + A(2) + " (read-only afterwards: " + new FileInfo(A(2)).IsReadOnly + ")");
                         return 0;
                     }
@@ -136,10 +136,32 @@ namespace SandstormModLauncher.Services
                         // ini-write file: merges the plan into that file in place, the same way a launch writes Game.ini.
                         save = false;
                         var plan = LaunchPlanner.Build(p, state);
-                        UeIni.WriteText(A(1), LaunchPlanner.MergeGameIni(UeIni.ReadText(A(1)), plan, state.Rules, state.Settings.ManagedIniKeys));
+                        UeIni.WriteText(A(1), LaunchPlanner.GameIniForLaunch(UeIni.ReadText(A(1)), plan, state.Rules, state.Settings.ManagedIniKeys, state.Settings));
                         print("Written: " + A(1) + " (read-only: " + new FileInfo(A(1)).IsReadOnly + ")");
                         return 0;
                     }
+                    case "rcon":
+                    {
+                        // rcon <command> [command ...]: to the running game over RCON (quote a console line: "getall X Y").
+                        save = false;
+                        var rcon = new GameRcon(() => state.Settings);
+                        var replies = rcon.Run(args.Skip(1).ToArray());
+                        for (int i = 0; i < replies.Count; i++) { print(">> " + args[i + 1]); print(replies[i].TrimEnd()); }
+                        return 0;
+                    }
+                    case "rcon-status":
+                    {
+                        save = false;
+                        string problem = new GameRcon(() => state.Settings).Probe();
+                        print("RCON " + RconSetup.Address + ":" + state.Settings.RconPort + ": " + (problem == null ? "connected" : "not reachable (" + problem + ")"));
+                        print("Game.ini has the launcher's RCON section: " + RconSetup.GameIniHasIt(state.Settings));
+                        return problem == null ? 0 : 1;
+                    }
+                    case "rcon-torture":
+                        save = false;
+                        if (!int.TryParse(A(1) ?? "400", NumberStyles.Integer, CultureInfo.InvariantCulture, out int rsteps) || !int.TryParse(A(2) ?? "1", NumberStyles.Integer, CultureInfo.InvariantCulture, out int rseed))
+                        { print("rcon-torture [steps] [seed] takes numbers"); return 1; }
+                        return RconTorture.Run(rsteps, rseed, print);
                     case "torture":
                         save = false;
                         if (!int.TryParse(A(1) ?? "2000", NumberStyles.Integer, CultureInfo.InvariantCulture, out int steps) || !int.TryParse(A(2) ?? "1", NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed))

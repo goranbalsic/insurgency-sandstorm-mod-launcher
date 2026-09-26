@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using SandstormModLauncher.Core;
 
 namespace SandstormModLauncher.Game
@@ -200,7 +201,8 @@ namespace SandstormModLauncher.Game
             {
                 Array.Clear(hist, 0, 256);
                 int n = 0;
-                for (int x = 0; x < f.Width; x += Math.Max(1, step)) { hist[f.L(x, y)]++; n++; }
+                // Right part of the width only: the console's suggestion box and game hints sit on the left end.
+                for (int x = x0; x < x1; x += Math.Max(1, step)) { hist[f.L(x, y)]++; n++; }
                 double flat = Flatness(hist, n, 4, out int med);
                 if (flat >= 0.97 && med >= 80 && med <= 210) borderRows++; else break;
             }
@@ -221,6 +223,39 @@ namespace SandstormModLauncher.Game
                 for (int x = (int)(f.Width * 0.04); x < f.Width; x++)
                     if (f.L(x, y) > 100 && ++bright > 6) return false;
             return true;
+        }
+
+        /// <summary>
+        /// True when the one-line console is still where it was in <paramref name="reference"/>: its solid grey edge is
+        /// there (a dark picture, e.g. a night map, never has that flat line) and the dark band below looks the same.
+        /// Only the right part of the width is compared: hints and the console's suggestion box are drawn on the left.
+        /// </summary>
+        public static bool LineStillThere(Frame reference, Frame now, ConsoleBar bar)
+        {
+            if (!Same(reference, now) || bar == null) return false;
+            // The edge can sit right above the rows the line was first found in.
+            var edge = new List<(int y, int med)>();
+            for (int y = Math.Max(0, bar.Top - 6); y <= Math.Min(bar.Bottom, bar.Top + 6); y++)
+            {
+                if (FlatRow(reference, y, out int m) && m >= 80 && m <= 210) edge.Add((y, m));
+                else if (edge.Count > 0) break;
+            }
+            if (edge.Count == 0) return false;   // no edge to recognise the line by: not claimed
+            foreach (var (y, med) in edge)
+                if (!FlatRow(now, y, out int m2) || Math.Abs(m2 - med) > 20) return false;
+            int bandTop = edge.Count > 0 ? edge[edge.Count - 1].y + 1 : bar.Top;
+            return 1 - Changed(reference, now, bandTop, bar.Bottom, 0.30, 0.97, 20) >= 0.55;
+        }
+
+        private static bool FlatRow(Frame f, int y, out int med)
+        {
+            med = 0;
+            if (f == null || y < 0 || y >= f.Height) return false;
+            Columns(f, 0.30, 0.97, 480, out int x0, out int x1, out int step);
+            var hist = new int[256];
+            int n = 0;
+            for (int x = x0; x < x1; x += step) { hist[f.L(x, y)]++; n++; }
+            return Flatness(hist, n, 6, out med) >= 0.95;
         }
 
         /// <summary>True when the bar still looks like it did right after the console opened (text may have changed).</summary>

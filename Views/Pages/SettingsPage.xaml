@@ -19,7 +19,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
             <StackPanel Margin="0,0,0,14">
-                <TextBlock Text="Game folder, console key and launch options" Style="{StaticResource Kicker}" />
+                <TextBlock Text="Game folder, game connection and launch options" Style="{StaticResource Kicker}" />
                 <TextBlock Text="Settings" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
             </StackPanel>
             <Grid Grid.Row="1">
@@ -56,12 +56,38 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- game connection -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" FontFamily="{StaticResource Mono}" Text="{Binding RconAddress}" />
+                                <TextBlock Text="Game connection (RCON)" Style="{StaticResource H2}" />
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="The launcher loads maps and changes rules through the game's own remote console, on this PC only (127.0.0.1, random password). No keys are pressed and the game does not need to be in front." />
+                            <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
+                                    Background="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=bg}"
+                                    BorderBrush="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=border}">
+                                <TextBlock Text="{Binding RconStatus}" Foreground="{Binding RconState, Converter={StaticResource Status}}" TextWrapping="Wrap" />
+                            </Border>
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Content="Check connection" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding CheckRconCommand}" />
+                            </WrapPanel>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AllowConsoleTyping}" Margin="0,6,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Type into the game console when RCON cannot do it" FontSize="13.5" />
+                                    <TextBlock Text="Cheat buttons in Live, versus AI difficulty, your own after-load commands, and a game started before RCON was set up. Needs the game in front." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                        </StackPanel>
+                    </Border>
+
                     <!-- console key -->
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0">
                         <StackPanel>
                             <TextBlock Text="Console key" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                       Text="Used to send the match. Nothing is typed unless the console is seen open." />
+                                       Text="Only for what RCON cannot do (see above). Nothing is typed unless the console is seen open." />
                             <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">
@@ -196,7 +222,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ApplyLiveRules}">
                                 <StackPanel>
                                     <TextBlock Text="Apply rules again after the map loads" FontSize="13.5" />
-                                    <TextBlock Text="Also sends rules as admin commands, no restart needed" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="Also sets them straight in the running match over RCON, no restart needed" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding SoloGameFlag}">

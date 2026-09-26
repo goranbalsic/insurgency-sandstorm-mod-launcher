@@ -17,8 +17,9 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
 - The official rulesets and the official online playlists as presets, tagged co-op (PvE, solo or with AI) or versus (against bots offline)
-- Live match control: restart rounds, set the clock, respawn or freeze bots, change rules mid-match, and every console command the game has, searchable
-- One click: writes your rules, starts the game, waits for the main menu and loads the match. The console is only typed into after it is seen open on screen, on any keyboard layout (F10 is added as a console key)
+- Live match control: restart rounds, change rules mid-match, respawn or freeze bots, set the clock, and every console command the game has, searchable
+- One click: writes your rules, starts the game, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed, no window has to be in front, and every step is confirmed by the game
+- Cheats and the versus AI difficulty, which the game only takes from its own console, are typed into it only after the console is seen open on screen, on any keyboard layout (F10 is added as a console key). Settings can turn that typing off
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - Adjustable text size (90% to 150%, Ctrl + / Ctrl - or Ctrl + mouse wheel) in a plain, classic Windows look
 - Send a problem report straight from the launcher: you see the cleaned report (no names, IDs or screenshots) first, and it is sent only when you press Send. You can post it on GitHub instead
@@ -43,12 +44,14 @@ Requirements: Windows 10 or 11, Insurgency: Sandstorm, .NET Framework 4.8 (part 
 
 ## How it works
 
-1. Rules you change are written to your `Game.ini` while the game is closed (backed up first), one line per setting, so bots spawn with your values from the first second. Older copies of the same settings are removed, because the game uses the first value it finds. When the game is already running, the rules are sent with admin commands after the map loads.
+1. Rules you change are written to your `Game.ini` while the game is closed (backed up first), one line per setting, so bots spawn with your values from the first second. Older copies of the same settings are removed, because the game uses the first value it finds.
 2. The launcher starts the game if needed and follows the game log until the main menu is up.
-3. It presses the console key and checks on screen that the console line opened. Only then does it paste the `open` command (map, scenario, lighting, mutators) and press Enter. If the console is not clearly open it stops without pressing anything else, so no key can land in the game's menus.
-4. If the game was already running, it sends your rules with admin commands once the map and its loading screen are done.
+3. It sends the `open` command (map, scenario, lighting, mutators) through the game's own RCON server, the remote console that server admins use. The game confirms it in its log. Nothing is typed and the game can stay in the background, so no key can ever land in a menu.
+4. If the game was already running, the rules are set in the match over RCON, and the game answers with each new value.
 
-The launcher uses the ` key when your keyboard layout has it. It is missing on many layouts (Serbian, German, French and others), so while the game is closed the launcher also adds F10 as a console key, which works on every layout.
+RCON is set up by the launcher: it listens on 127.0.0.1 only (this PC, never the network), with a random password, through the `[Rcon]` section of `Game.ini`. The game starts it however you start the game, from the launcher or from Steam.
+
+Only cheats and the versus AI difficulty are left to the game's own console, because the game takes them from nowhere else. The launcher presses the console key, checks on screen that the console line opened, pastes the line, and checks each step before it presses Enter. It uses the ` key when your keyboard layout has it; on layouts without it (Serbian, German, French and others) it adds F10 as a console key while the game is closed.
 
 ## Is it safe?
 
@@ -57,9 +60,10 @@ All source code is in this repository, and every release is built from it by [Gi
 What the program does on your PC:
 
 - Reads the game's .pak files, configs and log, and the game's mod folder (read only)
-- Writes only match rules (game mode settings) in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
+- Writes only match rules (game mode settings) and its RCON settings in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
+- Talks to the game over RCON on 127.0.0.1 (this PC only) with a random password; nothing from outside can reach it. The password never appears in logs or problem reports
 - Keeps copies of your game key bindings before it sends any key to the game, and can put them back (Settings > Game key bindings). It never edits them itself
-- Sends keystrokes only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
+- Sends keystrokes (only for cheats and the versus AI difficulty) only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
 - Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
 - Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
 - Sends a problem report only when you press Send in Settings > "Something went wrong?", after showing you all of it
@@ -103,6 +107,7 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 - `--render folder` draws every page to PNG files without opening a window
 - `--data folder` keeps settings and logs in another folder (for testing)
 - `--cli command` works on the setup without a window: `status`, `presets`, `apply`, `set`, `mutators`, `plan`, `save`, `reset`, and `torture [steps] [seed]`, a random stress test that checks the whole setup logic after every step, including that what you set is what the game gets (see `Services/Cli.cs`)
+- `--cli rcon "command"` sends commands to the running game over RCON; `rcon-status` checks the connection; `rcon-torture [steps] [seed]` tests the RCON code against a fake game that splits, delays and drops its answers
 - `--ui-torture out.txt [steps] [seed]` drives the real window at random (maps, presets, rules, mutators, profiles, saved setups, text sizes) and checks after every step that the screen, the saved profile and the launch plan agree. Use it with `--data` and a copy of a data folder
 
 ## Releasing

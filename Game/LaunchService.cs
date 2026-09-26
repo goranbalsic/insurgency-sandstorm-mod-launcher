@@ -24,6 +24,10 @@ namespace SandstormModLauncher.Game
     {
         public bool RestartIfNeeded;
         public bool ForceRestart;
+        /// <summary>The game's console may be typed into: for what RCON cannot do, and when RCON is not available.</summary>
+        public bool AllowConsole = true;
+        /// <summary>Bring the game to the front once the match is ready (the player launched from the launcher window).</summary>
+        public bool BringToFront;
     }
 
     public sealed class LaunchReport
@@ -50,13 +54,40 @@ namespace SandstormModLauncher.Game
         private readonly AppState state;
         private readonly GameMonitor monitor;
         private readonly ConsoleBridge console;
+        private readonly GameRcon rcon;
 
-        public LaunchService(AppState state, GameMonitor monitor, ConsoleBridge console)
+        public LaunchService(AppState state, GameMonitor monitor, ConsoleBridge console, GameRcon rcon)
         {
             this.state = state;
             this.monitor = monitor;
             this.console = console;
+            this.rcon = rcon;
         }
+
+        /// <summary>
+        /// Why RCON cannot be used right now, or null when the game answers on it. A game that takes the connection
+        /// but is busy (loading) counts as reachable: it answers once it is done.
+        /// </summary>
+        public Task<string> RconProblem() => Task.Run(() => rcon.Probe(out bool busy) is string p && !busy ? p : null);
+
+        /// <summary>Waits until the game answers on RCON (it starts listening while the game starts up; a busy game gets up to a minute).</summary>
+        private async Task<string> WaitForRcon(int seconds, CancellationToken ct)
+        {
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                bool busy = false;
+                string problem = await Task.Run(() => rcon.Probe(out busy), ct);
+                if (problem == null) return null;
+                if (!monitor.IsRunning) return "the game is not running";
+                if (sw.Elapsed > TimeSpan.FromSeconds(busy ? Math.Max(seconds, 60) : seconds)) return problem;
+                await Task.Delay(700, ct);
+            }
+        }
+
+        public static string NoRconMessage(string problem) =>
+            "The launcher cannot reach the game over RCON (" + problem + "). The game was probably started before the launcher set RCON up: " +
+            "close it and press Launch again (the launcher starts it with RCON), or allow typing into the game console in Settings.";
 
         /// <summary>True when the game is running with older start-only rules than the plan needs.</summary>
         public bool NeedsRestart(LaunchPlan plan)
@@ -109,6 +140,13 @@ namespace SandstormModLauncher.Game
                 current = 1;
                 Report(1, StepState.Active);
                 bool startedNow = false;
+                if (!GameProcessRunning() && !RconSetup.PortFree(state.Settings.RconPort))
+                {
+                    int old = state.Settings.RconPort;
+                    state.Settings.RconPort = 0;
+                    RconSetup.EnsureSettings(state.Settings);
+                    AppLog.Info("RCON port " + old + " is used by another program; the launcher uses " + state.Settings.RconPort + " now");
+                }
                 if (GameProcessRunning()) Report(1, StepState.Skipped, "The game is running: the rules are sent after the map loads, and Game.ini is updated before the next start");
                 else Report(1, StepState.Done, WriteGameIni(plan));
 
@@ -162,28 +200,43 @@ namespace SandstormModLauncher.Game
                 while (monitor.Window == IntPtr.Zero && wait.Elapsed < TimeSpan.FromSeconds(state.Settings.StartTimeoutSec)) { await Task.Delay(300, ct); monitor.Poll(); }
                 Report(3, StepState.Done, monitor.Phase == GamePhase.InMatch ? "In a match - it will switch maps" : (monitor.ModsMounted + " mods mounted"));
 
-                // 5. Send the open command
+                // 5. Send the match: over RCON (the game's own remote console), the keyboard console only as a fallback
                 current = 4;
-                var keyPlan = console.PlanKey();
-                if (!keyPlan.Ok) throw new LaunchException(keyPlan.Problem);
-                Report(4, StepState.Active, "Console key " + keyPlan.KeyName + (state.Settings.InputMethod == "Type" ? " · typing" : " · paste"));
+                Report(4, StepState.Active, "Connecting to the game (RCON)");
                 string scenarioId = plan.Scenario.Id;
                 string level = plan.Scenario.Level.Substring(plan.Scenario.Level.LastIndexOf('/') + 1);
                 Func<string, bool> browsed = l => l.Contains("LogNet: Browse:") && l.IndexOf(scenarioId, StringComparison.OrdinalIgnoreCase) >= 0;
                 var loadLines = new List<string>();
                 void Collect(string l) { lock (loadLines) loadLines.Add(l); }
                 monitor.LineReceived += Collect;
+                bool useRcon;
                 try
                 {
-                    // Never re-sent automatically: a second try could land while the first one is still loading.
-                    var sent = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
-                    if (!sent.Sent && !sent.NothingTyped)
+                    string rconProblem = await WaitForRcon(startedNow ? 45 : 3, ct);
+                    useRcon = rconProblem == null;
+                    CommandResult sent;
+                    if (useRcon)
                     {
-                        // The command may be sitting on the console line: the player can press Enter in the game.
-                        Report(4, StepState.Active, sent.Detail + " If the command is in the game's console, press Enter there; waiting a minute for it.");
-                        var until = DateTime.UtcNow.AddSeconds(60);
-                        while (DateTime.UtcNow < until && !SnapshotHas(loadLines, browsed)) { await Task.Delay(250, ct); monitor.Poll(); }
-                        if (SnapshotHas(loadLines, browsed)) { AppLog.Info("The open command was run by hand after the console send failed"); sent.Sent = true; sent.Verified = true; }
+                        // Never re-sent automatically: a second try could land while the first one is still loading.
+                        sent = await Travel(plan, loadLines, browsed, ct);
+                    }
+                    else
+                    {
+                        if (!options.AllowConsole) throw new LaunchException(NoRconMessage(rconProblem));
+                        var keyPlan = console.PlanKey();
+                        if (!keyPlan.Ok) throw new LaunchException(NoRconMessage(rconProblem) + " " + keyPlan.Problem);
+                        AppLog.Warn("RCON not available (" + rconProblem + "); using the game console");
+                        report.Warnings.Add("RCON was not available (" + rconProblem + "), so the command was typed into the game console. Restart the game from the launcher to avoid that.");
+                        Report(4, StepState.Active, "RCON not available: typing into the console (" + keyPlan.KeyName + ")");
+                        sent = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
+                        if (!sent.Sent && !sent.NothingTyped)
+                        {
+                            // The command may be sitting on the console line: the player can press Enter in the game.
+                            Report(4, StepState.Active, sent.Detail + " If the command is in the game's console, press Enter there; waiting a minute for it.");
+                            var until = DateTime.UtcNow.AddSeconds(60);
+                            while (DateTime.UtcNow < until && !SnapshotHas(loadLines, browsed)) { await Task.Delay(250, ct); monitor.Poll(); }
+                            if (SnapshotHas(loadLines, browsed)) { AppLog.Info("The open command was run by hand after the console send failed"); sent.Sent = true; sent.Verified = true; }
+                        }
                     }
                     if (!sent.Sent) throw new LaunchException(sent.Detail ?? "The command could not be sent.");
                     if (!sent.Verified)
@@ -192,7 +245,7 @@ namespace SandstormModLauncher.Game
                         // The map may still be on its way; the next step waits for it.
                         Report(4, StepState.Warning, "Sent; the game has not confirmed it yet");
                     }
-                    else Report(4, StepState.Done, "Accepted by the game");
+                    else Report(4, StepState.Done, useRcon ? "Loading (sent over RCON)" : "Accepted by the game");
 
                     // 6. Wait for the map
                     current = 5;
@@ -208,7 +261,7 @@ namespace SandstormModLauncher.Game
                     {
                         Report(5, StepState.Active, "Force reload: loading again");
                         lock (loadLines) loadLines.Clear();
-                        var again = await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
+                        var again = useRcon ? await Travel(plan, loadLines, browsed, ct) : await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
                         if (!again.Sent) throw new LaunchException("The reload was not sent: " + again.Detail);
                         await WaitForMap(level, loadLines, 240, ct);
                         await WaitForLoadingScreen(ct);
@@ -217,23 +270,55 @@ namespace SandstormModLauncher.Game
                 }
                 finally { monitor.LineReceived -= Collect; }
 
-                // 7. After-load commands
+                if (options.BringToFront) BringToFront();
+
+                // 7. After the map: game mode properties over RCON (a game started by this launch already read them
+                // from Game.ini), then whatever only the console can do.
                 current = 6;
-                // A game started by this launch already read the rules from Game.ini; sending them again is not needed.
-                var afterLoad = startedNow ? plan.AfterLoad.Where(c => !c.StartsWith("AdminSetGamemodeProperty ", StringComparison.OrdinalIgnoreCase)).ToList() : plan.AfterLoad;
-                if (afterLoad.Count > 0)
+                var props = startedNow ? new List<KeyValuePair<string, string>>() : plan.LiveProperties;
+                var done = new List<string>();
+                var problems = new List<string>();
+                if (props.Count > 0)
                 {
-                    Report(6, StepState.Active, afterLoad.Count + " command(s)");
-                    var res = await console.Run(string.Join(" | ", afterLoad), ct, null, TimeSpan.FromSeconds(3));
-                    if (!res.Sent) { report.Warnings.Add("Live settings were not applied: " + res.Detail); Report(6, StepState.Warning, res.Detail); }
+                    Report(6, StepState.Active, props.Count + " setting(s)");
+                    if (useRcon || await RconProblem() == null)
+                    {
+                        Dictionary<string, string> failed;
+                        try { failed = await Task.Run(() => rcon.SetProperties(props), ct); }
+                        catch (RconException ex) { failed = props.ToDictionary(kv => kv.Key, kv => "no confirmation from the game (" + ex.Message + ")"); }
+                        foreach (var f in failed) problems.Add(f.Key + ": " + f.Value);
+                        done.Add((props.Count - failed.Count) + " setting(s) set");
+                        AppLog.Info("RCON properties: " + (props.Count - failed.Count) + " set" + (failed.Count > 0 ? ", not taken: " + string.Join("; ", failed.Select(f => f.Key + " (" + f.Value + ")")) : ""));
+                    }
+                    else if (options.AllowConsole)
+                    {
+                        var res = await console.Run(string.Join(" | ", props.Select(kv => "AdminSetGamemodeProperty " + kv.Key + " " + kv.Value)), ct, null, TimeSpan.FromSeconds(3));
+                        if (!res.Sent) problems.Add("settings not sent: " + res.Detail); else done.Add(props.Count + " setting(s) typed into the console");
+                    }
+                    else problems.Add("settings not sent: RCON is not available and typing into the console is off");
+                }
+                if (plan.ConsoleOnly.Count > 0)
+                {
+                    string what = string.Join(" | ", plan.ConsoleOnly);
+                    if (!options.AllowConsole) problems.Add("needs the game console, which is off in Settings: " + what);
+                    else if (!options.BringToFront && !new GameInput(monitor.Window).IsForeground) problems.Add("needs the game console, but the game was not in front: " + what);
                     else
                     {
-                        var bad = res.Lines.Where(l => l.Contains("Command not recognized")).Select(l => l.Substring(l.IndexOf("Command not recognized", StringComparison.Ordinal))).ToList();
-                        foreach (var b in bad) report.Warnings.Add(b);
-                        Report(6, bad.Count > 0 ? StepState.Warning : StepState.Done, bad.Count > 0 ? bad.Count + " not recognised" : "Applied");
+                        Report(6, StepState.Active, "Typing into the game console: " + what);
+                        var res = await console.Run(what, ct, null, TimeSpan.FromSeconds(3));
+                        if (!res.Sent) problems.Add("console: " + res.Detail);
+                        else
+                        {
+                            var bad = res.Lines.Where(l => l.Contains("Command not recognized")).Select(l => l.Substring(l.IndexOf("Command not recognized", StringComparison.Ordinal))).ToList();
+                            problems.AddRange(bad);
+                            done.Add(plan.ConsoleOnly.Count + " console command(s)");
+                        }
                     }
                 }
-                else Report(6, StepState.Skipped, startedNow && plan.AfterLoad.Count > 0 ? "Rules were read from Game.ini at game start" : "Nothing to apply");
+                foreach (var pr in problems) report.Warnings.Add("After loading: " + pr);
+                if (props.Count == 0 && plan.ConsoleOnly.Count == 0)
+                    Report(6, StepState.Skipped, startedNow && plan.LiveProperties.Count > 0 ? "Rules were read from Game.ini at game start" : "Nothing to apply");
+                else Report(6, problems.Count > 0 ? StepState.Warning : StepState.Done, string.Join(", ", done.Concat(problems.Take(2))));
 
                 report.Success = true;
                 report.Message = "You're in. Have a good fight.";
@@ -259,6 +344,85 @@ namespace SandstormModLauncher.Game
                 AppLog.Error("Launch crashed", ex);
                 return report;
             }
+        }
+
+        /// <summary>
+        /// Loads the map over RCON, confirmed by the game's Browse line. No keys are pressed and the game does not have
+        /// to be in front. First the console's own open command (a fresh URL, exactly what the console would load);
+        /// if the game does not start loading, RCON's travel with every option the launcher may have set before spelled
+        /// out (travel keeps the options of the map before, e.g. hardcore or the mutators).
+        /// </summary>
+        private async Task<CommandResult> Travel(LaunchPlan plan, List<string> loadLines, Func<string, bool> browsed, CancellationToken ct)
+        {
+            var result = new CommandResult();
+            try { await Task.Run(() => rcon.Run(GameRcon.Quote(plan.OpenCommand)), ct); }
+            catch (RconException ex)
+            {
+                AppLog.Warn("RCON open failed: " + ex.Message);
+                result.Detail = "The game could not be reached over RCON: " + ex.Message;
+                result.NothingTyped = true;
+                return result;
+            }
+            result.Sent = true;
+            if (await WaitForLine(loadLines, browsed, 12, ct)) { AppLog.Info("RCON open: the game is loading the map"); result.Verified = true; return result; }
+            if (!monitor.IsRunning) { result.Detail = "The game closed."; return result; }
+            // Any sign that the open is under way (another Browse line, a loading phase) means waiting, never a second load.
+            if (SnapshotHas(loadLines, l => l.Contains("LogNet: Browse:") || l.Contains("LoadMap: ")) || monitor.Phase == GamePhase.Loading || monitor.LoadingScreenUp)
+            {
+                result.Verified = await WaitForLine(loadLines, browsed, 30, ct);
+                if (!result.Verified) result.Detail = "The game started travelling, but not to the map that was sent.";
+                return result;
+            }
+
+            string url = plan.TravelUrl + TravelResets(plan);
+            var reply = await Task.Run(() => rcon.Travel(url), ct);
+            AppLog.Info("RCON open gave no map load; travel: " + (reply.Ok ? reply.Text : "failed: " + reply.Error));
+            if (!reply.Ok) { result.Detail = "The game did not take the map over RCON: " + reply.Error; return result; }
+            result.Verified = await WaitForLine(loadLines, browsed, 20, ct);
+            if (!result.Verified) result.Detail = "The game answered but has not started loading the map.";
+            return result;
+        }
+
+        private async Task<bool> WaitForLine(List<string> lines, Func<string, bool> match, int seconds, CancellationToken ct)
+        {
+            var until = DateTime.UtcNow.AddSeconds(seconds);
+            while (DateTime.UtcNow < until && !SnapshotHas(lines, match))
+            {
+                if (!monitor.IsRunning) break;
+                await Task.Delay(200, ct);
+                monitor.Poll();
+            }
+            return SnapshotHas(lines, match);
+        }
+
+        /// <summary>
+        /// Options a travel would otherwise carry over from the map before: those the launcher may set, given their
+        /// neutral value when this plan does not set them (checked in the game: game= and Mutators= empty work).
+        /// </summary>
+        public static string TravelResets(LaunchPlan plan)
+        {
+            var have = new HashSet<string>(plan.TravelUrl.Split('?').Skip(1).Select(o => o.Split('=')[0]), StringComparer.OrdinalIgnoreCase);
+            var sb = new System.Text.StringBuilder();
+            void Reset(string key, string value) { if (!have.Contains(key)) sb.Append('?').Append(key).Append('=').Append(value); }
+            Reset("game", "");
+            Reset("Mutators", "");
+            Reset("bSoloGame", "0");
+            if (plan.Mode != null)
+                foreach (var key in LaunchPlanner.UrlOptions)
+                    if (plan.Mode.Defaults.TryGetValue(key, out var def) && def != null)
+                        Reset(key, LaunchPlanner.IsTrue(def) ? "1" : def.Equals("False", StringComparison.OrdinalIgnoreCase) ? "0" : def);
+            return sb.ToString();
+        }
+
+        /// <summary>Brings the game window to the front (a plain request; the launcher is in front when this runs).</summary>
+        private void BringToFront()
+        {
+            try
+            {
+                var input = new GameInput(monitor.Window);
+                if (!input.IsForeground) input.Focus(2500);
+            }
+            catch (Exception ex) { AppLog.Warn("Could not bring the game to the front: " + ex.Message); }
         }
 
         /// <summary>The loading picture stays up for a few seconds after the map is loaded; the console cannot open under it.</summary>
@@ -312,7 +476,7 @@ namespace SandstormModLauncher.Game
             string current = UeIni.ReadText(path);
             var db = state.Rules;
             // Extra lines the player added last time are the launcher's too, so removing them from the profile removes them here.
-            string updated = LaunchPlanner.MergeGameIni(current, plan, db, state.Settings.ManagedIniKeys);
+            string updated = LaunchPlanner.GameIniForLaunch(current, plan, db, state.Settings.ManagedIniKeys, state.Settings);
             int sections = plan.IniSections.Count(s => s.Values.Count > 0);
             if (Normalize(updated) != Normalize(current))
             {
@@ -353,6 +517,8 @@ namespace SandstormModLauncher.Game
             AppLog.Info("Starting the game (" + state.Install.Store + ")");
             var install = state.Install;
             var args = new List<string>();
+            RconSetup.EnsureSettings(state.Settings);
+            args.Add(RconSetup.CommandLine(state.Settings));
             string ruleset = plan?.Profile?.LaunchRuleset;
             if (!string.IsNullOrWhiteSpace(ruleset)) args.Add("-ruleset=" + ruleset.Trim());
             if (!string.IsNullOrWhiteSpace(state.Settings.LaunchArgs)) args.Add(state.Settings.LaunchArgs.Trim());
@@ -374,9 +540,15 @@ namespace SandstormModLauncher.Game
         {
             var p = Process.GetProcessesByName(GameInstall.ClientProcess).FirstOrDefault();
             if (p == null) return;
-            try { p.CloseMainWindow(); } catch { }
-            for (int i = 0; i < 60 && !p.HasExited; i++) await Task.Delay(500, ct);
+            // RCON asks the game to quit without touching its window; the window close request is the fallback.
+            if (await Task.Run(() => rcon.Exit(), ct))
+                for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
             if (!p.HasExited)
+            {
+                try { p.CloseMainWindow(); } catch { }
+                for (int i = 0; i < 60 && !p.HasExited; i++) await Task.Delay(500, ct);
+            }
+            if (!p.HasExited && state.Settings.AllowConsoleTyping)
             {
                 await console.Run("exit", ct, null, TimeSpan.FromSeconds(1));
                 for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);

@@ -55,7 +55,7 @@ namespace SandstormModLauncher.Services
                 {
                     s.AppendLine();
                     s.AppendLine("== settings.json");
-                    s.AppendLine(Json.Serialize(state.Settings, true));
+                    s.AppendLine(HidePasswords(Json.Serialize(state.Settings, true)));
                     s.AppendLine();
                     s.AppendLine("== active profile");
                     s.AppendLine(Json.Serialize(state.Store.Active, true));
@@ -290,10 +290,16 @@ namespace SandstormModLauncher.Services
             if (string.IsNullOrEmpty(from)) return;
             var lines = ReadLines(from).ToList();
             if (lines.Count == 0) return;
-            IEnumerable<string> tail = lines.Skip(Math.Max(0, lines.Count - lastLines));
+            IEnumerable<string> tail = lines.Skip(Math.Max(0, lines.Count - lastLines)).Select(HidePasswords);
             if (sanitize) tail = tail.Select(LogSanitizer.Clean).Where(l => l != null);
             File.WriteAllLines(to, tail, Encoding.UTF8);
         }
+
+        private static readonly System.Text.RegularExpressions.Regex PasswordValue =
+            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*Password""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>Any password value (the RCON password in settings.json and Game.ini) replaced by &lt;hidden&gt;.</summary>
+        public static string HidePasswords(string text) => text == null ? null : PasswordValue.Replace(text, "$1<hidden>");
 
         private static IEnumerable<string> KeyboardLayouts()
         {

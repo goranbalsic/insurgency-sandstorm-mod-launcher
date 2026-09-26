@@ -93,6 +93,7 @@ namespace SandstormModLauncher.Services
             Settings.CustomMaps = Settings.CustomMaps ?? new List<CustomMapEntry>();
             Settings.RulesPresets = Settings.RulesPresets ?? new List<RulesPreset>();
             Settings.RulesPresets.RemoveAll(r => r == null || string.IsNullOrWhiteSpace(r.Name));
+            if (Game.RconSetup.EnsureSettings(Settings)) { try { SaveSettings(); } catch (Exception ex) { AppLog.Warn("Settings not saved: " + ex.Message); } }
             foreach (var r in Settings.RulesPresets)
             {
                 r.Rules = r.Rules ?? new Dictionary<string, Dictionary<string, string>>();

@@ -35,28 +35,16 @@ namespace SandstormModLauncher.Core
             {
                 if (IsForeground) return true;
                 if (Native.IsIconic(window)) Native.ShowWindow(window, Native.SW_RESTORE);
-                switch (attempt++ % 3)
+                if (attempt++ % 2 == 0) Native.SetForegroundWindow(window);
+                else
                 {
-                    case 0:
-                        Native.SetForegroundWindow(window);
-                        break;
-                    case 1:
-                    {
-                        IntPtr fg = Native.GetForegroundWindow();
-                        uint fgThread = Native.GetWindowThreadProcessId(fg, out _);
-                        uint me = Native.GetCurrentThreadId();
-                        Native.AttachThreadInput(me, fgThread, true);
-                        Native.BringWindowToTop(window);
-                        Native.SetForegroundWindow(window);
-                        Native.AttachThreadInput(me, fgThread, false);
-                        break;
-                    }
-                    default:
-                        // A synthetic Alt tap lifts the foreground lock for this process.
-                        Native.keybd_event(0x12, 0, Native.KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
-                        Native.keybd_event(0x12, 0, Native.KEYEVENTF_EXTENDEDKEY | Native.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                        Native.SetForegroundWindow(window);
-                        break;
+                    IntPtr fg = Native.GetForegroundWindow();
+                    uint fgThread = Native.GetWindowThreadProcessId(fg, out _);
+                    uint me = Native.GetCurrentThreadId();
+                    Native.AttachThreadInput(me, fgThread, true);
+                    Native.BringWindowToTop(window);
+                    Native.SetForegroundWindow(window);
+                    Native.AttachThreadInput(me, fgThread, false);
                 }
                 Thread.Sleep(120);
             }

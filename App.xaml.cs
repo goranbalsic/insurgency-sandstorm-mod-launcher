@@ -81,6 +81,15 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 6 && eArgs[0] == "--probe-line")
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                try { Services.ProbeTest.LineCheck(eArgs[1], int.Parse(eArgs[2]), int.Parse(eArgs[3]), eArgs[4], eArgs.Skip(5).ToList()); }
+                catch (Exception ex) { File.WriteAllText(eArgs[1], "PROBE LINE CRASHED: " + ex); }
+                Shutdown();
+                return;
+            }
+
             if (eArgs.Length >= 3 && (eArgs[0] == "--probe-test" || eArgs[0] == "--probe"))
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;

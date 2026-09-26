@@ -27,7 +27,18 @@ namespace SandstormModLauncher.Game
         public List<UeIni.Section> IniSections = new List<UeIni.Section>();
         public int PlayerSlots;
         public string RestartKey = "";
+        /// <summary>Everything done after the map loads, for display.</summary>
         public List<string> AfterLoad = new List<string>();
+        /// <summary>Game mode properties set over RCON after the map loads (when the game was already running).</summary>
+        public List<KeyValuePair<string, string>> LiveProperties = new List<KeyValuePair<string, string>>();
+        /// <summary>Commands only the game's own console can run (cheats such as versus AI difficulty, the player's own lines).</summary>
+        public List<string> ConsoleOnly = new List<string>();
+
+        /// <summary>Keys of the player's extra URL options (they replace the launcher's value for the same key).</summary>
+        public HashSet<string> ExtraOptionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The map URL the open command loads (what RCON's travel takes).</summary>
+        public string TravelUrl => OpenCommand != null && OpenCommand.StartsWith("open ", StringComparison.Ordinal) ? OpenCommand.Substring(5) : null;
         public List<string> Warnings = new List<string>();
         public string Error;
 
@@ -169,26 +180,44 @@ namespace SandstormModLauncher.Game
                 int quota = int.TryParse(bq, out int q) && q > 0 ? q : 5;
                 plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Min(64, 2 * quota + 2));
             }
-            url.Append("?MaxPlayers=").Append(plan.PlayerSlots);
-            url.Append("?Lighting=").Append(p.Lighting == "Night" ? "Night" : "Day");
-            if (!string.IsNullOrEmpty(plan.GameAlias)) url.Append("?game=").Append(plan.GameAlias);
+            // The player's extra URL options (Advanced): each key once (the last one written), and they replace the
+            // launcher's value for the same key; the scenario always stays the launcher's.
+            string extraText = UrlSafe(p.ExtraUrlOptions, true);
+            if (extraText.Length != (p.ExtraUrlOptions ?? "").Trim().Length) plan.Warnings.Add("Extra URL options: spaces, quotes, | and ; were left out (they would break the open command).");
+            var extra = new List<KeyValuePair<string, string>>();
+            foreach (var part in extraText.Split(new[] { '?' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = part.IndexOf('=');
+                string key = eq < 0 ? part : part.Substring(0, eq);
+                if (key.Length == 0) continue;
+                if (key.Equals("Scenario", StringComparison.OrdinalIgnoreCase)) { plan.Warnings.Add("Extra URL options: Scenario is set by the map picked, so it was left out."); continue; }
+                int at = extra.FindIndex(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                var kv = new KeyValuePair<string, string>(key, eq < 0 ? null : part.Substring(eq + 1));
+                if (at >= 0) extra[at] = kv; else extra.Add(kv);
+            }
+            plan.ExtraOptionKeys = new HashSet<string>(extra.Select(x => x.Key), StringComparer.OrdinalIgnoreCase);
+            void Option(string key, string value)
+            {
+                if (plan.ExtraOptionKeys.Contains(key)) { plan.Warnings.Add("Extra URL options: " + key + " replaces the launcher's value (" + value + ")."); return; }
+                url.Append('?').Append(key).Append('=').Append(value);
+            }
+            Option("MaxPlayers", plan.PlayerSlots.ToString(CultureInfo.InvariantCulture));
+            Option("Lighting", p.Lighting == "Night" ? "Night" : "Day");
+            if (!string.IsNullOrEmpty(plan.GameAlias)) Option("game", plan.GameAlias);
             // bSoloGame stops AI teammates from joining (seen in the game), so it is left out when co-op has teammates.
-            if (state.Settings.SoloGameFlag && !wantsMates) url.Append("?bSoloGame=1");
+            if (state.Settings.SoloGameFlag && !wantsMates) Option("bSoloGame", "1");
             foreach (var kv in plan.Overrides)
             {
                 if (!UrlOptions.Contains(kv.Key)) continue;
                 var prop = db.Prop(kv.Key);
                 if (prop != null && prop.IsBool)
                 {
-                    if (IsTrue(kv.Value)) url.Append('?').Append(kv.Key).Append("=1");
+                    if (IsTrue(kv.Value)) Option(kv.Key, "1");
                 }
-                else url.Append('?').Append(kv.Key).Append('=').Append(kv.Value);
+                else Option(kv.Key, kv.Value);
             }
-            if (plan.Mutators.Count > 0) url.Append("?Mutators=").Append(string.Join(",", plan.Mutators));
-            string extra = UrlSafe(p.ExtraUrlOptions, true).Trim('?');
-            if (extra.Length != (p.ExtraUrlOptions ?? "").Trim().Trim('?').Length) plan.Warnings.Add("Extra URL options: spaces, quotes, | and ; were left out (they would break the open command).");
-            while (extra.Contains("??")) extra = extra.Replace("??", "?");
-            if (extra.Length > 0) url.Append('?').Append(extra);
+            if (plan.Mutators.Count > 0) Option("Mutators", string.Join(",", plan.Mutators));
+            foreach (var kv in extra) url.Append('?').Append(kv.Key).Append(kv.Value == null ? "" : "=" + kv.Value);
             plan.OpenCommand = url.ToString();
 
             // Game.ini sections (every mode the profile customises)
@@ -196,24 +225,26 @@ namespace SandstormModLauncher.Game
             plan.GameIniBlock = UeIni.Render(plan.IniSections);
             plan.RestartKey = RestartKeyFor(p, db);
 
-            // After-load commands
+            // After-load: game mode properties go over RCON (gamemodeproperty); cheats and the player's own lines need the console.
             if (state.Settings.ApplyLiveRules && cls != null)
                 foreach (var kv in plan.Overrides)
                 {
-                    // FriendlyBotQuota is also read at game start from Game.ini; sending it again does no harm.
-                    plan.AfterLoad.Add("AdminSetGamemodeProperty " + kv.Key + " " + kv.Value);
+                    // FriendlyBotQuota is also read at game start from Game.ini; setting it again does no harm.
+                    plan.LiveProperties.Add(new KeyValuePair<string, string>(kv.Key, kv.Value));
+                    plan.AfterLoad.Add("gamemodeproperty " + kv.Key + " " + kv.Value);
                 }
             if (plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var versusDifficulty))
             {
-                plan.AfterLoad.Add("EnableCheats");
-                plan.AfterLoad.Add("AIDifficulty " + versusDifficulty);
+                plan.ConsoleOnly.Add("EnableCheats");
+                plan.ConsoleOnly.Add("AIDifficulty " + versusDifficulty);
             }
-            else if (p.EnableCheatsAfterLoad) plan.AfterLoad.Add("EnableCheats");
+            else if (p.EnableCheatsAfterLoad) plan.ConsoleOnly.Add("EnableCheats");
             foreach (var line in (p.AfterLoadCommands ?? "").Split('\n'))
             {
                 string t = line.Trim();
-                if (t.Length > 0 && !t.StartsWith("//") && !t.StartsWith(";")) plan.AfterLoad.Add(t);
+                if (t.Length > 0 && !t.StartsWith("//") && !t.StartsWith(";")) plan.ConsoleOnly.Add(t);
             }
+            foreach (var c in plan.ConsoleOnly) plan.AfterLoad.Add("console: " + c);
             if (plan.Overrides.Count > 0 && cls == null)
                 plan.Warnings.Add("This scenario's game mode is not in the rules database, so rule changes are skipped.");
             return plan;
@@ -268,6 +299,10 @@ namespace SandstormModLauncher.Game
             var old = new HashSet<string>(earlier ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             return UeIni.MergeSections(current, plan.IniSections, (s, k) => IsManagedIniKey(db, s, k) || old.Contains(s + "\n" + k));
         }
+
+        /// <summary>Game.ini as a launch writes it: the plan merged in, and the launcher's [Rcon] section kept (also in Replace mode).</summary>
+        public static string GameIniForLaunch(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier, AppSettings settings) =>
+            RconSetup.Apply(MergeGameIni(current, plan, db, earlier), settings);
 
         /// <summary>The player's own extra Game.ini keys in a plan ("Section\nKey", array operators removed), remembered for the next launch.</summary>
         public static List<string> PlayerIniKeys(LaunchPlan plan, RulesDb db) =>
