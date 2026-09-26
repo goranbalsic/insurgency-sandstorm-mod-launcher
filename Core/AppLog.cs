@@ -40,8 +40,16 @@ namespace SandstormModLauncher.Core
         public static void Debug(string msg) => Write("DEBUG", msg, false);
         public static void Info(string msg) => Write("INFO ", msg, true);
         public static void Warn(string msg) => Write("WARN ", msg, true);
-        public static void Error(string msg, Exception ex = null) =>
+        public static void Error(string msg, Exception ex = null)
+        {
+            ErrorCount++;
+            LastError = msg + (ex != null ? " | " + ex.GetType().Name + ": " + ex.Message : "");
             Write("ERROR", msg + (ex != null ? " | " + ex.GetType().Name + ": " + ex.Message + Environment.NewLine + ex.StackTrace : ""), true);
+        }
+
+        /// <summary>Errors logged in this run (checked by the --ui-torture test).</summary>
+        public static int ErrorCount { get; private set; }
+        public static string LastError { get; private set; }
 
         private static void Write(string level, string msg, bool main)
         {

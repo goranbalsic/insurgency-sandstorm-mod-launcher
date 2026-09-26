@@ -52,7 +52,7 @@ namespace SandstormModLauncher.ViewModels
             try { CurrentPlan = LaunchPlanner.Build(Profile, State); }
             catch (Exception ex) { AppLog.Error("Could not build the launch plan", ex); CurrentPlan = null; }
             RaiseMany(nameof(PlanCommand), nameof(PlanIni), nameof(PlanAfterLoad), nameof(MapSummary), nameof(ModeSummary), nameof(SquadSummary),
-                      nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch), nameof(PlanError));
+                      nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch), nameof(PlanError), nameof(ActivePresetName));
             UpdateLaunchButton();
         }
 

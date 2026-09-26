@@ -102,7 +102,8 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 - `--probe-test out.txt shot1.png ...` checks the console detection against screenshots of the game
 - `--render folder` draws every page to PNG files without opening a window
 - `--data folder` keeps settings and logs in another folder (for testing)
-- `--cli command` works on the setup without a window: `status`, `presets`, `apply`, `set`, `mutators`, `plan`, `save`, `reset`, and `torture [steps] [seed]`, a random stress test that checks the whole setup logic after every step (see `Services/Cli.cs`)
+- `--cli command` works on the setup without a window: `status`, `presets`, `apply`, `set`, `mutators`, `plan`, `save`, `reset`, and `torture [steps] [seed]`, a random stress test that checks the whole setup logic after every step, including that what you set is what the game gets (see `Services/Cli.cs`)
+- `--ui-torture out.txt [steps] [seed]` drives the real window at random (maps, presets, rules, mutators, profiles, saved setups, text sizes) and checks after every step that the screen, the saved profile and the launch plan agree. Use it with `--data` and a copy of a data folder
 
 ## Releasing
 

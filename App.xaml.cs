@@ -94,6 +94,16 @@ namespace SandstormModLauncher
                 return;
             }
 
+            if (eArgs.Length >= 2 && eArgs[0] == "--ui-torture")
+            {
+                // --ui-torture out.txt [steps] [seed]: the main window driven at random, checked after every step (Services/UiTorture.cs).
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                int uiSteps = eArgs.Length > 2 && int.TryParse(eArgs[2], out int st) ? st : 300;
+                int uiSeed = eArgs.Length > 3 && int.TryParse(eArgs[3], out int sd) ? sd : 1;
+                RunUiTorture(eArgs[1], uiSteps, uiSeed);
+                return;
+            }
+
             if (eArgs.Length >= 2 && eArgs[0] == "--render")
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -237,6 +247,19 @@ namespace SandstormModLauncher
             try { await Services.LiveTest.Run(script, outFile); }
             catch (Exception ex) { File.AppendAllText(outFile, "\r\nLIVE TEST CRASHED: " + ex); }
             finally { Shutdown(); }
+        }
+
+        private async void RunUiTorture(string outFile, int steps, int seed)
+        {
+            var text = new System.Text.StringBuilder();
+            int code = 2;
+            try { code = await Services.UiTorture.Run(steps, seed, line => text.AppendLine(line)); }
+            catch (Exception ex) { text.AppendLine("UI TORTURE CRASHED: " + ex); }
+            finally
+            {
+                try { File.WriteAllText(outFile, text.ToString()); } catch { }
+                Shutdown(code);
+            }
         }
 
         /// <summary>

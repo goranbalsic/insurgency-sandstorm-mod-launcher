@@ -162,6 +162,7 @@ namespace SandstormModLauncher.ViewModels
         {
             string id = (customMutatorText ?? "").Trim();
             if (id.Length == 0) return;
+            if (!SetupEngine.IsValidMutatorId(id)) { ShowToast("A mutator ID has only letters, digits, _ . and - (no spaces)"); return; }
             if (State.FindMutator(id) == null && !State.Settings.CustomMutators.Contains(id, StringComparer.OrdinalIgnoreCase))
             {
                 State.Settings.CustomMutators.Add(id);

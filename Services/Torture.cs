@@ -40,7 +40,7 @@ namespace SandstormModLauncher.Services
 
             for (int i = 1; i <= steps; i++)
             {
-                int op = rnd.Next(14);
+                int op = rnd.Next(18);
                 string name = "";
                 try
                 {
@@ -149,6 +149,55 @@ namespace SandstormModLauncher.Services
                             if (NonSquad(p.Rules) != NonSquad(copy.Rules)) Fail(name + ": rules differ from applying only the second\n  " + NonSquad(p.Rules) + "\n  " + NonSquad(copy.Rules));
                             break;
                         }
+                        case 14:
+                        {
+                            // The versus "Fill teams with bots" switch (the Squad tab stores it for every versus mode).
+                            bool on = rnd.Next(2) == 0;
+                            name = "versus bots " + (on ? "on" : "off");
+                            var versus = db.Modes.Where(x => !x.Coop && x.Defaults.ContainsKey("bBots")).ToList();
+                            foreach (var m in versus) SetupEngine.SetRule(p, db, m.Cls, "bBots", on ? "True" : "False");
+                            foreach (var m in versus)
+                                if (LaunchPlanner.IsTrue(SetupEngine.Effective(p, db, m.Cls, "bBots")) != on) Fail(name + ": " + m.Cls + " bots are " + SetupEngine.Effective(p, db, m.Cls, "bBots"));
+                            break;
+                        }
+                        case 15:
+                            name = "mutators switch";
+                            p.MutatorsEnabled = !p.MutatorsEnabled;
+                            break;
+                        case 16:
+                        {
+                            // Advanced tab: extra URL options, mode override, extra Game.ini lines, after-load commands.
+                            string[] urls = { "", "", "?bFoo=1", "RoundTime=99", "a b?c", "??x=1??", " ?Game=Foo ", "x\"y|z;w", "\t?Tab=1" };
+                            string[] modes = { "", "", "", "Checkpoint", "Push Hardcore", "?x=1", "  " };
+                            p.ExtraUrlOptions = Pick(urls);
+                            p.GameModeOverride = Pick(modes);
+                            p.AfterLoadCommands = Pick(new[] { "", "slomo 1", "// comment\nstat fps\n;x\n\n", "ghost" });
+                            p.EnableCheatsAfterLoad = rnd.Next(2) == 0;
+                            p.CustomIniMode = Pick(new[] { "Off", "Append", "Replace" });
+                            var m = Pick(db.Modes);
+                            string key = Pick(m.Defaults.Keys.ToList());
+                            p.CustomIniText = Pick(new[] { "", "[/Script/Insurgency." + m.Cls + "]\n" + key + "=" + RandomValue(rnd, db.Prop(key), m.Defaults[key]) + "\n; note\n",
+                                                           "garbage without a section\n=\n[", "[/Script/Foo.Bar]\nX=1\n+Arr=a\n+Arr=b\n", "[]\n=1\n" });
+                            name = "advanced url=" + p.ExtraUrlOptions + " mode=" + p.GameModeOverride + " ini=" + p.CustomIniMode;
+                            break;
+                        }
+                        case 17:
+                        {
+                            // Profile names: every profile gets its own file, whatever the player types.
+                            name = "profile names";
+                            var store = new Store();
+                            string[] names = { "a/b", "a?b", "a:b", "CON", "con.json", "nul", "x.", "x", "X", " x ", "COM1", "", "   ", new string('n', 300), "Lone Wolf", "lone wolf", "ž č ć", "a|b", "a*b" };
+                            for (int k = 0; k < 12; k++)
+                            {
+                                string n = store.UniqueName(Pick(names));
+                                store.Profiles.Add(new Profile { Name = n });
+                            }
+                            var files = store.Profiles.Select(x => Store.ProfileFileName(x.Name)).ToList();
+                            if (files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count) Fail(name + ": two profiles share a file: " + string.Join(" | ", files));
+                            foreach (var fn in files)
+                                if (fn.Length == 0 || fn.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0 || fn.EndsWith(".") || fn.EndsWith(" ") || fn.Length > 80) Fail(name + ": bad file name " + fn);
+                            break;
+                        }
                         default:
                         {
                             // Squad presets never touch match rules or mutators.
@@ -168,7 +217,7 @@ namespace SandstormModLauncher.Services
                     step = i + " (" + name + ")";
                     Fail("EXCEPTION " + ex.GetType().Name + ": " + ex.Message + "\n" + ex.StackTrace);
                 }
-                string opName = new[] { "scenario", "conditions", "squad preset", "style", "official", "playlist", "set rule", "set rule", "unset rule", "mutators", "save+load", "reset", "match then match", "squad keeps match" }[op];
+                string opName = new[] { "scenario", "conditions", "squad preset", "style", "official", "playlist", "set rule", "set rule", "unset rule", "mutators", "save+load", "reset", "match then match", "squad keeps match", "versus bots", "mutators switch", "advanced", "profile names" }[op];
                 ops[opName] = ops.TryGetValue(opName, out var c) ? c + 1 : 1;
             }
             print("Torture: " + steps + " steps (seed " + seed + "): " + string.Join(", ", ops.OrderBy(o => o.Key).Select(o => o.Key + " " + o.Value)));
@@ -197,7 +246,7 @@ namespace SandstormModLauncher.Services
             foreach (var m in modes)
                 foreach (var key in pr.Owns.Where(k => m.Defaults.ContainsKey(k)))
                 {
-                    string want = pr.Rules.TryGetValue(m.Cls, out var map) && map.TryGetValue(key, out var v) ? v : db.DefaultValue(m.Cls, key);
+                    string want = pr.Rules.TryGetValue(m.Cls, out var map) && map.TryGetValue(key, out var v) ? v : SetupEngine.LauncherDefault(db, m.Cls, key);
                     string got = SetupEngine.Effective(p, db, m.Cls, key);
                     if (!LaunchPlanner.Same(got ?? "", want ?? "", db.Prop(key))) fail("squad " + pr.Name + ": " + m.Cls + "." + key + " is " + got + ", preset says " + want);
                 }
@@ -221,6 +270,7 @@ namespace SandstormModLauncher.Services
                 foreach (var kv in mode.Value)
                 {
                     var prop = db.Prop(kv.Key);
+                    if (!SetupEngine.MatchPresetSets(db, mode.Key, kv.Key, kv.Value)) continue;   // never turns versus bots off
                     string want = SetupEngine.NormalizeValue(prop, kv.Value);
                     if (want == null) { fail(pr.Name + ": its own value " + mode.Key + "." + kv.Key + "=" + kv.Value + " is not valid"); continue; }
                     string got = SetupEngine.Effective(p, db, mode.Key, kv.Key);
@@ -275,6 +325,7 @@ namespace SandstormModLauncher.Services
                         fail("versus with bots would wait for " + mp + " players");
                 }
                 LaunchPlanner.RestartKeyFor(p, db);
+                Honoured(p, state, plan, fail);
             }
 
             // Game.ini: the block renders and parses back the same; merging it into a messy Game.ini twice gives one result.
@@ -284,7 +335,7 @@ namespace SandstormModLauncher.Services
             {
                 var ps = parsed.FirstOrDefault(x => x.Name == s.Name);
                 if (ps == null) { fail("Game.ini section lost when parsed: " + s.Name); continue; }
-                foreach (var dup in s.Values.GroupBy(v => v.Key, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1)) fail("duplicate Game.ini key " + s.Name + " " + dup.Key);
+                foreach (var dup in s.Values.Where(v => !v.Key.StartsWith("+") && !v.Key.StartsWith(".")).GroupBy(v => v.Key, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1)) fail("duplicate Game.ini key " + s.Name + " " + dup.Key);
             }
             string messy = "[/Script/Engine.Engine]\r\nbSmoothFrameRate=True\r\n\r\n[/Script/Insurgency.INSCheckpointGameMode]\r\nFriendlyBotQuota=0\r\nFriendlyBotQuota=7\r\nSomethingElse=1\r\n; comment\r\n";
             Func<string, string, bool> managed = (sec, key) => LaunchPlanner.IsManagedIniKey(db, sec, key);
@@ -293,18 +344,85 @@ namespace SandstormModLauncher.Services
             if (once != twice) fail("merging Game.ini twice changed it again");
             if (!once.Contains("bSmoothFrameRate=True") || !once.Contains("SomethingElse=1")) fail("merging dropped lines the launcher does not own");
             foreach (var s in plan.IniSections)
-                foreach (var v in s.Values)
+                foreach (var v in s.Values.Where(x => !x.Key.StartsWith("+") && !x.Key.StartsWith(".")))
                 {
                     var sec = UeIni.Parse(once).FirstOrDefault(x => x.Name.Equals(s.Name, StringComparison.OrdinalIgnoreCase));
                     int count = sec?.Values.Count(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)) ?? 0;
                     if (count != 1) fail("after merging, " + s.Name + " " + v.Key + " appears " + count + " times");
                     else if (sec.Values.First(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)).Value != v.Value) fail("after merging, " + s.Name + " " + v.Key + " has the wrong value");
                 }
+            // Next launch with the extra lines switched off: none of the player's keys may stay behind.
+            var mine = LaunchPlanner.PlayerIniKeys(plan, db);
+            var without = Json.Deserialize<Profile>(Json.Serialize(p));
+            without.CustomIniMode = "Off";
+            var plan2 = LaunchPlanner.Build(without, state);
+            string launch1 = LaunchPlanner.MergeGameIni(messy, plan, db, null);
+            string launch2 = LaunchPlanner.MergeGameIni(launch1, plan2, db, mine);
+            var still = new HashSet<string>(plan2.IniSections.SelectMany(s => s.Values.Select(v => s.Name + "\n" + UeIni.KeyOf(v.Key + "="))), StringComparer.OrdinalIgnoreCase);
+            foreach (var sk in mine.Where(k => !still.Contains(k)))
+            {
+                int nl = sk.IndexOf('\n');
+                var sec2 = UeIni.Parse(launch2).FirstOrDefault(x => x.Name.Equals(sk.Substring(0, nl), StringComparison.OrdinalIgnoreCase));
+                if (sec2 != null && sec2.Values.Any(v => UeIni.KeyOf(v.Key + "=").Equals(sk.Substring(nl + 1), StringComparison.OrdinalIgnoreCase)))
+                    fail("the player's own Game.ini line " + sk.Replace("\n", " ") + " stayed after it was removed");
+            }
             if (!plan.IniSections.Any(s => s.Name.EndsWith("INSCheckpointGameMode") && s.Values.Any(v => v.Key == "FriendlyBotQuota")))
             {
                 var cp = UeIni.Parse(once).FirstOrDefault(x => x.Name.EndsWith("INSCheckpointGameMode"));
                 if (cp != null && cp.Values.Any(v => v.Key == "FriendlyBotQuota")) fail("an old FriendlyBotQuota the launcher owns was left in Game.ini");
             }
+        }
+
+        /// <summary>
+        /// What the player set is what the game gets: every setting of the played mode reaches the game with the value the
+        /// launcher shows (travel URL, Game.ini or after-load commands), apart from the documented adjustments that keep
+        /// an offline match playable.
+        /// </summary>
+        private static void Honoured(Profile p, AppState state, LaunchPlan plan, Action<string> fail)
+        {
+            var db = state.Rules;
+            var mode = plan.Mode;
+            if (mode == null) return;
+            string url = plan.OpenCommand ?? "";
+            bool versusBots = !mode.Coop && LaunchPlanner.IsTrue(SetupEngine.Effective(p, db, mode.Cls, "bBots"));
+            var custom = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.Equals(p.CustomIniMode ?? "Off", "Off", StringComparison.OrdinalIgnoreCase))
+                foreach (var sct in UeIni.Parse(p.CustomIniText ?? "")) foreach (var v in sct.Values) custom.Add(v.Key);
+            foreach (var key in mode.Defaults.Keys)
+            {
+                if (custom.Contains(key)) continue;
+                string want = SetupEngine.Effective(p, db, mode.Cls, key);
+                string got = plan.Overrides.TryGetValue(key, out var o) ? o : db.DefaultValue(mode.Cls, key);
+                var prop = db.Prop(key);
+                if (LaunchPlanner.Same(want ?? "", got ?? "", prop)) continue;
+                bool stored = SetupEngine.GetRule(p, mode.Cls, key) != null;
+                if (key == "BotQuota" && versusBots && int.TryParse(want, out var wq) && wq <= 0 && (got == "1" || got == "5")) continue;
+                if ((key == "MinimumPlayers" || key == "MinimumPlayersInProgress") && versusBots && !stored && got == "1") continue;
+                if (key == "bBots" && mode.Coop && !stored && LaunchPlanner.IsTrue(got)
+                    && int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var fb) && fb > 0) continue;
+                fail("the game would get " + mode.Cls + "." + key + "=" + got + " but the setup says " + want);
+            }
+            // Each change reaches the game.
+            var section = plan.IniSections.FirstOrDefault(sct => sct.Name == "/Script/Insurgency." + mode.Cls);
+            foreach (var kv in plan.Overrides)
+            {
+                if (custom.Contains(kv.Key)) continue;
+                var prop = db.Prop(kv.Key);
+                bool isBool = prop != null && prop.IsBool;
+                bool inUrl = LaunchPlanner.UrlOptions.Contains(kv.Key) && url.Contains("?" + kv.Key + "=" + (isBool ? "1" : kv.Value)) && (!isBool || LaunchPlanner.IsTrue(kv.Value));
+                bool inIni = section != null && section.Values.Any(v => v.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) && LaunchPlanner.Same(v.Value, kv.Value, prop));
+                if (!inUrl && !inIni) fail("change " + kv.Key + "=" + kv.Value + " is neither in the travel URL nor in Game.ini");
+                if (state.Settings.ApplyLiveRules && !plan.AfterLoad.Contains("AdminSetGamemodeProperty " + kv.Key + " " + kv.Value)) fail("change " + kv.Key + " missing from the after-load commands");
+            }
+            if (!mode.Coop && mode.Defaults.ContainsKey("bBots") && !versusBots && url.Contains("?bBots=1")) fail("versus bots are off but the travel URL turns them on");
+            string vd = SetupEngine.GetRule(p, "*", "AIDifficulty");
+            if (!mode.Coop && vd != null && !plan.AfterLoad.Contains("AIDifficulty " + vd)) fail("versus AI difficulty " + vd + " is not sent");
+            string muts = p.MutatorsEnabled && p.Mutators.Count > 0 ? "?Mutators=" + string.Join(",", p.Mutators) : null;
+            if (muts != null && !url.Contains(muts)) fail("travel URL misses the mutators " + muts);
+            if (muts == null && url.Contains("?Mutators=")) fail("mutators are off or empty but the travel URL has some");
+            if (!url.Contains("?Lighting=" + p.Lighting)) fail("travel URL has the wrong lighting");
+            bool hc = p.Hardcore && plan.Scenario?.GameModeClass == "INSCheckpointGameMode" && LaunchPlanner.UrlSafe(p.GameModeOverride, false).Length == 0;
+            if (hc != url.Contains("?game=CheckpointHardcore")) fail("hardcore is " + hc + " but the travel URL says otherwise");
         }
 
         // ------------------------------------------------------------------ canonical text for comparing setups
