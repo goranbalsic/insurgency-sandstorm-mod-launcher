@@ -154,7 +154,29 @@ namespace SandstormModLauncher.ViewModels
             if (!State.Install.IsValid) { Page = "Settings"; await ShowMessage("Game not found", "Set the Insurgency: Sandstorm folder in Settings first."); return; }
             SaveNow();
 
-            var options = new LaunchOptions { ForceRestart = forceRestart };
+            var options = new LaunchOptions
+            {
+                ForceRestart = forceRestart,
+                AllowConsole = State.Settings.AllowConsoleTyping,
+                // The player launched from here: once the match is ready, the game comes to the front.
+                BringToFront = Application.Current?.MainWindow?.IsActive == true,
+            };
+            // A game started before the launcher set up RCON cannot be reached without typing into it.
+            if (!forceRestart && Monitor.IsRunning)
+            {
+                string problem = await Launcher.RconProblem();   // null for a reachable or merely busy game
+                if (problem != null)
+                {
+                    AppLog.Info("RCON not reachable before launch: " + problem);
+                    string answer = await Ask("Restart the game?",
+                        "The launcher cannot reach the running game directly (RCON), probably because the game was started before the launcher set it up. " +
+                        "Restarting the game once fixes that for good; after that, maps load without the launcher typing anything." +
+                        (options.AllowConsole ? "\n\nOr type the command into the game console this time (the older way, needs the game in front)." : ""),
+                        "Restart and launch", options.AllowConsole ? "Type into the console" : "Cancel", options.AllowConsole ? "Cancel" : null);
+                    if (answer == null || answer == "Cancel") return;
+                    if (answer == "Restart and launch") { options.ForceRestart = true; forceRestart = true; }
+                }
+            }
             if (!forceRestart && Launcher.NeedsRestart(plan))
             {
                 switch (State.Settings.RestartPolicy)

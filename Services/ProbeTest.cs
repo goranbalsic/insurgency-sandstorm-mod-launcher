@@ -72,6 +72,16 @@ namespace SandstormModLauncher.Services
                     var longText = Strip(Text(Bar(full, w, h, lineH, 0, true), w, h, lineH, 1.0));
                     check = ConsoleProbe.TextIn(opaque, longText, bar, out px);
                     Check("long command across the whole line is seen", check == TextCheck.Appeared, check + " " + px + " px");
+
+                    // The line right before Enter: recognised against the picture with the command on it.
+                    Check("line with the command is still there", ConsoleProbe.LineStillThere(typed, typed, bar), "");
+                    var hinted = Strip(Box(typedPx, w, h, 10, h - lineH - 26, 120, 30, 30));   // suggestion box over the left end of the edge
+                    Check("line with a suggestion box over its edge is still there", ConsoleProbe.LineStillThere(typed, hinted, bar), "");
+                    Check("closed console is not the line", !ConsoleProbe.LineStillThere(typed, before, bar), "");
+                    Check("long command line is still there", ConsoleProbe.LineStillThere(longText, longText, bar), "");
+                    var nightTyped = Strip(Text(Bar(night, w, h, lineH, 0, true), w, h, lineH, 0.55));
+                    Check("night map: closed console is not the line", !ConsoleProbe.LineStillThere(nightTyped, Strip(night), bar), "");
+                    Check("night map: black bottom without the edge is not the line", !ConsoleProbe.LineStillThere(nightTyped, Strip(Box(night, w, h, 0, h - lineH, w, lineH, 8)), bar), "");
                 }
             }
             sb.AppendLine($"{pass} passed, {fail} failed");
@@ -88,6 +98,20 @@ namespace SandstormModLauncher.Services
                 string why = "cannot read";
                 var bar = f == null ? null : ConsoleProbe.FindOpenConsole(f, out why);
                 sb.AppendLine(Path.GetFileName(png) + ": " + (bar != null ? "OPEN " + (ConsoleProbe.LineLooksEmpty(f, bar) ? "empty line " : "text on line ") : "closed ") + why);
+            }
+            File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
+        }
+
+        /// <summary>--probe-line out.txt top bottom ref.png now.png...: is the console line of ref (rows top-bottom) still showing in each picture?</summary>
+        public static void LineCheck(string outFile, int top, int bottom, string refPng, IEnumerable<string> pngs)
+        {
+            var sb = new StringBuilder();
+            var r = LoadStrip(refPng);
+            var bar = new ConsoleBar { Top = top, Bottom = bottom };
+            foreach (var png in pngs)
+            {
+                var f = LoadStrip(png);
+                sb.AppendLine(Path.GetFileName(png) + ": " + (f == null || r == null ? "cannot read" : ConsoleProbe.LineStillThere(r, f, bar) ? "LINE SHOWING" : "no line"));
             }
             File.WriteAllText(outFile, sb.ToString(), Encoding.UTF8);
         }

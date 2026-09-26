@@ -28,6 +28,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand ClearCacheCommand { get; private set; }
         public ICommand RemoveIniRulesCommand { get; private set; }
         public ICommand RefreshConsoleKeyCommand { get; private set; }
+        public ICommand CheckRconCommand { get; private set; }
         public ICommand AddCustomMapCommand { get; private set; }
         public ICommand EditCustomMapCommand { get; private set; }
         public ICommand SaveCustomMapCommand { get; private set; }
@@ -56,6 +57,7 @@ namespace SandstormModLauncher.ViewModels
             ClearCacheCommand = new AsyncCommand(ClearCache);
             RemoveIniRulesCommand = new AsyncCommand(RemoveIniRules);
             RefreshConsoleKeyCommand = new RelayCommand(() => { RefreshConsoleKeyStatus(); RefreshKeyBackups(); });
+            CheckRconCommand = new AsyncCommand(() => RefreshRconStatus(true));
             RestoreKeyBindingsCommand = new AsyncCommand(RestoreKeyBindings, () => SelectedKeyBackup != null);
             DismissKeyWarningCommand = new RelayCommand(() => { KeyBindings.ClearWarning(); KeyBindingsWarning = null; });
             SaveReportCommand = new AsyncCommand(SaveReport);
@@ -71,8 +73,8 @@ namespace SandstormModLauncher.ViewModels
                 "2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n" +
                 "3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n" +
                 "4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
-                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
-                "6. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
+                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Only cheats and the versus AI difficulty are typed into the game console (Settings can turn that off).\n\n" +
+                "6. PLAY > Live works during a match: restart rounds and change rules directly, plus cheat buttons (clock, bots, god mode) that use the game console.\n\n" +
                 "Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC."));
         }
 
@@ -226,6 +228,48 @@ namespace SandstormModLauncher.ViewModels
         public string RestartPolicy { get => State.Settings.RestartPolicy ?? "Ask"; set => SetSetting(() => State.Settings.RestartPolicy = value ?? "Ask"); }
         public string LaunchArgs { get => State.Settings.LaunchArgs ?? ""; set => SetSetting(() => State.Settings.LaunchArgs = value ?? ""); }
         public int StartTimeoutSec { get => State.Settings.StartTimeoutSec; set => SetSetting(() => State.Settings.StartTimeoutSec = Math.Max(60, Math.Min(900, value))); }
+
+        // ------------------------------------------------------------------ game connection (RCON)
+
+        private string rconStatus = "Checking...", rconState = "Off";
+        public string RconStatus { get => rconStatus; set => Set(ref rconStatus, value); }
+        /// <summary>Ready (connected), Bad (the game runs but cannot be reached), Off (the game is not running), Busy (checking).</summary>
+        public string RconState { get => rconState; set => Set(ref rconState, value); }
+        public string RconAddress => RconSetup.Address + ":" + State.Settings.RconPort;
+        public bool AllowConsoleTyping { get => State.Settings.AllowConsoleTyping; set => SetSetting(() => State.Settings.AllowConsoleTyping = value); }
+
+        private bool checkingRcon;
+
+        /// <summary>Checks whether the game answers over RCON and says so on the Settings page.</summary>
+        public async Task RefreshRconStatus(bool announce = false)
+        {
+            if (checkingRcon || Rcon == null) return;
+            checkingRcon = true;
+            try
+            {
+                Raise(nameof(RconAddress));
+                if (!GameProcessRunning)
+                {
+                    bool set = !AppPaths.TestRun && await Task.Run(() => RconSetup.GameIniHasIt(State.Settings));
+                    RconState = "Off";
+                    RconStatus = set
+                        ? "The game is not running. It opens its RCON connection when it starts (set up in Game.ini), however you start it."
+                        : "The game is not running. RCON is set up the next time the launcher starts the game.";
+                }
+                else
+                {
+                    RconState = "Busy";
+                    RconStatus = "Checking the connection...";
+                    string problem = await Task.Run(() => Rcon.Probe());
+                    RconState = problem == null ? "Ready" : "Bad";
+                    RconStatus = problem == null
+                        ? "Connected. Maps, rules and round restarts go straight to the game; nothing is typed and the game can stay in the background."
+                        : "The game does not answer on RCON (" + problem + "). It was probably started before the launcher set it up: close it and launch from here once.";
+                }
+                if (announce) ShowToast(RconState == "Ready" ? "Connected to the game" : RconState == "Bad" ? "The game does not answer on RCON" : "The game is not running");
+            }
+            finally { checkingRcon = false; }
+        }
 
         // ------------------------------------------------------------------ console key
 

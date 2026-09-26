@@ -1,5 +1,14 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.6.0**
+
+- Launching no longer types into the game. The launcher now talks to the game through its own remote console (RCON, the one server admins use), on this PC only (127.0.0.1) with a random password. Maps load and rules are set without any key presses, the game can stay in the background, and the game confirms every step. This fixes the command that sometimes stayed in the console until you pressed Enter yourself, and the focus problems around it.
+- Rules changed in a running match are set over RCON too, and the game answers with each new value. The Live tab's round restarts, live rule changes, "Read current values" and "Count bots" work the same way.
+- Cheats and the versus AI difficulty still need the game's console (the game takes them from nowhere else). That typing is safer now: every key press is checked on screen before the next one, Enter is only pressed on a line that is verified, and the console is recognised even when the game's suggestion box covers part of it (the cause of the failures right after a map loaded). Settings can turn all typing off.
+- New in Settings: "Game connection (RCON)" shows whether the launcher reaches the game, with a Check button. A game started before this update is offered a one-time restart.
+- Extra URL options (Advanced) now replace the launcher's value for the same key instead of sending it twice.
+- The game is closed over RCON when the launcher needs to restart it.
+
 **Changes in 1.5.1**
 
 - Fixed: in versus, "Fill teams with bots" could not be turned off.

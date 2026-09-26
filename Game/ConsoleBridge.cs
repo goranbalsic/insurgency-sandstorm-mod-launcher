@@ -224,17 +224,18 @@ namespace SandstormModLauncher.Game
                 try
                 {
                     Exception error = null;
-                    string trace = null;
+                    var steps = new StringBuilder();
                     await Task.Run(() =>
                     {
-                        try { trace = Deliver(id, commandLine, plan, cfg); }
+                        try { Deliver(id, commandLine, plan, cfg, steps); }
                         catch (Exception ex) { error = ex; }
                     }).ConfigureAwait(false);
+                    string trace = steps.ToString();
                     if (error != null)
                     {
                         result.Detail = error.Message;
                         result.NothingTyped = (error as ConsoleSendException)?.NothingTyped ?? false;
-                        AppLog.Warn($"Console #{id} [{plan.KeyName}, {plan.Layout}] failed: {error.Message} | {shown}");
+                        AppLog.Warn($"Console #{id} [{plan.KeyName}, {plan.Layout}] failed: {error.Message} | {shown} ({trace})");
                         return result;
                     }
                     result.Sent = true;
@@ -376,12 +377,11 @@ namespace SandstormModLauncher.Game
             catch { }
         }
 
-        /// <summary>Sends one line. Throws ConsoleSendException (with what was and was not sent) on any doubt.</summary>
-        private string Deliver(int id, string commandLine, ConsoleKeyPlan plan, AppSettings cfg)
+        /// <summary>Sends one line. Throws ConsoleSendException (with what was and was not sent) on any doubt. The steps go to <paramref name="log"/>.</summary>
+        private string Deliver(int id, string commandLine, ConsoleKeyPlan plan, AppSettings cfg, StringBuilder log)
         {
             IntPtr hwnd = monitor.Window;
             var input = new GameInput(hwnd) { KeyDelayMs = Math.Max(30, cfg.KeyDelayMs) };
-            var log = new StringBuilder();
             var total = Stopwatch.StartNew();
             void Step(string s) => log.Append(log.Length == 0 ? "" : "; ").Append(total.ElapsedMilliseconds).Append("ms ").Append(s);
 
@@ -488,7 +488,18 @@ namespace SandstormModLauncher.Game
                         Thread.Sleep(60);
                         if (HeldKey() != 0) { WaitForKeysReleased(1500, true); input.TapRepeat(VK_BACK, 30); }
                         input.Chord(VK_CONTROL, VK_V);
-                        result = WaitForText(hwnd, emptyLine, bar, 900, out shown, out px);
+                        result = WaitForText(hwnd, emptyLine, bar, 2500, out shown, out px);
+                        if (result == TextCheck.None)
+                        {
+                            // A busy game can take a moment to draw the line; paste once more only onto a line that is still empty.
+                            var f = Grab(hwnd);
+                            if (ConsoleProbe.BarStillThere(opened, f, bar) && ConsoleProbe.TextIn(emptyLine, f, bar, out _) == TextCheck.None)
+                            {
+                                input.Chord(VK_CONTROL, VK_V);
+                                result = WaitForText(hwnd, emptyLine, bar, 2500, out shown, out px);
+                                Step("pasted again");
+                            }
+                        }
                     }
                     finally
                     {
@@ -496,7 +507,7 @@ namespace SandstormModLauncher.Game
                     }
                     Step("pasted: " + result + " (" + px + " px)");
                 }
-                if (result == TextCheck.None)
+                else
                 {
                     var f = Grab(hwnd);
                     if (ConsoleProbe.BarStillThere(opened, f, bar) && ConsoleProbe.TextIn(emptyLine, f, bar, out _) == TextCheck.None)
@@ -536,33 +547,34 @@ namespace SandstormModLauncher.Game
             // instead of running the line. The console takes the keyboard whenever it opens, so cycle it
             // (typing -> big console -> closed -> typing, one quick key press each) right before Enter,
             // and check the line is still there.
+            // Every press has to show on screen before the next one: a busy game that takes the keys late must not
+            // leave the console closed while Enter goes to a menu button. Any doubt stops here, without Enter.
             bool reopened = false;
-            for (int press = 0; press < 5 && !reopened; press++)
+            string cycle = null;
+            // The line is recognised by comparing its rows with the picture taken with the command on it (menus, hints
+            // and the console's own suggestion box drawn around it do not matter), or on its own.
+            Frame lineRef = typed;
+            ConsoleBar lineBar = bar;
+            input.Tap(openVk);                                   // typing -> big console: the line leaves the bottom edge
+            if (!WaitForLine(hwnd, lineRef, lineBar, false, 2000, out _)) cycle = "the console line did not change after the first press";
+            else
             {
-                input.Tap(openVk);
-                Frame f = null;
-                ConsoleBar now = null;
-                var wait = Stopwatch.StartNew();
-                // First press: wait for the line to go (big console). Second: the console closes, which looks the
-                // same at the bottom edge, so only a short look. After that: wait for the line to come back.
-                bool wantOpen = press > 0;
-                int timeout = press == 0 ? 500 : press == 1 ? 90 : 900;
-                do
+                input.Tap(openVk);                               // big console -> closed (looks the same at the bottom edge)
+                Thread.Sleep(250);
+                if (LineShowing(Grab(hwnd), lineRef, lineBar)) cycle = "the console line came back too early";
+                else
                 {
-                    Thread.Sleep(30);
-                    f = Grab(hwnd);
-                    now = ConsoleProbe.FindOpenConsole(f, out _);
-                    if ((now != null) == wantOpen) break;
+                    input.Tap(openVk);                           // closed -> typing: the line comes back, with the command
+                    if (!WaitForLine(hwnd, lineRef, lineBar, true, 2000, out var f)) cycle = "the console line did not open again";
+                    else { reopened = true; opened = f; }
                 }
-                while (wait.ElapsedMilliseconds < timeout);
-                if (!wantOpen || now == null) continue;  // the next press moves the cycle on
-                reopened = true;
-                bar = now;
-                opened = f;
+            }
+            if (reopened)
+            {
                 Thread.Sleep(60);
                 var back = Grab(hwnd);
                 double kept = ConsoleProbe.TextRemaining(empty, typed, back, bar);
-                Step("console opened again for Enter after " + (press + 1) + " key presses, line kept " + kept.ToString("0.00"));
+                Step("console opened again for Enter, line kept " + kept.ToString("0.00"));
                 if (kept < 0.8)
                 {
                     // The game cleared the line when it closed: clear leftovers and put the command back.
@@ -582,8 +594,9 @@ namespace SandstormModLauncher.Game
             }
             if (!reopened)
             {
+                Step("stopped before Enter: " + cycle);
                 SaveShots(id, "reopen-failed", before, opened, typed, Grab(hwnd));
-                throw new ConsoleSendException("The console could not be opened again right before Enter, so Enter was not pressed. Click once into the game and try again.", false);
+                throw new ConsoleSendException("The game did not follow the console key presses right before Enter (" + cycle + "), so Enter was not pressed. The command may still be in the game's console: press Enter there.", false);
             }
             var pre = Grab(hwnd);
             double keep = ConsoleProbe.TextRemaining(empty, typed, pre, bar);
@@ -634,6 +647,31 @@ namespace SandstormModLauncher.Game
                 Step("enter ignored; line cleared");
             }
             throw new ConsoleSendException("The game did not take the Enter key. The console line was cleared so nothing is left typed in it.", false);
+        }
+
+        /// <summary>True when the one-line console shows at the bottom edge: its rows look as they did with the command on them, or it is recognised on its own.</summary>
+        private static bool LineShowing(Frame f, Frame lineRef, ConsoleBar bar) =>
+            f != null && (ConsoleProbe.LineStillThere(lineRef, f, bar) || ConsoleProbe.FindOpenConsole(f, out _) != null);
+
+        /// <summary>Waits until the one-line console shows (open = true) or is gone (false), seen in two pictures in a row.</summary>
+        private static bool WaitForLine(IntPtr hwnd, Frame lineRef, ConsoleBar bar, bool open, int timeoutMs, out Frame frame)
+        {
+            var sw = Stopwatch.StartNew();
+            frame = null;
+            int inRow = 0;
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                Thread.Sleep(30);
+                var f = Grab(hwnd);
+                if (f == null) continue;
+                if (LineShowing(f, lineRef, bar) == open)
+                {
+                    frame = f;
+                    if (++inRow >= 2) return true;
+                }
+                else inRow = 0;
+            }
+            return false;
         }
 
         private static TextCheck WaitForText(IntPtr hwnd, Frame empty, ConsoleBar bar, int timeoutMs, out Frame typed, out int textPixels)

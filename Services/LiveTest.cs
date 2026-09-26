@@ -22,7 +22,10 @@ namespace SandstormModLauncher.Services
     ///   waitround [seconds]                                        wait for the round to be active
     ///   count [label]                                              count players and bots per team
     ///   key &lt;F1|Enter|...&gt;                                         press one key in the game (only when it is in front)
-    ///   quit                                                       close the game
+    ///   rcon &lt;command&gt;                                             one RCON command, the reply is logged
+    ///   prop &lt;Name&gt; [value] [expect=value]                         game mode property over RCON (FAIL when not as expected)
+    ///   quit                                                       close the game (over RCON)
+    /// launch takes "console" to allow typing into the game console; without it the launch must work over RCON alone.
     /// </summary>
     public static class LiveTest
     {
@@ -47,7 +50,8 @@ namespace SandstormModLauncher.Services
             state.Settings.RestartPolicy = "Always";
             var monitor = new GameMonitor();
             var console = new ConsoleBridge(monitor, () => state.Settings, () => state.Official);
-            var launcher = new LaunchService(state, monitor, console);
+            var rcon = new GameRcon(() => state.Settings);
+            var launcher = new LaunchService(state, monitor, console, rcon);
             string gameIni = GameInstall.GameIniPath;
             string savedIni = File.Exists(gameIni) ? File.ReadAllText(gameIni) : null;
             Out("Game.ini saved for restore (" + (savedIni?.Length ?? 0) + " chars)");
@@ -64,7 +68,7 @@ namespace SandstormModLauncher.Services
                     {
                         switch (cmd.ToLowerInvariant())
                         {
-                            case "launch": await Launch(arg, state, launcher, Out); break;
+                            case "launch": await Launch(arg, state, launcher, rcon, Out); break;
                             case "console":
                             {
                                 var res = await console.Run(arg, CancellationToken.None, null, TimeSpan.FromSeconds(3));
@@ -83,7 +87,29 @@ namespace SandstormModLauncher.Services
                                 Out("  round state: " + (monitor.RoundState ?? "none") + ", phase " + monitor.Phase);
                                 break;
                             }
-                            case "count": await Count(console, arg, Out); break;
+                            case "count": Count(rcon, arg, Out); break;
+                            case "rcon":
+                            {
+                                var replies = rcon.Run(arg);
+                                foreach (var l in replies[0].Replace("\r", "").Split('\n').Where(l => l.Trim().Length > 0).Take(40))
+                                    Out("  | " + (LogSanitizer.Clean(l) ?? "<hidden>"));
+                                break;
+                            }
+                            case "prop":
+                            {
+                                var w = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                string expect = w.FirstOrDefault(x => x.StartsWith("expect=", StringComparison.Ordinal))?.Substring(7);
+                                var parts = w.Where(x => !x.StartsWith("expect=", StringComparison.Ordinal)).ToList();
+                                if (parts.Count >= 2)
+                                {
+                                    var failed = rcon.SetProperties(new[] { new KeyValuePair<string, string>(parts[0], parts[1]) });
+                                    Out(failed.Count == 0 ? "  set " + parts[0] + " = " + parts[1] : "  FAIL set " + parts[0] + ": " + failed.Values.First());
+                                }
+                                var values = rcon.ReadProperties(parts[0], out var modeCls);
+                                string now = values.TryGetValue(parts[0], out var v) ? v : "(none)";
+                                Out("  " + modeCls + "." + parts[0] + " = " + now + (expect != null ? (now == expect ? "  (as expected)" : "  FAIL expected " + expect) : ""));
+                                break;
+                            }
                             case "key":
                             {
                                 var input = new GameInput(monitor.Window);
@@ -119,15 +145,18 @@ namespace SandstormModLauncher.Services
             }
         }
 
-        private static async Task Launch(string arg, AppState state, LaunchService launcher, Action<string> Out)
+        private static async Task Launch(string arg, AppState state, LaunchService launcher, GameRcon rcon, Action<string> Out)
         {
             var parts = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            bool allowConsole = parts.Contains("console");
             var p = new Profile { Name = "LiveTest", ScenarioId = parts[0], MaxPlayers = 8, Lighting = "Day", MutatorsEnabled = false };
             state.Settings.SoloGameFlag = !parts.Contains("nosolo");
             foreach (var kv in parts.Skip(1))
             {
                 if (kv == "night") { p.Lighting = "Night"; continue; }
-                if (kv == "nosolo") continue;
+                if (kv == "nosolo" || kv == "console") continue;
+                if (kv.StartsWith("mutators=")) { p.Mutators = kv.Substring(9).Split(',').ToList(); p.MutatorsEnabled = true; continue; }
+                if (kv.StartsWith("*.")) { var gv = kv.Substring(2).Split('='); if (!p.Rules.TryGetValue("*", out var g)) p.Rules["*"] = g = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); g[gv[0]] = gv[1]; continue; }
                 if (kv == "hardcore") { p.Hardcore = true; continue; }
                 if (kv.StartsWith("slots=")) { p.MaxPlayers = int.Parse(kv.Substring(6)); continue; }
                 int dot = kv.IndexOf('.'), eq = kv.IndexOf('=');
@@ -142,27 +171,19 @@ namespace SandstormModLauncher.Services
             Out("  plan: " + plan.OpenCommand + (plan.Error != null ? " ERROR " + plan.Error : ""));
             if (plan.GameIniBlock.Length > 0) Out("  ini:\r\n" + plan.GameIniBlock);
             var progress = new Progress<LaunchUpdate>(u => { if (u.State != StepState.Active) Out("  step " + (u.Step + 1) + " " + u.State + ": " + u.Detail); });
-            var report = await launcher.Run(plan, new LaunchOptions { RestartIfNeeded = true }, progress, CancellationToken.None);
+            if (plan.LiveProperties.Count > 0) Out("  after load (RCON): " + string.Join(", ", plan.LiveProperties.Select(kv => kv.Key + "=" + kv.Value)));
+            if (plan.ConsoleOnly.Count > 0) Out("  after load (console): " + string.Join(" | ", plan.ConsoleOnly));
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var report = await launcher.Run(plan, new LaunchOptions { RestartIfNeeded = true, AllowConsole = allowConsole, BringToFront = false }, progress, CancellationToken.None);
+            Out("  took " + (int)sw.Elapsed.TotalSeconds + " s");
             Out("  launch " + (report.Success ? "OK" : "FAILED: " + report.Message));
             foreach (var w in report.Warnings) Out("  warning: " + w);
         }
 
-        private static async Task Count(ConsoleBridge console, string label, Action<string> Out)
+        private static void Count(GameRcon rcon, string label, Action<string> Out)
         {
-            var res = await console.Run("getall INSPlayerState TeamId | getall INSPlayerState bIsABot", CancellationToken.None, null, TimeSpan.FromSeconds(3));
-            var teams = new Dictionary<string, string>();
-            var bots = new Dictionary<string, bool>();
-            foreach (var l in res.Lines)
-            {
-                var t = Regex.Match(l, @"(INSPlayerState_\w+)\.TeamId = (\d+)");
-                if (t.Success) teams[t.Groups[1].Value] = t.Groups[2].Value;
-                var b = Regex.Match(l, @"(INSPlayerState_\w+)\.bIsABot = (True|False)");
-                if (b.Success) bots[b.Groups[1].Value] = b.Groups[2].Value == "True";
-            }
-            if (!res.Sent) { Out("  count NOT SENT: " + res.Detail); return; }
-            var summary = teams.GroupBy(kv => kv.Value).OrderBy(g => g.Key)
-                .Select(g => "team " + g.Key + ": " + g.Count(kv => bots.TryGetValue(kv.Key, out var x) && !x) + " human, " + g.Count(kv => bots.TryGetValue(kv.Key, out var x) && x) + " bots");
-            Out("  COUNT " + label + ": " + (teams.Count == 0 ? "no player states" : string.Join(" | ", summary)));
+            var teams = rcon.CountPlayers();
+            Out("  COUNT " + label + ": " + (teams.Count == 0 ? "no player states" : string.Join(" | ", teams.Select(t => "team " + t.Key + ": " + t.Value.humans + " human, " + t.Value.bots + " bots"))));
         }
     }
 }

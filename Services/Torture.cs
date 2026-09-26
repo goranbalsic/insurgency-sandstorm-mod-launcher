@@ -351,6 +351,23 @@ namespace SandstormModLauncher.Services
                     if (count != 1) fail("after merging, " + s.Name + " " + v.Key + " appears " + count + " times");
                     else if (sec.Values.First(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)).Value != v.Value) fail("after merging, " + s.Name + " " + v.Key + " has the wrong value");
                 }
+            // The launcher's RCON section: exactly once, with the launcher's values, in every mode (Replace too), nothing else lost.
+            string launch = LaunchPlanner.GameIniForLaunch(messy, plan, db, null, state.Settings);
+            string again = LaunchPlanner.GameIniForLaunch(launch, plan, db, null, state.Settings);
+            if (launch != again) fail("writing Game.ini for a launch twice changed it again");
+            var rconSecs = UeIni.Parse(launch).Where(x => x.Name.Equals(RconSetup.Section, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (rconSecs.Count != 1) fail("Game.ini has " + rconSecs.Count + " [Rcon] sections");
+            else
+            {
+                foreach (var v in RconSetup.IniSection(state.Settings).Values)
+                    if (rconSecs[0].Values.Count(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)) != 1 || rconSecs[0].Values.First(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)).Value != v.Value)
+                        fail("[Rcon] " + v.Key + " is not the launcher's value");
+                if (rconSecs[0].Values.Any(x => x.Key == "ListenAddressOverride" && x.Value != "127.0.0.1") || rconSecs[0].Values.Any(x => x.Key == "bUseBroadcastAddress" && x.Value != "False"))
+                    fail("RCON would listen beyond this PC");
+            }
+            if (!string.Equals(p.CustomIniMode ?? "Off", "Replace", StringComparison.OrdinalIgnoreCase) && (!launch.Contains("bSmoothFrameRate=True") || !launch.Contains("SomethingElse=1")))
+                fail("the RCON section cost lines the launcher does not own");
+
             // Next launch with the extra lines switched off: none of the player's keys may stay behind.
             var mine = LaunchPlanner.PlayerIniKeys(plan, db);
             var without = Json.Deserialize<Profile>(Json.Serialize(p));
@@ -388,6 +405,8 @@ namespace SandstormModLauncher.Services
             var custom = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (!string.Equals(p.CustomIniMode ?? "Off", "Off", StringComparison.OrdinalIgnoreCase))
                 foreach (var sct in UeIni.Parse(p.CustomIniText ?? "")) foreach (var v in sct.Values) custom.Add(v.Key);
+            // The player's own extra URL options replace the launcher's value for their keys.
+            foreach (var k in plan.ExtraOptionKeys) custom.Add(k);
             foreach (var key in mode.Defaults.Keys)
             {
                 if (custom.Contains(key)) continue;
@@ -412,17 +431,29 @@ namespace SandstormModLauncher.Services
                 bool inUrl = LaunchPlanner.UrlOptions.Contains(kv.Key) && url.Contains("?" + kv.Key + "=" + (isBool ? "1" : kv.Value)) && (!isBool || LaunchPlanner.IsTrue(kv.Value));
                 bool inIni = section != null && section.Values.Any(v => v.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) && LaunchPlanner.Same(v.Value, kv.Value, prop));
                 if (!inUrl && !inIni) fail("change " + kv.Key + "=" + kv.Value + " is neither in the travel URL nor in Game.ini");
-                if (state.Settings.ApplyLiveRules && !plan.AfterLoad.Contains("AdminSetGamemodeProperty " + kv.Key + " " + kv.Value)) fail("change " + kv.Key + " missing from the after-load commands");
+                if (state.Settings.ApplyLiveRules && !plan.LiveProperties.Any(x => x.Key == kv.Key && x.Value == kv.Value)) fail("change " + kv.Key + " missing from the after-load properties");
             }
             if (!mode.Coop && mode.Defaults.ContainsKey("bBots") && !versusBots && url.Contains("?bBots=1")) fail("versus bots are off but the travel URL turns them on");
             string vd = SetupEngine.GetRule(p, "*", "AIDifficulty");
-            if (!mode.Coop && vd != null && !plan.AfterLoad.Contains("AIDifficulty " + vd)) fail("versus AI difficulty " + vd + " is not sent");
+            if (!mode.Coop && vd != null && !plan.ConsoleOnly.Contains("AIDifficulty " + vd)) fail("versus AI difficulty " + vd + " is not sent");
+            // RCON travel keeps the options of the map before: every option the launcher may set is spelled out, once.
+            string full = plan.TravelUrl + LaunchService.TravelResets(plan);
+            var keys = full.Split('?').Skip(1).Select(o => o.Split('=')[0]).ToList();
+            foreach (var dup in keys.GroupBy(k => k, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1)) fail("travel URL has " + dup.Key + " twice");
+            foreach (var must in new[] { "game", "Mutators", "bSoloGame", "Scenario", "MaxPlayers", "Lighting" })
+                if (!keys.Contains(must, StringComparer.OrdinalIgnoreCase)) fail("travel URL does not set " + must);
+            if (full.IndexOfAny(new[] { ' ', '"', '|', ';' }) >= 0) fail("travel URL has a space or a console character: " + full);
             string muts = p.MutatorsEnabled && p.Mutators.Count > 0 ? "?Mutators=" + string.Join(",", p.Mutators) : null;
-            if (muts != null && !url.Contains(muts)) fail("travel URL misses the mutators " + muts);
-            if (muts == null && url.Contains("?Mutators=")) fail("mutators are off or empty but the travel URL has some");
-            if (!url.Contains("?Lighting=" + p.Lighting)) fail("travel URL has the wrong lighting");
+            if (!plan.ExtraOptionKeys.Contains("Mutators"))
+            {
+                if (muts != null && !url.Contains(muts)) fail("travel URL misses the mutators " + muts);
+                if (muts == null && url.Contains("?Mutators=")) fail("mutators are off or empty but the travel URL has some");
+            }
+            if (!plan.ExtraOptionKeys.Contains("Lighting") && !url.Contains("?Lighting=" + p.Lighting)) fail("travel URL has the wrong lighting");
             bool hc = p.Hardcore && plan.Scenario?.GameModeClass == "INSCheckpointGameMode" && LaunchPlanner.UrlSafe(p.GameModeOverride, false).Length == 0;
-            if (hc != url.Contains("?game=CheckpointHardcore")) fail("hardcore is " + hc + " but the travel URL says otherwise");
+            if (!plan.ExtraOptionKeys.Contains("game") && hc != url.Contains("?game=CheckpointHardcore")) fail("hardcore is " + hc + " but the travel URL says otherwise");
+            var urlKeys = url.Split('?').Skip(1).Select(o => o.Split('=')[0]).ToList();
+            foreach (var dup in urlKeys.GroupBy(k => k, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1)) fail("open command has " + dup.Key + " twice");
         }
 
         // ------------------------------------------------------------------ canonical text for comparing setups

@@ -105,7 +105,10 @@ namespace SandstormModLauncher.ViewModels
             // Measured in the game: these only exist in the co-op game modes and are rejected in versus.
             var coopOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CheatCounterAttack", "CheatFinishCounterAttack", "SkipToExtraction", "AIIgnorePlayers" };
             foreach (var a in LiveGroups.SelectMany(g => g.Actions))
+            {
                 if (coopOnly.Contains(a.Command.Split(' ')[0])) a.CoopOnly = true;
+                a.ViaRcon = a.Command == "AdminRestartRound 0" || a.Command == "AdminRestartRound 1";
+            }
         }
 
         private bool liveIsCoop = true;
@@ -218,14 +221,75 @@ namespace SandstormModLauncher.ViewModels
         private async Task RunLiveAction(LiveAction action)
         {
             if (action == null) return;
+            try { await RunLiveActionCore(action); } catch (OperationCanceledException) { }
+        }
+
+        private async Task RunLiveActionCore(LiveAction action)
+        {
+            // Round restarts are RCON commands: no typing, the game can stay where it is.
+            if (action.Command == "AdminRestartRound 0" || action.Command == "AdminRestartRound 1")
+            {
+                var r = await OverRcon(() => Rcon.RestartRound(action.Command.EndsWith("1")));
+                if (r != null)
+                {
+                    LiveOutput = r.Ok ? action.Label + ": done (RCON)" : "Not done: " + r.Error;
+                    ShowToast(r.Ok ? action.Label + ": done" : "Not done: " + r.Error);
+                    return;
+                }
+            }
+            if (!State.Settings.AllowConsoleTyping)
+            {
+                LiveOutput = "This one needs the game's console, and typing into the console is off in Settings.";
+                ShowToast("Needs the game console (off in Settings)");
+                return;
+            }
             // Cheats are only needed for cheat commands, but switching them on is harmless in local play.
             var res = await RunConsole("EnableCheats | " + action.Command);
             if (res.Sent) ShowToast(res.NotRecognized ? res.Detail : action.Label + ": done");
         }
 
+        /// <summary>
+        /// Runs something over RCON on a worker thread. Null when the game cannot be reached over RCON at all (the
+        /// caller may fall back to the console). A failure in the middle of the call is shown and throws
+        /// OperationCanceledException: the change may have reached the game, so it is not typed in again.
+        /// </summary>
+        private async Task<T> OverRcon<T>(Func<T> work) where T : class
+        {
+            if (Rcon == null) return null;
+            LiveBusy = true;
+            try
+            {
+                bool busy = false;
+                string problem = await Task.Run(() => Rcon.Probe(out busy));
+                if (problem != null && !busy) return null;
+                try { return await Task.Run(work); }
+                catch (RconException ex)
+                {
+                    AppLog.Warn("RCON: " + ex.Message);
+                    LiveOutput = "No answer from the game over RCON (" + ex.Message + "). The change may still arrive; press Read to check.";
+                    ShowToast("No answer from the game");
+                    throw new OperationCanceledException();
+                }
+            }
+            finally { LiveBusy = false; }
+        }
+
         private async Task ReadLiveRules()
         {
+            try { await ReadLiveRulesCore(); } catch (OperationCanceledException) { }
+        }
+
+        private async Task ReadLiveRulesCore()
+        {
             if (liveModeCls == null) return;
+            var read = await OverRcon(() => Rcon.ReadProperties(null, out _));
+            if (read != null)
+            {
+                foreach (var r in LiveRules) r.Current = read.TryGetValue(r.Key, out var v) ? TrimNumber(v) : "?";
+                LiveOutput = read.Count > 0 ? "Read " + LiveRules.Count(r => r.Current != "?") + " live values from the match (RCON)." : "No values came back. Make sure the match has finished loading.";
+                return;
+            }
+            if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
             LiveBusy = true;
             try
             {
@@ -236,6 +300,8 @@ namespace SandstormModLauncher.ViewModels
             finally { LiveBusy = false; }
         }
 
+        private const string NoRconLive = "The launcher cannot reach the game over RCON (the game was probably started before the launcher set it up). Restart the game from the launcher, or allow typing into the game console in Settings.";
+
         private static string TrimNumber(string v)
         {
             if (double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) && v.Contains("."))
@@ -244,6 +310,11 @@ namespace SandstormModLauncher.ViewModels
         }
 
         private async Task ApplyLiveRuleChanges()
+        {
+            try { await ApplyLiveRuleChangesCore(); } catch (OperationCanceledException) { }
+        }
+
+        private async Task ApplyLiveRuleChangesCore()
         {
             var cmds = new List<string>();
             var bad = new List<string>();
@@ -256,6 +327,23 @@ namespace SandstormModLauncher.ViewModels
             }
             if (bad.Count > 0) { ShowToast("Not a valid value: " + string.Join(", ", bad)); return; }
             if (cmds.Count == 0) return;
+            var props = cmds.Select(c => c.Split(' ')).Select(w => new KeyValuePair<string, string>(w[1], w[2])).ToList();
+            var failed = await OverRcon(() =>
+            {
+                var f = Rcon.SetProperties(props);
+                if (restartAfterApply) { var rr = Rcon.RestartRound(false); if (!rr.Ok) f["restart"] = rr.Error; }
+                return f;
+            });
+            if (failed != null)
+            {
+                int ok = props.Count - failed.Count(f => f.Key != "restart");
+                LiveOutput = ok + " live change(s) set over RCON" + (restartAfterApply && !failed.ContainsKey("restart") ? ", round restarted" : "") +
+                             (failed.Count > 0 ? "\nNot taken: " + string.Join("; ", failed.Select(f => f.Key + " (" + f.Value + ")")) : "");
+                ShowToast(failed.Count == 0 ? ok + " live change(s) set" : "Some changes were not taken");
+                await ReadLiveRules();
+                return;
+            }
+            if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
             if (restartAfterApply) cmds.Add("AdminRestartRound 0");
             var res = await RunConsole(string.Join(" | ", cmds));
             if (res.Sent)
@@ -277,6 +365,28 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task CountBots()
         {
+            try { await CountBotsCore(); } catch (OperationCanceledException) { }
+        }
+
+        private async Task CountBotsCore()
+        {
+            var counted = await OverRcon(() => Rcon.CountPlayers());
+            if (counted != null)
+            {
+                if (counted.Count == 0) { LiveOutput = "No players came back. Make sure the match has finished loading."; return; }
+                if (counted.Values.All(c => c.bots == 0))
+                {
+                    LiveOutput = "No bots have joined yet. They join when the round starts (after you pick a class).";
+                    ShowToast("No bots yet: they join when the round starts");
+                    return;
+                }
+                var mine = counted.FirstOrDefault(kv => kv.Value.humans > 0);
+                int myMates = mine.Value.bots, theirs = counted.Where(kv => kv.Key != mine.Key).Sum(kv => kv.Value.humans + kv.Value.bots);
+                LiveOutput = $"Your team: you + {myMates} AI teammate{(myMates == 1 ? "" : "s")}\nEnemy team: {theirs} bot{(theirs == 1 ? "" : "s")}";
+                ShowToast($"You + {myMates} AI vs {theirs} enemies");
+                return;
+            }
+            if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
             var res = await RunConsole("getall INSPlayerState TeamId | getall INSPlayerState bIsABot", TimeSpan.FromSeconds(2.5));
             var teams = new Dictionary<string, string>();
             var bots = new Dictionary<string, bool>();

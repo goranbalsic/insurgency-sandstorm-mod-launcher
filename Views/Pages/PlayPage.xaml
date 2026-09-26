@@ -548,7 +548,7 @@
                                 <TextBlock Text="Nightmare" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
                             </Grid>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}"
-                                       Text="Versus: applied after the map loads." />
+                                       TextWrapping="Wrap" Text="Versus: typed into the game console after the map loads, the one setting RCON cannot set (needs the game in front, and typing allowed in Settings)." />
                         </StackPanel>
                         </StackPanel>
                     </Border>

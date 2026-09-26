@@ -21,6 +21,7 @@ namespace SandstormModLauncher.ViewModels
         public GameMonitor Monitor { get; private set; }
         public ConsoleBridge Console { get; private set; }
         public LaunchService Launcher { get; private set; }
+        public GameRcon Rcon { get; private set; }
         private readonly Dispatcher ui = Application.Current.Dispatcher;
         private readonly DispatcherTimer saveTimer, toastTimer, watchTimer;
         private FileSystemWatcher modWatcher;
@@ -66,7 +67,10 @@ namespace SandstormModLauncher.ViewModels
                 AppLog.Info($"Game: {State.Install.GameDir ?? "not found"} ({State.Install.Store})");
                 Monitor = new GameMonitor();
                 Console = new ConsoleBridge(Monitor, () => State.Settings, () => State.Official);
-                Launcher = new LaunchService(State, Monitor, Console);
+                Rcon = new GameRcon(() => State.Settings);
+                Launcher = new LaunchService(State, Monitor, Console, Rcon);
+                // The game reads its RCON settings from Game.ini at start, also when started from Steam.
+                if (!AppPaths.TestRun && !Process.GetProcessesByName(GameInstall.ClientProcess).Any()) RconSetup.EnsureGameIni(State.Settings);
                 Monitor.StateChanged += () => ui.BeginInvoke(new Action(OnGameStateChanged));
 
                 KeyBindings.DropDetected += () => ui.BeginInvoke(new Action(() =>
@@ -98,6 +102,7 @@ namespace SandstormModLauncher.ViewModels
                 Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
+                _ = RefreshRconStatus();
                 if (!State.Install.IsValid)
                 {
                     Page = "Settings";
@@ -209,7 +214,9 @@ namespace SandstormModLauncher.ViewModels
             if (Monitor.Phase != lastPhase)
             {
                 AppLog.Debug("Game: " + lastPhase + " -> " + Monitor.Phase + (Monitor.CurrentLevel != null ? " (" + Monitor.CurrentLevel + ")" : ""));
+                bool check = lastPhase == GamePhase.NotRunning || Monitor.Phase == GamePhase.Menu || Monitor.Phase == GamePhase.NotRunning;
                 lastPhase = Monitor.Phase;
+                if (check) _ = RefreshRconStatus();
             }
             bool running = Monitor.IsRunning;
             if (running != lastRunning)
@@ -218,7 +225,12 @@ namespace SandstormModLauncher.ViewModels
                 if (!running && !Loading)
                 {
                     // The game saves its settings when it exits: keep a copy and add the extra console key now that it is safe.
-                    Task.Run(() => KeyBindings.Backup("game closed")).ContinueWith(_ => ui.BeginInvoke(new Action(() => { RefreshConsoleKeyStatus(); RefreshKeyBackups(); })));
+                    // Game.ini is written by the game on exit too: make sure the RCON section is still there for the next start.
+                    Task.Run(() =>
+                    {
+                        KeyBindings.Backup("game closed");
+                        if (!AppPaths.TestRun) RconSetup.EnsureGameIni(State.Settings);
+                    }).ContinueWith(_ => ui.BeginInvoke(new Action(() => { RefreshConsoleKeyStatus(); RefreshKeyBackups(); _ = RefreshRconStatus(); })));
                 }
                 lastRunning = running;
             }
