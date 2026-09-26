@@ -383,12 +383,7 @@ namespace SandstormModLauncher.ViewModels
         }
 
         /// <summary>The name, with a number added when another profile already has it (renaming ignores the profile itself).</summary>
-        private string UniqueProfileName(string name, Profile self = null)
-        {
-            string n = name.Trim(); int i = 2;
-            while (State.Store.Profiles.Any(p => p != self && p.Name.Equals(n, StringComparison.OrdinalIgnoreCase))) n = name.Trim() + " " + i++;
-            return n;
-        }
+        private string UniqueProfileName(string name, Profile self = null) => State.Store.UniqueName(name, self);
 
         public void ProfileChanged()
         {

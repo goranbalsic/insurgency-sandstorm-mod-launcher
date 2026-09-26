@@ -161,7 +161,8 @@ namespace SandstormModLauncher.Core
         /// </summary>
         public static string MergeSections(string text, IList<Section> ours, Func<string, string, bool> isManaged)
         {
-            var writing = new HashSet<string>(ours.SelectMany(s => s.Values.Select(v => s.Name + "\n" + v.Key)), StringComparer.OrdinalIgnoreCase);
+            // Keys compared without array operators, so the player's own "+Key=..." lines replace their old copies instead of piling up.
+            var writing = new HashSet<string>(ours.SelectMany(s => s.Values.Select(v => s.Name + "\n" + KeyOf(v.Key + "="))), StringComparer.OrdinalIgnoreCase);
             bool Drop(string section, string key) =>
                 section != null && key != null && (writing.Contains(section + "\n" + key) || isManaged(section, key));
 

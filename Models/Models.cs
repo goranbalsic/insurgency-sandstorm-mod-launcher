@@ -126,6 +126,8 @@ namespace SandstormModLauncher.Models
         public string RulesPresetName { get; set; }
         /// <summary>"mode|key" of every rule the last applied match preset set, so the next one can take them back out.</summary>
         public List<string> PresetKeys { get; set; } = new List<string>();
+        /// <summary>The setup as the last preset left it (SetupEngine.PresetCheck), to show when it was changed since.</summary>
+        public string PresetCheck { get; set; }
         public string LaunchRuleset { get; set; }            // official ruleset applied with -ruleset= at game start
         public string CustomIniMode { get; set; } = "Off";     // Off / Append / Replace
         public string CustomIniText { get; set; } = "";

@@ -312,10 +312,7 @@ namespace SandstormModLauncher.Game
             string current = UeIni.ReadText(path);
             var db = state.Rules;
             // Extra lines the player added last time are the launcher's too, so removing them from the profile removes them here.
-            var earlier = new HashSet<string>(state.Settings.ManagedIniKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
-            string updated = string.Equals(p.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)
-                ? UeIni.Render(plan.IniSections) + "\r\n"
-                : UeIni.MergeSections(current, plan.IniSections, (s, k) => LaunchPlanner.IsManagedIniKey(db, s, k) || earlier.Contains(s + "\n" + k));
+            string updated = LaunchPlanner.MergeGameIni(current, plan, db, state.Settings.ManagedIniKeys);
             int sections = plan.IniSections.Count(s => s.Values.Count > 0);
             if (Normalize(updated) != Normalize(current))
             {
@@ -324,8 +321,7 @@ namespace SandstormModLauncher.Game
                 AppLog.Info("Game.ini updated (" + sections + " section(s), " + UeIni.Split(current).Count + " -> " + UeIni.Split(updated).Count + " lines)");
                 AppLog.Debug("Game.ini rules:\r\n" + plan.GameIniBlock);
             }
-            state.Settings.ManagedIniKeys = plan.IniSections.SelectMany(s => s.Values.Where(v => !LaunchPlanner.IsManagedIniKey(db, s.Name, v.Key)).Select(v => s.Name + "\n" + v.Key))
-                                                             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            state.Settings.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(plan, db);
             state.Settings.LastWrittenRulesHash = plan.RestartKey;
             state.Settings.LastRulesWriteUtc = DateTime.UtcNow;
             return plan.Overrides.Count == 0 && sections == 0 ? "Game defaults" : $"{plan.Overrides.Count} change{(plan.Overrides.Count == 1 ? "" : "s")} for {plan.ModeTitle}";

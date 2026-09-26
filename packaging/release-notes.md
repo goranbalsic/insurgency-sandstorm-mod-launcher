@@ -1,5 +1,16 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.5.1**
+
+- Fixed: in versus, "Fill teams with bots" could not be turned off.
+- Fixed: official versus rulesets and playlists no longer switch the bots off (online they are played without bots; offline that left an empty match).
+- Fixed: extra Game.ini lines that add to a list (+Key=...) were written again on every launch, and removed ones stayed in Game.ini. Free For All rules are now cleaned up like every other mode.
+- Fixed: two profiles whose names differ only in characters Windows does not allow in file names (like a/b and a?b) overwrote each other, and names like CON could not be saved.
+- Fixed: a custom mutator ID, extra URL options or a mode override with a space broke the open command. They are now checked, and the launcher says what it left out.
+- Fixed: after "Save setup" the match summary kept showing the previous preset name. It now also says "(changed)" once you change something after applying a preset.
+- Live rule changes only accept one clean value per setting, so a stray | or space can no longer run a second console command.
+- The launch plan warns when minimum enemies is above maximum enemies.
+
 **Changes in 1.5.0**
 
 - Presets rebuilt from the ground up. A rules preset now replaces the rules of the preset before it and sets exactly its own values, instead of adding to whatever was there. Squad presets only change the bot values, so a squad and a rules preset can be combined in any order.

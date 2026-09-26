@@ -245,7 +245,16 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task ApplyLiveRuleChanges()
         {
-            var cmds = LiveRules.Where(r => !string.IsNullOrWhiteSpace(r.Value)).Select(r => "AdminSetGamemodeProperty " + r.Key + " " + r.Value.Trim()).ToList();
+            var cmds = new List<string>();
+            var bad = new List<string>();
+            foreach (var r in LiveRules.Where(r => !string.IsNullOrWhiteSpace(r.Value)))
+            {
+                // One value per setting: a space, | or ; would run a second console command.
+                string clean = SetupEngine.NormalizeValue(State.Rules.Prop(r.Key), r.Value);
+                if (clean == null) bad.Add(r.Label);
+                else cmds.Add("AdminSetGamemodeProperty " + r.Key + " " + clean);
+            }
+            if (bad.Count > 0) { ShowToast("Not a valid value: " + string.Join(", ", bad)); return; }
             if (cmds.Count == 0) return;
             if (restartAfterApply) cmds.Add("AdminRestartRound 0");
             var res = await RunConsole(string.Join(" | ", cmds));

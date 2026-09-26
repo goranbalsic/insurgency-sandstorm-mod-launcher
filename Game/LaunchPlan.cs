@@ -85,7 +85,9 @@ namespace SandstormModLauncher.Game
             plan.Scenario = sc;
             plan.Hardcore = p.Hardcore && sc.GameModeClass == "INSCheckpointGameMode";
             plan.Mode = db.ResolveMode(sc.GameModeClass, plan.Hardcore);
-            plan.GameAlias = !string.IsNullOrWhiteSpace(p.GameModeOverride) ? p.GameModeOverride.Trim() : plan.Hardcore ? "CheckpointHardcore" : null;
+            string alias = UrlSafe(p.GameModeOverride, false);
+            if (alias.Length != (p.GameModeOverride ?? "").Trim().Length) plan.Warnings.Add("Game mode override: spaces and ? & = \" | ; were left out.");
+            plan.GameAlias = alias.Length > 0 ? alias : plan.Hardcore ? "CheckpointHardcore" : null;
             plan.Level = sc.Level.StartsWith("/Game/Maps/", StringComparison.OrdinalIgnoreCase)
                 ? sc.Level.Substring(sc.Level.LastIndexOf('/') + 1) : sc.Level;
 
@@ -135,6 +137,11 @@ namespace SandstormModLauncher.Game
                     if (int.TryParse(db.DefaultValue(cls, key), out int min) && min > 1 && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
                         plan.Overrides[key] = "1";
 
+            if (plan.Mode != null && plan.Mode.Coop
+                && int.TryParse(plan.Overrides.TryGetValue("MinimumEnemies", out var mn) ? mn : db.DefaultValue(cls, "MinimumEnemies"), out int minE)
+                && int.TryParse(plan.Overrides.TryGetValue("MaximumEnemies", out var mx) ? mx : db.DefaultValue(cls, "MaximumEnemies"), out int maxE) && minE > maxE)
+                plan.Warnings.Add("Minimum enemies (" + minE + ") is above maximum enemies (" + maxE + "); the game then uses the maximum.");
+
             // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
             if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
                 && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && fbn > 0
@@ -178,8 +185,10 @@ namespace SandstormModLauncher.Game
                 else url.Append('?').Append(kv.Key).Append('=').Append(kv.Value);
             }
             if (plan.Mutators.Count > 0) url.Append("?Mutators=").Append(string.Join(",", plan.Mutators));
-            string extra = (p.ExtraUrlOptions ?? "").Trim();
-            if (extra.Length > 0) url.Append(extra.StartsWith("?") ? extra : "?" + extra);
+            string extra = UrlSafe(p.ExtraUrlOptions, true).Trim('?');
+            if (extra.Length != (p.ExtraUrlOptions ?? "").Trim().Trim('?').Length) plan.Warnings.Add("Extra URL options: spaces, quotes, | and ; were left out (they would break the open command).");
+            while (extra.Contains("??")) extra = extra.Replace("??", "?");
+            if (extra.Length > 0) url.Append('?').Append(extra);
             plan.OpenCommand = url.ToString();
 
             // Game.ini sections (every mode the profile customises)
@@ -250,11 +259,28 @@ namespace SandstormModLauncher.Game
                               .Select(s => s.GameModePath).Distinct(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// The new Game.ini text for a launch: the plan merged into the current file ("Replace" keeps only the plan).
+        /// <paramref name="earlier"/> = the player's own extra keys written last time, removed again when no longer wanted.
+        /// </summary>
+        public static string MergeGameIni(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier)
+        {
+            if (string.Equals(plan.Profile?.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)) return UeIni.Render(plan.IniSections) + "\r\n";
+            var old = new HashSet<string>(earlier ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            return UeIni.MergeSections(current, plan.IniSections, (s, k) => IsManagedIniKey(db, s, k) || old.Contains(s + "\n" + k));
+        }
+
+        /// <summary>The player's own extra Game.ini keys in a plan ("Section\nKey", array operators removed), remembered for the next launch.</summary>
+        public static List<string> PlayerIniKeys(LaunchPlan plan, RulesDb db) =>
+            plan.IniSections.SelectMany(s => s.Values.Where(v => !IsManagedIniKey(db, s.Name, v.Key)).Select(v => s.Name + "\n" + UeIni.KeyOf(v.Key + "=")))
+                            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        /// <summary>
         /// Keys the launcher owns in Game.ini: every match rule it knows, in any game mode section. Old copies of
         /// them (from earlier launches, or left behind when the game rewrote the file) are removed before writing.
         /// </summary>
         public static bool IsManagedIniKey(RulesDb db, string section, string key) =>
-            section.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) >= 0 && db.Prop(key) != null;
+            db.Prop(key) != null && (section.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) >= 0
+                                     || db.Modes.Any(m => section.EndsWith("." + m.Cls, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>Fingerprint of everything that only takes effect when the game starts.</summary>
         public static string RestartKeyFor(Profile p, RulesDb db)
@@ -275,6 +301,19 @@ namespace SandstormModLauncher.Game
         {
             using (var sha = SHA1.Create())
                 return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(s ?? ""))).Replace("-", "").Substring(0, 16);
+        }
+
+        /// <summary>Text for the travel URL: no whitespace or characters the console treats specially. Options keep ? and =.</summary>
+        public static string UrlSafe(string text, bool options)
+        {
+            var sb = new StringBuilder();
+            foreach (char c in text ?? "")
+            {
+                if (char.IsWhiteSpace(c) || char.IsControl(c) || c == '"' || c == '|' || c == ';') continue;
+                if (!options && (c == '?' || c == '&' || c == '=')) continue;
+                sb.Append(c);
+            }
+            return sb.ToString();
         }
 
         public static bool IsTrue(string v) => v != null && (v.Equals("true", StringComparison.OrdinalIgnoreCase) || v == "1");

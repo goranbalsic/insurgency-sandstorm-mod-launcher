@@ -68,8 +68,34 @@ namespace SandstormModLauncher.Game
         public static string GetRule(Profile p, string cls, string key) =>
             cls != null && p.Rules.TryGetValue(cls, out var d) && d.TryGetValue(key, out var v) ? v : null;
 
-        /// <summary>The value the match uses: the profile's own, else the mode's default.</summary>
-        public static string Effective(Profile p, RulesDb db, string cls, string key) => GetRule(p, cls, key) ?? db.DefaultValue(cls, key);
+        /// <summary>The value the match uses: the profile's own, else the launcher's default for the mode.</summary>
+        public static string Effective(Profile p, RulesDb db, string cls, string key) => GetRule(p, cls, key) ?? LauncherDefault(db, cls, key);
+
+        /// <summary>
+        /// The value used when the profile stores nothing. Same as the game's default, except that versus is played
+        /// against bots offline (bBots on; the game's own default is off), so "bots off" has to be stored.
+        /// </summary>
+        public static string LauncherDefault(RulesDb db, string cls, string key)
+        {
+            if (cls == null || cls == "*") return null;
+            if (key.Equals("bBots", StringComparison.OrdinalIgnoreCase))
+            {
+                var m = db.Mode(cls);
+                if (m != null && !m.Coop && m.Defaults.ContainsKey("bBots")) return "True";
+            }
+            return db.DefaultValue(cls, key);
+        }
+
+        /// <summary>
+        /// Match presets (styles, official rulesets, playlists) never turn versus bots off: the official online rulesets
+        /// say bBots=False, which offline would leave an empty match. Bots are set on the Squad tab.
+        /// </summary>
+        public static bool MatchPresetSets(RulesDb db, string cls, string key, string value)
+        {
+            if (!key.Equals("bBots", StringComparison.OrdinalIgnoreCase)) return true;
+            var m = db.Mode(cls);
+            return m == null || m.Coop || LaunchPlanner.IsTrue(value);
+        }
 
         // ------------------------------------------------------------------ changing it
 
@@ -115,7 +141,7 @@ namespace SandstormModLauncher.Game
             }
             if (value != null && cls != "*")
             {
-                string def = db.DefaultValue(cls, key);
+                string def = LauncherDefault(db, cls, key);
                 if (def != null && LaunchPlanner.Same(def, value, db.Prop(key))) value = null;
             }
             if (cls == "*" && key == "AIDifficulty" && value != null && double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) && Math.Abs(d - 0.5) < 0.001)
@@ -141,6 +167,10 @@ namespace SandstormModLauncher.Game
             }
         }
 
+        /// <summary>A mutator ID the travel URL can carry: letters, digits, _ . and -.</summary>
+        public static bool IsValidMutatorId(string id) =>
+            !string.IsNullOrEmpty(id) && id.Length <= 200 && id.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '-');
+
         public static void SetMutators(Profile p, AppState s, IEnumerable<string> ids, List<string> missing = null)
         {
             var list = new List<string>();
@@ -162,6 +192,37 @@ namespace SandstormModLauncher.Game
             p.MutatorPreset = null;
             p.RulesPresetName = null;
             p.PresetKeys = new List<string>();
+            p.PresetCheck = null;
+        }
+
+        /// <summary>
+        /// What a preset decides, as text: a match preset its rules (bots aside) and mutators, a saved setup everything.
+        /// Compared with the stored check to tell whether the setup was changed after the preset.
+        /// </summary>
+        public static string PresetCheck(Profile p, bool full)
+        {
+            var sb = new System.Text.StringBuilder(full ? "S|" : "M|");
+            foreach (var mode in p.Rules.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+                foreach (var kv in mode.Value.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+                    if (full || (mode.Key != "*" && !IsSquadKey(kv.Key))) sb.Append(mode.Key).Append('.').Append(kv.Key).Append('=').Append(kv.Value).Append(';');
+            sb.Append('|').Append(string.Join(",", p.Mutators));
+            if (full) sb.Append('|').Append(p.ScenarioId).Append('|').Append(p.CustomMapId).Append('|').Append(p.Lighting).Append('|').Append(p.Hardcore).Append('|').Append(p.MutatorsEnabled);
+            return sb.ToString();
+        }
+
+        /// <summary>The preset name for the summary: "Realism", or "Realism (changed)" once the setup differs from what it set.</summary>
+        public static string PresetLabel(Profile p)
+        {
+            if (string.IsNullOrEmpty(p.RulesPresetName)) return "";
+            bool full = p.PresetCheck != null && p.PresetCheck.StartsWith("S|");
+            return p.PresetCheck == null || PresetCheck(p, full) == p.PresetCheck ? p.RulesPresetName : p.RulesPresetName + " (changed)";
+        }
+
+        /// <summary>Remembers the setup as the named preset left it.</summary>
+        public static void MarkPreset(Profile p, string name, bool full)
+        {
+            p.RulesPresetName = name;
+            p.PresetCheck = PresetCheck(p, full);
         }
 
         /// <summary>
@@ -189,6 +250,7 @@ namespace SandstormModLauncher.Game
                     foreach (var mode in preset.Rules)
                         foreach (var kv in mode.Value)
                         {
+                            if (!MatchPresetSets(db, mode.Key, kv.Key, kv.Value)) continue;
                             SetRule(p, db, mode.Key, kv.Key, kv.Value);
                             if (GetRule(p, mode.Key, kv.Key) != null) set.Add(mode.Key + "|" + kv.Key);
                         }
@@ -198,7 +260,7 @@ namespace SandstormModLauncher.Game
                     bool fits = current == null || preset.ForModes.Count == 0 || preset.ForModes.Contains(current.Cls, StringComparer.OrdinalIgnoreCase);
                     if (fits && preset.Night) p.Lighting = "Night";
                     if (fits && preset.HardcoreCheckpoint && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode") p.Hardcore = true;
-                    p.RulesPresetName = preset.Name;
+                    MarkPreset(p, preset.Name, false);
                     string mut = preset.Mutators == null ? "" : " with " + (p.Mutators.Count == 0 ? "no mutators" : p.Mutators.Count + " mutator" + (p.Mutators.Count == 1 ? "" : "s"));
                     string made = fits || preset.ForModes.Count == 0 ? "" : ". Made for " + string.Join(", ", preset.ForModes.Select(m => db.Mode(m)?.Name ?? m).Distinct()) + ": pick one of those on the Map tab for the full effect";
                     return preset.Name + " applied" + mut + made + (missing.Count > 0 ? ". Not installed: " + string.Join(", ", missing) : "");
@@ -219,7 +281,7 @@ namespace SandstormModLauncher.Game
                         if (saved.MaxPlayers > 0) p.MaxPlayers = saved.MaxPlayers;
                         p.MutatorsEnabled = saved.MutatorsEnabled;
                     }
-                    p.RulesPresetName = saved.Name;
+                    MarkPreset(p, saved.Name, true);
                     return saved.Name + " loaded" + (missing.Count > 0 ? ". Not installed: " + string.Join(", ", missing) : "");
                 }
             }
@@ -316,7 +378,8 @@ namespace SandstormModLauncher.Game
         public static bool HasEffect(RulesDb db, Dictionary<string, Dictionary<string, string>> rules, ICollection<string> mutators) =>
             (mutators?.Count ?? 0) > 0 || rules.Any(mode => mode.Value.Any(kv =>
             {
-                string d = db.DefaultValue(mode.Key, kv.Key);
+                if (!MatchPresetSets(db, mode.Key, kv.Key, kv.Value)) return false;
+                string d = LauncherDefault(db, mode.Key, kv.Key);
                 return d == null || !LaunchPlanner.Same(d, kv.Value, db.Prop(kv.Key));
             }));
 
@@ -406,7 +469,7 @@ namespace SandstormModLauncher.Game
                     string clean = string.IsNullOrEmpty(key) || key.IndexOfAny(new[] { ' ', '?', '=', '&' }) >= 0 ? null : NormalizeValue(db.Prop(key), map[key]);
                     if (clean != null && cls != "*")
                     {
-                        string def = db.DefaultValue(cls, key);
+                        string def = LauncherDefault(db, cls, key);
                         if (def != null && LaunchPlanner.Same(def, clean, db.Prop(key))) clean = null;
                     }
                     if (clean != null && cls == "*" && key == "AIDifficulty" && double.TryParse(clean, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ai) && Math.Abs(ai - 0.5) < 0.001)
@@ -425,13 +488,19 @@ namespace SandstormModLauncher.Game
             foreach (var p in s.Store.Profiles)
             {
                 int n = CleanRules(p.Rules, s.Rules);
-                var muts = (p.Mutators ?? new List<string>()).Where(m => !string.IsNullOrWhiteSpace(m) && m.IndexOfAny(new[] { ' ', '?', '=', '&', ',' }) < 0)
-                    .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var muts = (p.Mutators ?? new List<string>()).Where(IsValidMutatorId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 if (p.Mutators == null || muts.Count != p.Mutators.Count) { p.Mutators = muts; n++; }
                 if (n > 0) { AppLog.Warn("Profile " + p.Name + ": " + n + " stored values were not valid and were fixed"); s.Store.SaveProfile(p); }
             }
             int saved = 0;
             foreach (var r in s.Settings.RulesPresets) saved += CleanRules(r.Rules, s.Rules);
+            saved += s.Settings.CustomMutators.RemoveAll(m => !IsValidMutatorId(m));
+            foreach (var mp in s.Settings.MutatorPresets.Where(x => x != null))
+            {
+                var list = (mp.Mutators ?? new List<string>()).Where(IsValidMutatorId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (mp.Mutators == null || list.Count != mp.Mutators.Count) { mp.Mutators = list; saved++; }
+            }
+            saved += s.Settings.MutatorPresets.RemoveAll(x => x == null || string.IsNullOrWhiteSpace(x.Name));
             if (saved > 0) { AppLog.Warn("Saved setups: " + saved + " values fixed"); s.Store.SaveSettings(); }
         }
 
@@ -450,7 +519,7 @@ namespace SandstormModLauncher.Game
                 {
                     if (kv.Value == null) list.Add("null value " + mode.Key + "." + kv.Key);
                     else if (NormalizeValue(db.Prop(kv.Key), kv.Value) != kv.Value) list.Add("value not in clean form " + mode.Key + "." + kv.Key + "=" + kv.Value);
-                    string d = mode.Key == "*" ? null : db.DefaultValue(mode.Key, kv.Key);
+                    string d = LauncherDefault(db, mode.Key, kv.Key);
                     if (d != null && LaunchPlanner.Same(d, kv.Value, db.Prop(kv.Key))) list.Add("stored value equal to the default " + mode.Key + "." + kv.Key + "=" + kv.Value);
                 }
             }

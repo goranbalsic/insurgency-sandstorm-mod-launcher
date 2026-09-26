@@ -242,13 +242,14 @@ namespace SandstormModLauncher.Services
                 ["version"] = typeof(DebugReport).Assembly.GetName().Version.ToString(3),
                 ["note"] = LogSanitizer.Public(note ?? "") ?? "",
                 ["summary"] = shortText ?? "",
-                ["full"] = (fullText ?? "").Length > 200000 ? fullText.Substring(0, 200000) : fullText ?? "",
+                ["full"] = (fullText ?? "").Length > 150000 ? fullText.Substring(0, 150000) : fullText ?? "",
             }, false);
             var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(inbox);
             req.Method = "POST";
             req.ContentType = "application/json";
             req.UserAgent = "SandstormModLauncher/" + typeof(DebugReport).Assembly.GetName().Version.ToString(3);
             req.Timeout = 20000;
+            req.ReadWriteTimeout = 20000;
             req.AllowAutoRedirect = true;
             byte[] body = Encoding.UTF8.GetBytes(json);
             using (var s = req.GetRequestStream()) s.Write(body, 0, body.Length);

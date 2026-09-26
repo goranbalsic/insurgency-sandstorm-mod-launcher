@@ -187,7 +187,7 @@ namespace SandstormModLauncher.ViewModels
         private bool CurrentIsCoop => CurrentMode == null || CurrentMode.Coop;
         public string SquadKindLabel => CurrentIsCoop ? "co-op" : "versus";
         /// <summary>The last preset applied or saved setup loaded (shown in the match summary).</summary>
-        public string ActivePresetName => Profile.RulesPresetName ?? "";
+        public string ActivePresetName => SetupEngine.PresetLabel(Profile);
 
         private static PresetItem Item(Preset p) =>
             new PresetItem { Name = p.Name, Group = p.Group, Description = p.Description, Tag = p.Tag, Note = p.Note, Source = p };
@@ -236,6 +236,7 @@ namespace SandstormModLauncher.ViewModels
                 if (mapChanged) SyncMapSelection();
                 BuildMutatorList();
                 BuildActiveMutators();
+                BuildMutatorPresets();
                 rulesMode = null;
                 SyncRulesModeToScenario();
                 RefreshRuleItems();
@@ -260,7 +261,8 @@ namespace SandstormModLauncher.ViewModels
                 State.Settings.RulesPresets.Remove(existing);
             }
             State.Settings.RulesPresets.Add(SetupEngine.Capture(Profile, name));
-            Profile.RulesPresetName = name;
+            SetupEngine.MarkPreset(Profile, name, true);
+            Raise(nameof(ActivePresetName));
             SaveNow();
             if (PresetFilter == "Saved") BuildPresets(); else PresetFilter = "Saved";
             ShowToast("Setup saved as \"" + name + "\"");
@@ -271,6 +273,7 @@ namespace SandstormModLauncher.ViewModels
             if (!(item?.Source is Preset p) || p.Saved == null || !State.Settings.RulesPresets.Contains(p.Saved)) return;
             if (await Ask("Delete preset", "Delete \"" + p.Name + "\"?", "Delete") != "Delete") return;
             State.Settings.RulesPresets.Remove(p.Saved);
+            if (string.Equals(Profile.RulesPresetName, p.Saved.Name, StringComparison.OrdinalIgnoreCase)) { Profile.RulesPresetName = null; Raise(nameof(ActivePresetName)); }
             SaveNow();
             BuildPresets();
         }
@@ -298,6 +301,7 @@ namespace SandstormModLauncher.ViewModels
             if (await Ask("Reset all rules", "Put every setting in every mode (bots and enemies too) back to the game defaults? Map and mutators stay.", "Reset all") != "Reset all") return;
             SetupEngine.ClearRules(Profile, (c, k) => true);
             Profile.RulesPresetName = null;
+            Profile.PresetCheck = null;
             Profile.PresetKeys = new List<string>();
             RefreshFromProfile(false);
         }

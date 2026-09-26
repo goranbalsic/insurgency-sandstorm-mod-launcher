@@ -72,7 +72,15 @@ namespace SandstormModLauncher.Services
                     var p = Json.Deserialize<Profile>(File.ReadAllText(f, Encoding.UTF8));
                     if (p == null || string.IsNullOrWhiteSpace(p.Name)) continue;
                     Normalize(p);
+                    if (Profiles.Any(x => x.Name.Equals(p.Name, StringComparison.OrdinalIgnoreCase))) { AppLog.Warn("Profile " + p.Name + " is in two files; " + Path.GetFileName(f) + " skipped"); continue; }
                     Profiles.Add(p);
+                    // Files named by older versions (a trailing dot, a device name like CON, a very long name) move to today's name.
+                    string want = ProfilePath(p.Name);
+                    if (!string.Equals(Path.GetFullPath(f), Path.GetFullPath(want), StringComparison.OrdinalIgnoreCase) && !File.Exists(want))
+                    {
+                        try { WriteAtomic(want, File.ReadAllText(f, Encoding.UTF8)); File.Delete(f); AppLog.Info("Profile file " + Path.GetFileName(f) + " renamed to " + Path.GetFileName(want)); }
+                        catch (Exception ex) { AppLog.Warn("Profile file rename: " + ex.Message); }
+                    }
                 }
                 catch (Exception ex) { AppLog.Warn("Profile " + Path.GetFileName(f) + " unreadable: " + ex.Message); TryQuarantine(f); }
             }
@@ -127,12 +135,38 @@ namespace SandstormModLauncher.Services
             try { if (!string.Equals(old, ProfilePath(newName), StringComparison.OrdinalIgnoreCase)) File.Delete(old); } catch { }
         }
 
-        public static string ProfilePath(string name)
+        public static string ProfilePath(string name) => Path.Combine(AppPaths.ProfilesDir, ProfileFileName(name) + ".json");
+
+        private static readonly string[] Reserved = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                                                      "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+
+        /// <summary>The file name of a profile: invalid characters replaced, no trailing dots or spaces, not a reserved device name, not too long.</summary>
+        public static string ProfileFileName(string name)
         {
             var safe = new StringBuilder();
-            foreach (char c in name) safe.Append(Path.GetInvalidFileNameChars().Contains(c) ? '_' : c);
-            return Path.Combine(AppPaths.ProfilesDir, safe.ToString().Trim() + ".json");
+            foreach (char c in name ?? "") safe.Append(Path.GetInvalidFileNameChars().Contains(c) ? '_' : c);
+            string s = safe.ToString().Trim().TrimEnd('.', ' ');
+            if (s.Length > 80) s = s.Substring(0, 80).TrimEnd('.', ' ');
+            if (s.Length == 0) s = "_";
+            string stem = s.Split('.')[0].Trim();
+            if (Reserved.Contains(stem, StringComparer.OrdinalIgnoreCase)) s = "_" + s;
+            return s;
         }
+
+        /// <summary>The name, with a number added when another profile already has it or would share its file (renaming ignores the profile itself).</summary>
+        public string UniqueName(string name, Profile self = null)
+        {
+            string baseName = (name ?? "").Trim();
+            if (baseName.Length > 60) baseName = baseName.Substring(0, 60).Trim();
+            if (baseName.Length == 0) baseName = "Profile";
+            string n = baseName; int i = 2;
+            while (Profiles.Any(p => p != self && p.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || FileTaken(n, self)) n = baseName + " " + i++;
+            return n;
+        }
+
+        /// <summary>True when another profile would be saved to the same file.</summary>
+        public bool FileTaken(string name, Profile self) =>
+            Profiles.Any(p => p != self && string.Equals(ProfileFileName(p.Name), ProfileFileName(name), StringComparison.OrdinalIgnoreCase));
 
         private static void WriteAtomic(string path, string text)
         {

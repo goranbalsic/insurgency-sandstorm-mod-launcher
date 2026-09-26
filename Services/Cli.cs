@@ -57,7 +57,9 @@ namespace SandstormModLauncher.Services
                     }
                     case "light": p.Lighting = (A(1) ?? "").Equals("night", StringComparison.OrdinalIgnoreCase) ? "Night" : "Day"; print("Lighting " + p.Lighting); return 0;
                     case "hardcore": p.Hardcore = (A(1) ?? "").Equals("on", StringComparison.OrdinalIgnoreCase); print("Hardcore " + p.Hardcore); return 0;
-                    case "slots": p.MaxPlayers = Math.Max(1, Math.Min(64, int.Parse(A(1) ?? "8", CultureInfo.InvariantCulture))); print("Player slots " + p.MaxPlayers); return 0;
+                    case "slots":
+                        if (!int.TryParse(A(1) ?? "", NumberStyles.Integer, CultureInfo.InvariantCulture, out int slots)) { print("slots needs a number"); save = false; return 1; }
+                        p.MaxPlayers = Math.Max(1, Math.Min(64, slots)); print("Player slots " + p.MaxPlayers); return 0;
                     case "presets":
                         save = false;
                         foreach (var pr in Presets(state, p, A(1) ?? "styles")) print(pr.Name.PadRight(40) + " " + pr.Tag.PadRight(7) + " " + Trim(pr.Description, 80));
@@ -72,7 +74,7 @@ namespace SandstormModLauncher.Services
                     case "save":
                         state.Settings.RulesPresets.RemoveAll(r => r.Name.Equals(A(1) ?? "", StringComparison.OrdinalIgnoreCase));
                         state.Settings.RulesPresets.Add(SetupEngine.Capture(p, A(1) ?? "Saved setup"));
-                        p.RulesPresetName = A(1);
+                        SetupEngine.MarkPreset(p, A(1), true);
                         print("Saved \"" + A(1) + "\"");
                         return 0;
                     case "delete-saved":
@@ -117,7 +119,7 @@ namespace SandstormModLauncher.Services
                         if (File.Exists(A(2))) new FileInfo(A(2)).IsReadOnly = false;
                         File.Copy(A(1), A(2), true);
                         new FileInfo(A(2)).IsReadOnly = new FileInfo(A(1)).IsReadOnly;
-                        UeIni.WriteText(A(2), UeIni.MergeSections(UeIni.ReadText(A(2)), plan.IniSections, (sec, key) => LaunchPlanner.IsManagedIniKey(state.Rules, sec, key)));
+                        UeIni.WriteText(A(2), LaunchPlanner.MergeGameIni(UeIni.ReadText(A(2)), plan, state.Rules, state.Settings.ManagedIniKeys));
                         print("Merged into " + A(2) + " (read-only afterwards: " + new FileInfo(A(2)).IsReadOnly + ")");
                         return 0;
                     }
@@ -134,13 +136,15 @@ namespace SandstormModLauncher.Services
                         // ini-write file: merges the plan into that file in place, the same way a launch writes Game.ini.
                         save = false;
                         var plan = LaunchPlanner.Build(p, state);
-                        UeIni.WriteText(A(1), UeIni.MergeSections(UeIni.ReadText(A(1)), plan.IniSections, (sec, key) => LaunchPlanner.IsManagedIniKey(state.Rules, sec, key)));
+                        UeIni.WriteText(A(1), LaunchPlanner.MergeGameIni(UeIni.ReadText(A(1)), plan, state.Rules, state.Settings.ManagedIniKeys));
                         print("Written: " + A(1) + " (read-only: " + new FileInfo(A(1)).IsReadOnly + ")");
                         return 0;
                     }
                     case "torture":
                         save = false;
-                        return Torture.Run(state, int.Parse(A(1) ?? "2000", CultureInfo.InvariantCulture), int.Parse(A(2) ?? "1", CultureInfo.InvariantCulture), print);
+                        if (!int.TryParse(A(1) ?? "2000", NumberStyles.Integer, CultureInfo.InvariantCulture, out int steps) || !int.TryParse(A(2) ?? "1", NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed))
+                        { print("torture [steps] [seed] takes numbers"); return 1; }
+                        return Torture.Run(state, steps, seed, print);
                     default:
                         save = false;
                         print("Unknown command " + cmd + ". See Services/Cli.cs for the list.");
@@ -192,7 +196,7 @@ namespace SandstormModLauncher.Services
         {
             var mode = SetupEngine.CurrentMode(p, state);
             print("Profile " + p.Name + ": " + p.ScenarioId + " (" + (mode?.Cls ?? "no mode") + "), " + p.Lighting + (p.Hardcore ? ", hardcore" : "") + ", " + p.MaxPlayers + " slots");
-            print("Preset: " + (p.RulesPresetName ?? "none"));
+            print("Preset: " + (p.RulesPresetName == null ? "none" : SetupEngine.PresetLabel(p)));
             foreach (var mr in p.Rules.OrderBy(k => k.Key))
                 print("  " + mr.Key + ": " + string.Join(", ", mr.Value.Select(kv => kv.Key + "=" + kv.Value)));
             print("Mutators (" + (p.MutatorsEnabled ? "on" : "off") + "): " + (p.Mutators.Count == 0 ? "none" : string.Join(", ", p.Mutators)));
