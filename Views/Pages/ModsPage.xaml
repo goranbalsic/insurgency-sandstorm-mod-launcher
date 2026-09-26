@@ -10,7 +10,9 @@
         </Grid.RowDefinitions>
 
         <DockPanel Margin="0,0,0,2">
-            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Center" Text="{Binding ModsSummary}" />
+            <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MutatorsEnabled}" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource TextDim}"
+                      Content="Load the mutators" ToolTip="Turn off to play without mutators but keep your selection" />
+            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Center" Text="{Binding ModsSummary}" TextTrimming="CharacterEllipsis" />
             <Border Style="{StaticResource SegmentHost}" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource Segment}" MinHeight="30" IsChecked="{Binding ModsTab, Converter={StaticResource Eq}, ConverterParameter=Mutators}">

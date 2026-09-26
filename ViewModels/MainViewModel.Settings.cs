@@ -67,12 +67,13 @@ namespace SandstormModLauncher.ViewModels
             DeleteCustomMapCommand = new AsyncCommand(p => DeleteCustomMap((p as MapItem)?.Custom ?? editingMap));
             CancelCustomMapCommand = new RelayCommand(() => MapEditorOpen = false);
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
-                "1. PLAY > Map: pick a map and scenario, then set your squad and the enemies on the right. Every value starts at that mode's own default. Changed values turn gold.\n\n" +
-                "2. PLAY > Rules has every other match setting of that mode, with presets: play styles for co-op or versus, the official rulesets, the official playlists (their mutators and rules on the map you picked) and your own. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
-                "3. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded.\n\n" +
-                "4. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
-                "5. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
-                "Something wrong? Settings > Something went wrong? saves a report on this PC, or shows a cleaned one you can post on the project's GitHub."));
+                "1. PLAY > Map: pick a map and scenario, day or night. The right column (Your match) always shows the whole setup; click a line to change it.\n\n" +
+                "2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n" +
+                "3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n" +
+                "4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
+                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and sends the match through the console. It checks on screen that the console is open before typing, and stops if it is not. Keep your hands off the keyboard for those few seconds.\n\n" +
+                "6. PLAY > Live works during a match: restart rounds, set the clock, respawn bots, change rules, without typing commands.\n\n" +
+                "Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC."));
         }
 
         public ICommand HelpCommand { get; private set; }
@@ -368,6 +369,7 @@ namespace SandstormModLauncher.ViewModels
         {
             PrepareShareCommand = new AsyncCommand(PrepareShare);
             SendShareCommand = new RelayCommand(SendShare, () => shareOpen);
+            SendReportCommand = new AsyncCommand(SendReport, () => shareOpen && !sendingReport);
             CancelShareCommand = new RelayCommand(() => ShareReportOpen = false);
             ReportLaunchProblemCommand = new AsyncCommand(async () =>
             {
@@ -391,6 +393,40 @@ namespace SandstormModLauncher.ViewModels
             ShareReportText = f;
             ShareReportOpen = true;
         }
+
+        /// <summary>Sends the report the player just read to the developer's report inbox (no account needed). Only on their click.</summary>
+        private async Task SendReport()
+        {
+            if (!shareOpen || sendingReport) return;
+            sendingReport = true;
+            CommandManager.InvalidateRequerySuggested();
+            try
+            {
+                string note = ReportNote, s = shareShort, f = shareFull;
+                string id = await Task.Run(() => DebugReport.Send(note, s, f));
+                ShareReportOpen = false;
+                ReportNote = "";
+                ShowToast("Report sent (id " + id + "). Thank you!");
+            }
+            catch (DebugReport.NoInboxException)
+            {
+                ShowToast("Sending reports directly is not set up yet, so the GitHub form opens instead.");
+                SendShare();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("Report not sent: " + ex.Message);
+                ShowToast("The report could not be sent (" + ex.Message + "). It is saved on this PC; you can also post it on GitHub.");
+            }
+            finally
+            {
+                sendingReport = false;
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
+        private bool sendingReport;
+        public ICommand SendReportCommand { get; private set; }
 
         private void SendShare()
         {

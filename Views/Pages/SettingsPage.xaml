@@ -243,24 +243,28 @@
                             </WrapPanel>
                             <TextBlock Text="Something went wrong?" Style="{StaticResource Label}" />
                             <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="Report on GitHub..." Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding PrepareShareCommand}"
-                                        ToolTip="Shows the report first. Nothing is sent until you press Submit on GitHub." />
+                                <Button DockPanel.Dock="Right" Content="Send a report..." Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding PrepareShareCommand}"
+                                        ToolTip="Shows the report first. Nothing is sent until you press Send." />
                                 <Button DockPanel.Dock="Right" Content="Save report" Margin="8,0,0,0" Command="{Binding SaveReportCommand}" />
                                 <TextBox Text="{Binding ReportNote, UpdateSourceTrigger=PropertyChanged}" Tag="What happened? (optional)" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
-                                       Text="Save report keeps logs on this PC. Report on GitHub shows a cleaned report first (no names, IDs or screenshots); nothing is posted until you press Submit." />
+                                       Text="Save report keeps logs on this PC. Send a report shows a cleaned report first (no names, IDs or screenshots); nothing leaves your PC until you press Send." />
                             <Border x:Name="sharePanel" Style="{StaticResource Well}" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding ShareReportOpen, Converter={StaticResource Vis}}"
                                     IsVisibleChanged="SharePanel_IsVisibleChanged">
                                 <StackPanel>
-                                    <TextBlock Text="This is everything that would be posted publicly" FontWeight="SemiBold" />
-                                    <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8"
-                                               Text="The full text goes on your clipboard to paste into the form. Cancel if anything looks private." />
+                                    <TextBlock Text="This is everything that would be sent" FontWeight="SemiBold" />
+                                    <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" TextWrapping="Wrap"
+                                               Text="Send goes to the developer's private report inbox, only this text, once. Cancel if anything looks private." />
                                     <TextBox Style="{StaticResource CodeBox}" IsReadOnly="True" Height="240" Text="{Binding ShareReportText, Mode=OneWay}" FontSize="11.5" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                                        <Button Content="Cancel" Command="{Binding CancelShareCommand}" />
-                                        <Button Content="Open the GitHub form" Style="{StaticResource AccentButton}" Margin="8,0,0,0" Command="{Binding SendShareCommand}" />
-                                    </StackPanel>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <Button DockPanel.Dock="Left" Style="{StaticResource LinkButton}" Content="Post it on GitHub instead" VerticalAlignment="Center" Command="{Binding SendShareCommand}"
+                                                ToolTip="Opens the public GitHub issue form (needs a GitHub account)" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Content="Cancel" Command="{Binding CancelShareCommand}" />
+                                            <Button Content="Send" Style="{StaticResource AccentButton}" Margin="8,0,0,0" Padding="18,5" Command="{Binding SendReportCommand}" />
+                                        </StackPanel>
+                                    </DockPanel>
                                 </StackPanel>
                             </Border>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0">

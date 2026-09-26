@@ -61,6 +61,7 @@ namespace SandstormModLauncher.ViewModels
             {
                 if (!State.Store.IsLoaded) State.Store.Load();
                 State.Rules = RulesDb.LoadEmbedded();
+                SetupEngine.CleanStored(State);
                 State.Install = GameInstall.Detect(State.Settings.GameDirOverride);
                 AppLog.Info($"Game: {State.Install.GameDir ?? "not found"} ({State.Install.Store})");
                 Monitor = new GameMonitor();

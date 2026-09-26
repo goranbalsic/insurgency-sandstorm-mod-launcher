@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -84,6 +84,12 @@ namespace SandstormModLauncher.Services
             Settings.MutatorPresets = Settings.MutatorPresets ?? new List<MutatorPreset>();
             Settings.CustomMaps = Settings.CustomMaps ?? new List<CustomMapEntry>();
             Settings.RulesPresets = Settings.RulesPresets ?? new List<RulesPreset>();
+            Settings.RulesPresets.RemoveAll(r => r == null || string.IsNullOrWhiteSpace(r.Name));
+            foreach (var r in Settings.RulesPresets)
+            {
+                r.Rules = r.Rules ?? new Dictionary<string, Dictionary<string, string>>();
+                r.Mutators = r.Mutators ?? new List<string>();
+            }
         }
 
         private static void Normalize(Profile p)
@@ -95,7 +101,9 @@ namespace SandstormModLauncher.Services
                 if (kv.Value != null) fixedRules[kv.Key] = new Dictionary<string, string>(kv.Value, StringComparer.OrdinalIgnoreCase);
             p.Rules = fixedRules;
             if (p.MaxPlayers <= 0) p.MaxPlayers = 8;
-            if (string.IsNullOrEmpty(p.Lighting)) p.Lighting = "Day";
+            if (p.MaxPlayers > 64) p.MaxPlayers = 64;
+            p.Lighting = "Night".Equals(p.Lighting, StringComparison.OrdinalIgnoreCase) ? "Night" : "Day";
+            p.PresetKeys = p.PresetKeys ?? new List<string>();
         }
 
         public Profile Active => Profiles.FirstOrDefault(p => p.Name == Settings.ActiveProfile) ?? Profiles[0];
