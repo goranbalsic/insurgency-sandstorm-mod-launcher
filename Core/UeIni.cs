@@ -15,24 +15,84 @@ namespace SandstormModLauncher.Core
         public const string BlockStart = "; >>> Sandstorm Mod Launcher (managed block, edited automatically) >>>";
         public const string BlockEnd = "; <<< Sandstorm Mod Launcher <<<";
 
+        /// <summary>Reads a config file while other programs may have it open; a file held exclusively is retried for a moment.</summary>
         public static string ReadText(string path)
         {
             if (!File.Exists(path)) return "";
-            var bytes = File.ReadAllBytes(path);
+            byte[] bytes = null;
+            for (int attempt = 1; bytes == null; attempt++)
+            {
+                try
+                {
+                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    using (var m = new MemoryStream())
+                    {
+                        fs.CopyTo(m);
+                        bytes = m.ToArray();
+                    }
+                }
+                catch (IOException ex) when (attempt < 6 && !(ex is FileNotFoundException) && !(ex is DirectoryNotFoundException))
+                {
+                    System.Threading.Thread.Sleep(250 * attempt);
+                }
+                catch (IOException ex) when (!(ex is FileNotFoundException) && !(ex is DirectoryNotFoundException))
+                {
+                    throw new IOException(Path.GetFileName(path) + " is in use by another program (" + ex.Message.TrimEnd('.') + "). Close the game or the program that has it open and try again.", ex);
+                }
+            }
             if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
             if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
             return Encoding.UTF8.GetString(bytes);
         }
 
+        /// <summary>
+        /// Writes a config file through a temporary file. A read-only file (players set Game.ini read-only so the game
+        /// cannot overwrite it) is written anyway and made read-only again afterwards; a file another program holds
+        /// is retried for a moment. Anything else fails with a message that says what to do.
+        /// </summary>
         public static void WriteText(string path, string text)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             bool ascii = text.All(c => c < 128);
             string tmp = path + ".sml-tmp";
-            if (ascii) File.WriteAllText(tmp, text, new UTF8Encoding(false));
-            else File.WriteAllText(tmp, text, Encoding.Unicode); // Unreal reads UTF-16 LE with BOM
-            if (File.Exists(path)) File.Replace(tmp, path, null);
-            else File.Move(tmp, path);
+            var existing = new FileInfo(path);
+            bool wasReadOnly = existing.Exists && existing.IsReadOnly;
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    if (File.Exists(tmp)) { new FileInfo(tmp).IsReadOnly = false; File.Delete(tmp); }
+                    if (ascii) File.WriteAllText(tmp, text, new UTF8Encoding(false));
+                    else File.WriteAllText(tmp, text, Encoding.Unicode); // Unreal reads UTF-16 LE with BOM
+                    if (File.Exists(path))
+                    {
+                        if (wasReadOnly) new FileInfo(path).IsReadOnly = false;
+                        File.Replace(tmp, path, null);
+                    }
+                    else File.Move(tmp, path);
+                    if (wasReadOnly) new FileInfo(path).IsReadOnly = true;
+                    if (wasReadOnly) AppLog.Info(Path.GetFileName(path) + " is read-only: written and set read-only again");
+                    return;
+                }
+                catch (IOException ex) when (attempt < 6 && !(ex is FileNotFoundException) && !(ex is DirectoryNotFoundException))
+                {
+                    // Another program (the game shutting down, an editor, a sync tool) has it open.
+                    System.Threading.Thread.Sleep(250 * attempt);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (wasReadOnly && File.Exists(path)) new FileInfo(path).IsReadOnly = true; } catch { }
+                    throw new UnauthorizedAccessException("Windows did not allow the launcher to change " + Path.GetFileName(path) + " (" + ex.Message.TrimEnd('.') + "). " +
+                        "Check that the file is not blocked by an antivirus \"protected folders\" setting, and that you can edit it yourself: " + path, ex);
+                }
+                catch (IOException ex)
+                {
+                    try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                    try { if (wasReadOnly && File.Exists(path)) new FileInfo(path).IsReadOnly = true; } catch { }
+                    throw new IOException(Path.GetFileName(path) + " is in use by another program (" + ex.Message.TrimEnd('.') + "). Close the game or the program that has it open and try again.", ex);
+                }
+            }
         }
 
         /// <summary>Removes the marked block older launcher versions wrote.</summary>

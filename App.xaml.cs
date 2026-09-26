@@ -13,6 +13,9 @@ namespace SandstormModLauncher
     {
         private static Mutex singleInstance;
 
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern bool AttachConsole(int processId);
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -153,11 +156,28 @@ namespace SandstormModLauncher
                 return;
             }
 
-            if (eArgs.Length >= 2 && eArgs[0] == "--preset-test")
+            if (eArgs.Length >= 1 && eArgs[0] == "--cli")
             {
-                // --preset-test out.txt: what every rules preset changes in the launch plan (no window).
+                // --cli [--out file] command args: the setup logic from the command line (Services/Cli.cs), no window.
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                RunPresetTest(eArgs[1]);
+                var rest = eArgs.Skip(1).ToList();
+                string outFile = null;
+                int o = rest.IndexOf("--out");
+                if (o >= 0 && o + 1 < rest.Count) { outFile = rest[o + 1]; rest.RemoveRange(o, 2); }
+                bool console = AttachConsole(-1);
+                var text = new System.Text.StringBuilder();
+                int code;
+                try
+                {
+                    code = Services.Cli.Run(rest.ToArray(), line =>
+                    {
+                        text.AppendLine(line);
+                        if (console) Console.WriteLine(line);
+                    });
+                }
+                catch (Exception ex) { text.AppendLine("CLI CRASHED: " + ex); if (console) Console.WriteLine("CLI CRASHED: " + ex); code = 2; }
+                if (outFile != null) File.WriteAllText(outFile, text.ToString());
+                Shutdown(code);
                 return;
             }
 
@@ -223,22 +243,6 @@ namespace SandstormModLauncher
         /// --render &lt;folder&gt; [Page ...]: draws the launcher pages to PNG files without ever showing a window
         /// (1920x1080 at 125% scaling). Used to check the layout while someone else is using the PC.
         /// </summary>
-        private async void RunPresetTest(string outFile)
-        {
-            try
-            {
-                var vm = new ViewModels.MainViewModel();
-                vm.State.Store.Load();
-                var init = vm.InitializeAsync();
-                for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
-                string text = await vm.PresetSelfTest("Styles") + "\n" + await vm.PresetSelfTest("Official") + "\n" + await vm.PresetSelfTest("Playlists");
-                File.WriteAllText(outFile, text);
-                vm.Dispose();
-            }
-            catch (Exception ex) { File.WriteAllText(outFile, "PRESET TEST CRASHED: " + ex); }
-            finally { Shutdown(); }
-        }
-
         private async void RenderPages(string outDir, System.Collections.Generic.List<string> pages)
         {
             try

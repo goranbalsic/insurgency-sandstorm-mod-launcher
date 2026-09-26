@@ -123,8 +123,15 @@ namespace SandstormModLauncher.Game
                 if (!File.Exists(path)) return;
                 string dir = Path.Combine(AppPaths.DataDir, "backups");
                 Directory.CreateDirectory(dir);
-                File.Copy(path, Path.Combine(dir, Path.GetFileName(path) + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak"), true);
-                foreach (var old in Directory.GetFiles(dir, Path.GetFileName(path) + ".*.bak").OrderByDescending(f => f).Skip(15)) File.Delete(old);
+                string target = Path.Combine(dir, Path.GetFileName(path) + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak");
+                if (File.Exists(target)) new FileInfo(target).IsReadOnly = false;
+                File.Copy(path, target, true);
+                new FileInfo(target).IsReadOnly = false;   // a copy of a read-only Game.ini is read-only too; backups must stay removable
+                foreach (var old in Directory.GetFiles(dir, Path.GetFileName(path) + ".*.bak").OrderByDescending(f => f).Skip(15))
+                {
+                    new FileInfo(old).IsReadOnly = false;
+                    File.Delete(old);
+                }
             }
             catch (Exception ex) { AppLog.Warn("Backup failed: " + ex.Message); }
         }

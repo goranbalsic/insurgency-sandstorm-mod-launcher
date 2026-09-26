@@ -44,13 +44,90 @@
         <Style x:Key="TabSegment" TargetType="RadioButton" BasedOn="{StaticResource PageTab}">
             <Setter Property="MinWidth" Value="84" />
         </Style>
+        <!-- One preset (squad preset, rule style, official ruleset, playlist or saved setup). Co-op = PvE, solo or with AI teammates; Versus = against bots offline. -->
+        <DataTemplate x:Key="PresetCard">
+            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="11,9" Margin="0,0,8,8">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Apply" Padding="14,4"
+                                Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                        <Button Style="{StaticResource GhostButton}" Content="Delete" Padding="10,4" Margin="6,0,0,0" ToolTip="Delete this saved setup"
+                                Visibility="{Binding Group, Converter={StaticResource Vis}, ConverterParameter='Saved'}"
+                                Command="{Binding DataContext.DeleteRulesPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Padding="6,1" Margin="6,2,0,0" VerticalAlignment="Top" CornerRadius="2" BorderThickness="1"
+                                    Visibility="{Binding HasTag, Converter={StaticResource Vis}}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource GoodBg}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource GoodBorder}" />
+                                        <Setter Property="ToolTip" Value="Co-op (PvE): play it solo or with AI teammates" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVersus}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource InfoBg}" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource InfoBorder}" />
+                                                <Setter Property="ToolTip" Value="Versus (PvP): offline you play it against bots" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource GoodFg}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsVersus}" Value="True"><Setter Property="Foreground" Value="{StaticResource InfoFg}" /></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Note}" Style="{StaticResource Mute}" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HasNote, Converter={StaticResource Vis}}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+        <!-- A line of the match summary: what it is, the current value, and a click opens the tab that changes it. -->
+        <Style x:Key="SummaryRow" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="Transparent" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="2,8,2,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{TemplateBinding Tag}" Foreground="{StaticResource TextMute}" FontSize="12" VerticalAlignment="Top" Margin="0,1,0,0" />
+                                <ContentPresenter Grid.Column="1" />
+                                <TextBlock Grid.Column="2" Text="&#xE76C;" Style="{StaticResource Icon}" FontSize="10" Foreground="{StaticResource TextFaint}" Margin="8,2,0,0" VerticalAlignment="Top" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{StaticResource Bg3}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="20,18,20,16">
+    <Grid x:Name="root" Margin="20,18,20,16" SizeChanged="Root_SizeChanged">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="20" />
-            <ColumnDefinition Width="0.6*" MinWidth="330" MaxWidth="410" />
+            <ColumnDefinition x:Name="gapCol" Width="20" />
+            <ColumnDefinition x:Name="summaryCol" Width="0.6*" MinWidth="330" MaxWidth="410" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -59,8 +136,8 @@
 
             <!-- ============================================================ header + tabs (full width, never moves) -->
             <Border Grid.ColumnSpan="3" Style="{StaticResource TabStrip}">
-            <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left" Margin="0,0,0,8">
+            <DockPanel x:Name="header" LastChildFill="False">
+                <StackPanel x:Name="titleBox" DockPanel.Dock="Left" Margin="0,0,0,8">
                     <TextBlock Style="{StaticResource Kicker}">
                         <Run Text="Play · " /><Run Text="{Binding RulesModeTitle, Mode=OneWay}" />
                     </TextBlock>
@@ -69,6 +146,7 @@
                             <Style TargetType="TextBlock" BasedOn="{StaticResource H1}">
                                 <Setter Property="Text" Value="Map and scenario" />
                                 <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Squad"><Setter Property="Text" Value="Bots and enemies" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="Match rules" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="Live match control" /></DataTrigger>
                                     <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="Mods and mutators" /></DataTrigger>
@@ -78,12 +156,19 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </StackPanel>
-                <Border DockPanel.Dock="Right" VerticalAlignment="Bottom">
+                <Border x:Name="tabsBox" DockPanel.Dock="Right" VerticalAlignment="Bottom">
                     <StackPanel Orientation="Horizontal">
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Map}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE707;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
                                 <TextBlock Text="Map" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Squad}"
+                                     ToolTip="Teammates, enemies and AI difficulty, with presets">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE716;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Squad" />
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Rules}"
@@ -231,6 +316,11 @@
 
             <!-- ============================================================ maps -->
             <Grid Grid.Row="1" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Map}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="0.55*" MinWidth="270" MaxWidth="360" />
+                </Grid.ColumnDefinitions>
                 <ScrollViewer x:Name="mapScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
                     <ItemsControl ItemsSource="{Binding MapsView}" Margin="-6,-6,-6,0" Focusable="False">
                         <ItemsControl.ItemsPanel>
@@ -306,6 +396,163 @@
                 <TextBlock Style="{StaticResource Dim}" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                            Visibility="{Binding AllMapCount, Converter={StaticResource VisNot}}"
                            Text="No maps yet. Make sure the game folder is set in Settings." />
+                <!-- scenario of the picked map -->
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" Text="{Binding SelectedMap.Counts}" />
+                            <TextBlock Style="{StaticResource H2}" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding SelectedMapTitle, StringFormat={}{0}}" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding ScenarioModeGroups}" Margin="0,4,0,0" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
+                                        <ItemsControl ItemsSource="{Binding Modes}" Focusable="False">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <RadioButton Style="{StaticResource Chip}" Margin="0,0,6,6" GroupName="scenarioMode" Content="{Binding Mode}"
+                                                                 IsChecked="{Binding IsSelected, Mode=OneWay}" ToolTip="{Binding Tip}"
+                                                                 Command="{Binding DataContext.SelectScenarioModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel Visibility="{Binding HasScenarioSides, Converter={StaticResource Vis}}" Margin="0,6,0,0">
+                            <TextBlock Text="Side" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
+                            <Border Style="{StaticResource SegmentHost}">
+                                <ItemsControl ItemsSource="{Binding ScenarioSides}" Focusable="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <RadioButton Style="{StaticResource Segment}" GroupName="scenarioSide" Content="{Binding SideLabel}" IsChecked="{Binding IsSelected, Mode=OneWay}" ToolTip="{Binding Id}"
+                                                         Command="{Binding DataContext.SelectScenarioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding SelectedScenarioId}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="1,8,0,0"
+                                   TextTrimming="CharacterEllipsis" ToolTip="Scenario ID" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SegmentHost}">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Style="{StaticResource Segment}" IsChecked="{Binding Day}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE706;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,7,0" />
+                                            <TextBlock Text="Day" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource Segment}" IsChecked="{Binding Night}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE708;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,7,0" />
+                                            <TextBlock Text="Night" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                </UniformGrid>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource Well}" Margin="8,0,0,0" Padding="10,0">
+                                <CheckBox Content="Hardcore" IsChecked="{Binding Hardcore}" IsEnabled="{Binding CanHardcore}" Foreground="{StaticResource TextDim}"
+                                          ToolTip="Hardcore Checkpoint: no HUD, more damage, limited respawns (Checkpoint scenarios only)" />
+                            </Border>
+                        </Grid>
+                        <c:Stepper Margin="0,8,0,0" Label="Player slots" Hint="MaxPlayers · raised automatically to fit AI teammates" Value="{Binding MaxPlayers}" Minimum="1" Maximum="64" />
+                    </StackPanel>
+                </Border>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- ============================================================ squad: presets on the left, the values on the right -->
+            <Grid Grid.Row="0" Grid.RowSpan="2" Margin="0,14,0,0" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Squad}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="0.8*" MinWidth="300" MaxWidth="420" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Margin="16,12,16,10">
+                            <TextBlock Text="Presets" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap">
+                                <Run Text="For every" /> <Run Text="{Binding SquadKindLabel, Mode=OneWay}" /> <Run Text="mode. Applying one replaces the bot values it is about; fine-tune them on the right." />
+                            </TextBlock>
+                        </StackPanel>
+                        <ScrollViewer x:Name="squadScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14,0,6,8" Focusable="False">
+                            <ItemsControl ItemsSource="{Binding SquadPresets}" ItemTemplate="{StaticResource PresetCard}" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><UniformGrid VerticalAlignment="Top" Columns="{Binding ActualWidth, ElementName=squadScroll, Converter={StaticResource ColumnsFor}, ConverterParameter=210}" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Bots and enemies" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap">
+                                <Run Text="{Binding CurrentModeName, Mode=OneWay}" /><Run Text=" defaults unless changed (gold)." />
+                            </TextBlock>
+                        <!-- co-op -->
+                        <StackPanel Visibility="{Binding IsCoopMode, Converter={StaticResource Vis}}" Margin="0,8,0,0">
+                            <c:Stepper Margin="0,10,0,0" Label="AI teammates" Hint="{Binding TeammatesHint}" Value="{Binding Teammates}" Changed="{Binding TeammatesChanged}" Maximum="32"
+                                       ToolTip="Bots on your team. Read at game start (the launcher restarts it if needed)." />
+                            <c:Stepper Label="Enemies when playing alone" Hint="{Binding SoloEnemiesHint}" Value="{Binding SoloEnemies}" Changed="{Binding SoloEnemiesChanged}"
+                                       ToolTip="Enemy bots alive at once when you are the only human player" />
+                            <c:Stepper Label="Minimum enemies" Hint="{Binding MinEnemiesHint}" Value="{Binding MinEnemies}" Changed="{Binding MinEnemiesChanged}"
+                                       ToolTip="Fewest enemy bots with a group of players" />
+                            <c:Stepper Label="Maximum enemies" Hint="{Binding MaxEnemiesHint}" Value="{Binding MaxEnemies}" Changed="{Binding MaxEnemiesChanged}"
+                                       ToolTip="Most enemy bots with a full group of players" />
+                        </StackPanel>
+
+                        <!-- versus -->
+                        <StackPanel Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}" Margin="0,12,0,0">
+                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding BotsEnabled}" Margin="0,4,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="Fill teams with bots" FontSize="14" />
+                                    <TextBlock Text="bBots · teams are always even" FontSize="11" Foreground="{StaticResource TextFaint}" />
+                                </StackPanel>
+                            </CheckBox>
+                            <c:Stepper Label="Players per team" Hint="{Binding BotQuotaHint}" Value="{Binding BotQuota}" Changed="{Binding BotQuotaChanged}" Maximum="32"
+                                       IsEnabled="{Binding BotsEnabled}" ToolTip="Size of each team. You take one slot on yours; bots fill the rest and the whole enemy team." />
+                        </StackPanel>
+
+                        <StackPanel Margin="0,12,0,0">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding AiDifficultyLabel}" FontFamily="{StaticResource Mono}" Foreground="{StaticResource Accent}" />
+                                <TextBlock Text="AI difficulty" FontSize="14" />
+                            </DockPanel>
+                            <Slider Minimum="0" Maximum="1" Value="{Binding AiDifficulty}" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0"
+                                    ToolTip="How well bots aim, spot and react. 0.5 is the game default." />
+                            <Grid Margin="0,2,0,0">
+                                <TextBlock Text="Recruit" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
+                                <TextBlock Text="Default 0.50" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Nightmare" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}"
+                                       Text="Versus: applied after the map loads." />
+                        </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
             </Grid>
 
             <!-- ============================================================ rules -->
@@ -323,7 +570,7 @@
                         </Grid.RowDefinitions>
                         <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="2,2,0,0" Padding="14,8">
                             <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource InfoFg}">
-                                <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode. Gold = changed from the game default. Bots and enemies are in the squad card." />
+                                <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode. Gold = changed from the game default. Bots and enemies are on the Squad tab." />
                             </TextBlock>
                         </Border>
                         <ListBox Grid.Row="1" Style="{StaticResource PlainList}" ItemsSource="{Binding RuleItemsView}" Margin="0,0,0,6"
@@ -381,68 +628,19 @@
                                     <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Official" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Official}" />
                                     <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Playlists" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Playlists}"
                                                  ToolTip="The official online playlists: their mutators and rules, added to the map you picked" />
-                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Mine" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Mine}" />
+                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Saved" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Saved}" />
                                 </UniformGrid>
                             </Border>
                         </StackPanel>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,0,10,8">
                             <StackPanel>
-                                <ItemsControl ItemsSource="{Binding RulePresets}" Focusable="False">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="11,9" Margin="0,0,0,8">
-                                                <StackPanel>
-                                                    <DockPanel>
-                                                        <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="24" Height="24" FontSize="11" Content="&#xE74D;" ToolTip="Delete preset"
-                                                                Visibility="{Binding Group, Converter={StaticResource Vis}, ConverterParameter='My preset'}"
-                                                                Command="{Binding DataContext.DeleteRulesPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                        <!-- Co-op = PvE, solo or with AI teammates; Versus = PvP, played against bots offline -->
-                                                        <Border DockPanel.Dock="Right" Padding="6,1" Margin="6,2,4,0" VerticalAlignment="Top" CornerRadius="2" BorderThickness="1"
-                                                                Visibility="{Binding HasTag, Converter={StaticResource Vis}}">
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="{StaticResource GoodBg}" />
-                                                                    <Setter Property="BorderBrush" Value="{StaticResource GoodBorder}" />
-                                                                    <Setter Property="ToolTip" Value="Co-op (PvE): play it solo or with AI teammates" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsVersus}" Value="True">
-                                                                            <Setter Property="Background" Value="{StaticResource InfoBg}" />
-                                                                            <Setter Property="BorderBrush" Value="{StaticResource InfoBorder}" />
-                                                                            <Setter Property="ToolTip" Value="Versus (PvP): offline you play it against bots" />
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Foreground" Value="{StaticResource GoodFg}" />
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsVersus}" Value="True"><Setter Property="Foreground" Value="{StaticResource InfoFg}" /></DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                        </Border>
-                                                        <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                    </DockPanel>
-                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                                                    <TextBlock Text="{Binding Note}" Style="{StaticResource Mute}" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                                               Visibility="{Binding HasNote, Converter={StaticResource Vis}}" />
-                                                    <Border Height="8" />
-                                                    <Button Content="Apply" HorizontalAlignment="Left" Padding="14,5"
-                                                            Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding RulePresets}" ItemTemplate="{StaticResource PresetCard}" Focusable="False" />
                                 <TextBlock Style="{StaticResource Mute}" Visibility="{Binding HasNoPresets, Converter={StaticResource Vis}}" Margin="4,4,4,0" TextWrapping="Wrap"
-                                           Text="No presets yet." />
+                                           Text="Nothing saved yet. &quot;Save setup as a preset&quot; below keeps the whole match: map, scenario, bots, every rule and the mutators." />
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="2" Margin="14,4,14,12">
-                            <Button Content="Save my changes as a preset" Command="{Binding SaveRulesPresetCommand}" ToolTip="Saves all your rule changes (every mode) and mutators" />
+                            <Button Content="Save setup as a preset..." Command="{Binding SaveRulesPresetCommand}" ToolTip="Saves everything: map, scenario, bots, every rule and the mutators" />
                             <Button Content="Reset every mode" Style="{StaticResource DangerButton}" Margin="0,8,0,0" Command="{Binding ResetAllRulesCommand}" />
                         </StackPanel>
                     </Grid>
@@ -528,196 +726,60 @@
             </Border>
         </Grid>
 
-        <!-- ============================================================ setup column (always shown, so the page never changes shape) -->
-        <ScrollViewer Grid.Row="1" Grid.Column="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
-            <StackPanel>
-                <!-- scenario -->
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" Text="{Binding SelectedMap.Counts}" />
-                            <TextBlock Style="{StaticResource H2}" TextTrimming="CharacterEllipsis"
-                                       Text="{Binding SelectedMapTitle, StringFormat={}{0}}" />
-                        </DockPanel>
-                        <ItemsControl ItemsSource="{Binding ScenarioModeGroups}" Margin="0,4,0,0" Focusable="False">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,8,0,6" />
-                                        <ItemsControl ItemsSource="{Binding Modes}" Focusable="False">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <RadioButton Style="{StaticResource Chip}" Margin="0,0,6,6" GroupName="scenarioMode" Content="{Binding Mode}"
-                                                                 IsChecked="{Binding IsSelected, Mode=OneWay}" ToolTip="{Binding Tip}"
-                                                                 Command="{Binding DataContext.SelectScenarioModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <StackPanel Visibility="{Binding HasScenarioSides, Converter={StaticResource Vis}}" Margin="0,6,0,0">
-                            <TextBlock Text="Side" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMute}" Margin="1,0,0,6" />
-                            <Border Style="{StaticResource SegmentHost}">
-                                <ItemsControl ItemsSource="{Binding ScenarioSides}" Focusable="False">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <RadioButton Style="{StaticResource Segment}" GroupName="scenarioSide" Content="{Binding SideLabel}" IsChecked="{Binding IsSelected, Mode=OneWay}" ToolTip="{Binding Id}"
-                                                         Command="{Binding DataContext.SelectScenarioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+        <!-- ============================================================ your match: the same summary on every tab (click a line to change it) -->
+        <ScrollViewer x:Name="summary" Grid.Row="1" Grid.Column="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
+            <Border Style="{StaticResource Card}" Padding="0">
+                <StackPanel>
+                    <Border x:Name="summaryThumb" Height="130" CornerRadius="2,2,0,0" Background="{StaticResource Bg3}">
+                        <Grid>
+                            <Border CornerRadius="2,2,0,0">
+                                <Border.Background>
+                                    <ImageBrush ImageSource="{Binding SelectedMap.Thumb, Converter={StaticResource Img}}" Stretch="UniformToFill" />
+                                </Border.Background>
                             </Border>
-                        </StackPanel>
-                        <TextBlock Text="{Binding SelectedScenarioId}" Style="{StaticResource MonoText}" FontSize="11" Foreground="{StaticResource TextFaint}" Margin="1,8,0,0"
-                                   TextTrimming="CharacterEllipsis" ToolTip="Scenario ID" />
-                        <Grid Margin="0,12,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SegmentHost}">
-                                <UniformGrid Rows="1">
-                                    <RadioButton Style="{StaticResource Segment}" IsChecked="{Binding Day}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE706;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,7,0" />
-                                            <TextBlock Text="Day" />
-                                        </StackPanel>
-                                    </RadioButton>
-                                    <RadioButton Style="{StaticResource Segment}" IsChecked="{Binding Night}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE708;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,7,0" />
-                                            <TextBlock Text="Night" />
-                                        </StackPanel>
-                                    </RadioButton>
-                                </UniformGrid>
+                            <Border VerticalAlignment="Bottom" Height="56">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                                        <GradientStop Color="#F2080909" Offset="0" />
+                                        <GradientStop Color="#00080909" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
                             </Border>
-                            <Border Grid.Column="1" Style="{StaticResource Well}" Margin="8,0,0,0" Padding="10,0">
-                                <CheckBox Content="Hardcore" IsChecked="{Binding Hardcore}" IsEnabled="{Binding CanHardcore}" Foreground="{StaticResource TextDim}"
-                                          ToolTip="Hardcore Checkpoint: no HUD, more damage, limited respawns (Checkpoint scenarios only)" />
-                            </Border>
+                            <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,8">
+                                <TextBlock Text="Your match" FontSize="11" Foreground="{StaticResource TextDim}" />
+                                <TextBlock Text="{Binding SelectedMapTitle}" FontFamily="{StaticResource Display}" FontSize="17" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
                         </Grid>
-                        <c:Stepper Margin="0,8,0,0" Label="Player slots" Hint="MaxPlayers · raised automatically to fit AI teammates" Value="{Binding MaxPlayers}" Minimum="1" Maximum="64" />
-                    </StackPanel>
-                </Border>
-
-                <!-- squad & enemies -->
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
-                    <StackPanel>
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="All match rules" Command="{Binding PlayTabCommand}" CommandParameter="Rules" VerticalAlignment="Bottom" />
-                            <TextBlock Text="Squad and enemies" Style="{StaticResource H2}" />
-                        </DockPanel>
-                        <TextBlock Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap">
-                            <Run Text="{Binding CurrentModeName, Mode=OneWay}" /><Run Text=" defaults unless changed (gold)." />
+                    </Border>
+                    <StackPanel Margin="14,6,14,14">
+                        <TextBlock Style="{StaticResource Mute}" Margin="2,2,0,4" TextTrimming="CharacterEllipsis" Visibility="{Binding ActivePresetName, Converter={StaticResource Vis}}">
+                            <Run Text="Preset: " /><Run Text="{Binding ActivePresetName, Mode=OneWay}" Foreground="{StaticResource AccentSoftFg}" />
                         </TextBlock>
-
-                        <!-- co-op -->
-                        <StackPanel Visibility="{Binding IsCoopMode, Converter={StaticResource Vis}}" Margin="0,12,0,0">
-                            <Border Style="{StaticResource SegmentHost}">
-                                <UniformGrid Rows="1">
-                                    <RadioButton Style="{StaticResource Segment}" Content="Lone Wolf" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=LoneWolf}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="LoneWolf" ToolTip="No AI teammates: just you against the enemy" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Squad" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Squad}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="Squad" ToolTip="Fight alongside AI teammates" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Defaults" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Defaults}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="Defaults" ToolTip="Reset bots and enemies to this mode's defaults" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Custom" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Custom}"
-                                                 IsHitTestVisible="False" Focusable="False" ToolTip="Your own mix of the values below" />
-                                </UniformGrid>
-                            </Border>
-                            <c:Stepper Margin="0,10,0,0" Label="AI teammates" Hint="{Binding TeammatesHint}" Value="{Binding Teammates}" Changed="{Binding TeammatesChanged}" Maximum="32"
-                                       ToolTip="Bots on your team. Read at game start (the launcher restarts it if needed)." />
-                            <c:Stepper Label="Enemies when playing alone" Hint="{Binding SoloEnemiesHint}" Value="{Binding SoloEnemies}" Changed="{Binding SoloEnemiesChanged}"
-                                       ToolTip="Enemy bots alive at once when you are the only human player" />
-                            <c:Stepper Label="Minimum enemies" Hint="{Binding MinEnemiesHint}" Value="{Binding MinEnemies}" Changed="{Binding MinEnemiesChanged}"
-                                       ToolTip="Fewest enemy bots with a group of players" />
-                            <c:Stepper Label="Maximum enemies" Hint="{Binding MaxEnemiesHint}" Value="{Binding MaxEnemies}" Changed="{Binding MaxEnemiesChanged}"
-                                       ToolTip="Most enemy bots with a full group of players" />
-                        </StackPanel>
-
-                        <!-- versus -->
-                        <StackPanel Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}" Margin="0,12,0,0">
-                            <Border Style="{StaticResource SegmentHost}">
-                                <UniformGrid Rows="1">
-                                    <RadioButton Style="{StaticResource Segment}" Content="1 v 1" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=VS1}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="VS1" ToolTip="You against one bot" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="5 v 5" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=VS5}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="VS5" ToolTip="You + 4 AI against 5 bots" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="10 v 10" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=VS10}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="VS10" ToolTip="You + 9 AI against 10 bots" />
-                                    <RadioButton Style="{StaticResource Segment}" Content="Defaults" MinHeight="34" IsChecked="{Binding PlayStyle, Mode=OneWay, Converter={StaticResource Eq}, ConverterParameter=Defaults}"
-                                                 Command="{Binding PlayStyleCommand}" CommandParameter="Defaults" ToolTip="The mode's own bot settings" />
-                                </UniformGrid>
-                            </Border>
-                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding BotsEnabled}" Margin="0,10,0,6">
-                                <StackPanel>
-                                    <TextBlock Text="Fill teams with bots" FontSize="14" />
-                                    <TextBlock Text="bBots · teams are always even" FontSize="11" Foreground="{StaticResource TextFaint}" />
-                                </StackPanel>
-                            </CheckBox>
-                            <c:Stepper Label="Players per team" Hint="{Binding BotQuotaHint}" Value="{Binding BotQuota}" Changed="{Binding BotQuotaChanged}" Maximum="32"
-                                       IsEnabled="{Binding BotsEnabled}" ToolTip="Size of each team. You take one slot on yours; bots fill the rest and the whole enemy team." />
-                        </StackPanel>
-
-                        <StackPanel Margin="0,12,0,0">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding AiDifficultyLabel}" FontFamily="{StaticResource Mono}" Foreground="{StaticResource Accent}" />
-                                <TextBlock Text="AI difficulty" FontSize="14" />
-                            </DockPanel>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding AiDifficulty}" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0"
-                                    ToolTip="How well bots aim, spot and react. 0.5 is the game default." />
-                            <Grid Margin="0,2,0,0">
-                                <TextBlock Text="Recruit" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Left" />
-                                <TextBlock Text="Default 0.50" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
-                                <TextBlock Text="Nightmare" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Right" />
-                            </Grid>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding IsVersusMode, Converter={StaticResource Vis}}"
-                                       Text="Versus: applied after the map loads." />
-                        </StackPanel>
+                        <Button Style="{StaticResource SummaryRow}" Tag="Scenario" Command="{Binding PlayTabCommand}" CommandParameter="Map" ToolTip="Map, mode, side, day or night">
+                            <TextBlock TextWrapping="Wrap"><Run Text="{Binding ModeSummary, Mode=OneWay}" /><LineBreak /><Run Text="{Binding MapSummary, Mode=OneWay}" Foreground="{StaticResource TextDim}" /></TextBlock>
+                        </Button>
+                        <Button Style="{StaticResource SummaryRow}" Tag="Bots" Command="{Binding PlayTabCommand}" CommandParameter="Squad" ToolTip="Teammates, enemies and difficulty">
+                            <TextBlock Text="{Binding SquadSummary}" TextWrapping="Wrap" />
+                        </Button>
+                        <Button Style="{StaticResource SummaryRow}" Tag="Rules" Command="{Binding PlayTabCommand}" CommandParameter="Rules" ToolTip="Every match setting, presets and playlists">
+                            <TextBlock Text="{Binding RulesSummary}" TextWrapping="Wrap" />
+                        </Button>
+                        <Button Style="{StaticResource SummaryRow}" Tag="Mutators" Command="{Binding ModsTabCommand}" CommandParameter="Mutators" ToolTip="Pick mutators and their load order">
+                            <TextBlock Text="{Binding MutatorSummary}" TextWrapping="Wrap" />
+                        </Button>
+                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MutatorsEnabled}" Margin="2,10,0,0" Foreground="{StaticResource TextDim}"
+                                  Content="Load the mutators" ToolTip="Turn off to play without mutators but keep your selection" />
+                        <TextBlock Text="{Binding PlanError}" Style="{StaticResource Mute}" Foreground="{StaticResource Warn}" Margin="2,10,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding PlanError, Converter={StaticResource Vis}}" />
+                        <UniformGrid Rows="1" Margin="0,14,0,0">
+                            <Button Content="Save setup..." Margin="0,0,4,0" Command="{Binding SaveRulesPresetCommand}"
+                                    ToolTip="Save everything (map, scenario, bots, rules, mutators) as a preset. Find it under Rules > Presets > Saved." />
+                            <Button Content="Reset..." Style="{StaticResource GhostButton}" Margin="4,0,0,0" Command="{Binding ResetSetupCommand}"
+                                    ToolTip="Bots, enemies, every rule and the mutators back to the game defaults (map stays)" />
+                        </UniformGrid>
                     </StackPanel>
-                </Border>
-
-                <!-- mutators -->
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
-                    <StackPanel>
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Manage" Command="{Binding ModsTabCommand}" CommandParameter="Mutators" VerticalAlignment="Bottom" />
-                            <TextBlock Style="{StaticResource H2}">
-                                <Run Text="Mutators · " /><Run Text="{Binding ActiveMutatorCount, Mode=OneWay}" /><Run Text=" active" />
-                            </TextBlock>
-                        </DockPanel>
-                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding MutatorsEnabled}" Margin="0,10,0,4" Foreground="{StaticResource TextDim}"
-                                  Content="Load mutators with the match" ToolTip="Turn off to play without mutators but keep your selection" />
-                        <ItemsControl ItemsSource="{Binding ActiveMutators}" Margin="0,6,0,0" Focusable="False">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Height="28" CornerRadius="2" Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="11,0,4,0" Margin="0,0,6,6">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Name}" FontSize="13" VerticalAlignment="Center" MaxWidth="200" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding Source}" FontSize="11" Foreground="{StaticResource TextFaint}" VerticalAlignment="Center" Margin="7,0,0,0" MaxWidth="120" TextTrimming="CharacterEllipsis" />
-                                            <Button Style="{StaticResource IconButton}" Width="22" Height="22" FontSize="11" Content="&#xE711;" Margin="4,0,0,0" ToolTip="Remove"
-                                                    Command="{Binding DataContext.RemoveMutatorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource VisNot}}"
-                                   Text="No mutators." />
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </StackPanel>
+            </Border>
         </ScrollViewer>
     </Grid>
 </UserControl>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -202,6 +202,65 @@ namespace SandstormModLauncher.Services
             lines.Select(l => LogSanitizer.Public(l.TrimEnd('\r'))).Where(l => !string.IsNullOrWhiteSpace(l));
 
         private static string Cut(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "...";
+
+        public sealed class NoInboxException : Exception
+        {
+            public NoInboxException() : base("no report inbox is set up") { }
+        }
+
+        /// <summary>
+        /// Where reports go: the address in report-endpoint.txt in this project's repository (so the inbox can be set
+        /// up or moved without a new release). Only https addresses are used.
+        /// </summary>
+        public static string InboxAddress()
+        {
+            try
+            {
+                var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create("https://raw.githubusercontent.com/" + Updater.Repo + "/main/report-endpoint.txt");
+                req.UserAgent = "SandstormModLauncher";
+                req.Timeout = 8000;
+                using (var resp = (System.Net.HttpWebResponse)req.GetResponse())
+                using (var r = new StreamReader(resp.GetResponseStream()))
+                {
+                    string url = r.ReadToEnd().Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0 && !l.StartsWith("#"));
+                    return url != null && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? url : null;
+                }
+            }
+            catch (System.Net.WebException ex) when ((ex.Response as System.Net.HttpWebResponse)?.StatusCode == System.Net.HttpStatusCode.NotFound) { return null; }
+        }
+
+        /// <summary>
+        /// Sends the cleaned report (the same text the player was shown) to the report inbox. Blocking; call it off the
+        /// UI thread. Returns the id the inbox gives it. Throws NoInboxException when no inbox is set up.
+        /// </summary>
+        public static string Send(string note, string shortText, string fullText, string inboxOverride = null)
+        {
+            string inbox = inboxOverride ?? InboxAddress() ?? throw new NoInboxException();
+            string json = Json.Serialize(new Dictionary<string, object>
+            {
+                ["app"] = "SandstormModLauncher",
+                ["version"] = typeof(DebugReport).Assembly.GetName().Version.ToString(3),
+                ["note"] = LogSanitizer.Public(note ?? "") ?? "",
+                ["summary"] = shortText ?? "",
+                ["full"] = (fullText ?? "").Length > 200000 ? fullText.Substring(0, 200000) : fullText ?? "",
+            }, false);
+            var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(inbox);
+            req.Method = "POST";
+            req.ContentType = "application/json";
+            req.UserAgent = "SandstormModLauncher/" + typeof(DebugReport).Assembly.GetName().Version.ToString(3);
+            req.Timeout = 20000;
+            req.AllowAutoRedirect = true;
+            byte[] body = Encoding.UTF8.GetBytes(json);
+            using (var s = req.GetRequestStream()) s.Write(body, 0, body.Length);
+            using (var resp = (System.Net.HttpWebResponse)req.GetResponse())
+            using (var r = new StreamReader(resp.GetResponseStream()))
+            {
+                string answer = r.ReadToEnd();
+                var m = System.Text.RegularExpressions.Regex.Match(answer, "\"id\"\\s*:\\s*\"([^\"]+)\"");
+                AppLog.Info("Problem report sent to the report inbox (" + body.Length + " bytes)");
+                return m.Success ? m.Groups[1].Value : "ok";
+            }
+        }
 
         /// <summary>The new-issue link with the form filled in (title, note and the short report).</summary>
         public static string IssueUrl(string note, string shortText)

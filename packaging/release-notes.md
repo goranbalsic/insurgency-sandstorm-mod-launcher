@@ -1,5 +1,17 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.5.0**
+
+- Presets rebuilt from the ground up. A rules preset now replaces the rules of the preset before it and sets exactly its own values, instead of adding to whatever was there. Squad presets only change the bot values, so a squad and a rules preset can be combined in any order.
+- New Squad tab in Play: squad presets (Lone Wolf, Fireteam, Squad Leader, Full Platoon, 1 v 1 to 16 v 16, relaxed or elite bots) next to the teammate, enemy and AI difficulty values.
+- "Save setup" keeps the whole match (map, scenario, day or night, bots, every rule and the mutators) as one preset under Rules > Presets > Saved, and loading it brings all of it back.
+- Calmer Play layout: a "Your match" column shows the whole setup on every tab; click a line to change it. At small window sizes or large text it makes room, and the page no longer scrolls sideways at 150%.
+- Fixed: "access to the path is denied" when Game.ini is read-only. The launcher writes it and keeps it read-only. A Game.ini that another program briefly holds open is retried instead of failing.
+- Fixed: versus with bots and a team size of 0 could start with no bots at all. The smallest team size is now 1.
+- Values in hand-edited or older profiles are checked when loading; anything the game or the open command cannot take is removed.
+- Send a problem report straight from the launcher: Settings > "Something went wrong?" > "Send a report...". You see the whole cleaned report first and nothing leaves your PC until you press Send. Posting it on GitHub still works.
+- Mods tab: "Load the mutators" switch next to the mutator list.
+
 **Changes in 1.4.0**
 
 - Fixed: the Styles presets did nothing when a versus scenario was picked (they only changed co-op modes). Styles now follow the scenario on the map: co-op styles (Lone Wolf, Fireteam, Squad Leader, ...) for co-op, versus styles (1 v 1, 5 v 5, 10 v 10, 16 v 16, relaxed or elite bots, quick rounds, ...) for versus.

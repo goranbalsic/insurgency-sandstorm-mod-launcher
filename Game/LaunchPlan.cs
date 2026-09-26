@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -124,6 +124,12 @@ namespace SandstormModLauncher.Game
             // Ambush, Defusal and Free For All also default to BotQuota=0: bots "on" but none would come.
             if (versusBots && !plan.Overrides.ContainsKey("BotQuota") && int.TryParse(db.DefaultValue(cls, "BotQuota"), out int dq) && dq <= 0)
                 plan.Overrides["BotQuota"] = "5";
+            // Bots on but a team size of 0 (set by hand) would also leave the match empty: one per team at least.
+            if (versusBots && plan.Overrides.TryGetValue("BotQuota", out var setQuota) && int.TryParse(setQuota, out int sq) && sq <= 0)
+            {
+                plan.Overrides["BotQuota"] = "1";
+                plan.Warnings.Add("Players per team was 0 with bots on; 1 is used (you against one bot).");
+            }
             if (versusBots)
                 foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
                     if (int.TryParse(db.DefaultValue(cls, key), out int min) && min > 1 && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))

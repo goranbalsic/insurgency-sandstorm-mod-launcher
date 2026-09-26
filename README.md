@@ -11,7 +11,8 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 ## Features
 
 - All official maps and scenarios plus mod maps, day or night, Hardcore Checkpoint
-- Play page with fixed tabs: Map (map, squad and enemies), Rules (every setting of the selected mode, with presets: play styles, official rulesets, the official online playlists and your own), Mods (all mutators, official ones grouped by the playlists that use them, and the installed mods), Live (control of the running match) and Advanced
+- Play page with fixed tabs: Map (map and scenario), Squad (teammates, enemies and AI difficulty, with presets), Rules (every setting of the selected mode, with presets: play styles, official rulesets, the official online playlists and your saved setups), Mods (all mutators, official ones grouped by the playlists that use them, and the installed mods), Live (control of the running match) and Advanced. A "Your match" column shows the whole setup on every tab
+- Presets that behave: a squad preset changes only the bot values, a rules preset replaces the rules of the previous one instead of piling up, and "Save setup" keeps everything (map, scenario, bots, rules, mutators) as one preset you can load again
 - Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults. Separate squad settings for co-op and versus; versus with bots as 1v1, 5v5, 10v10 or any team size
 - All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
@@ -20,9 +21,9 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - One click: writes your rules, starts the game, waits for the main menu and loads the match. The console is only typed into after it is seen open on screen, on any keyboard layout (F10 is added as a console key)
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - Adjustable text size (90% to 150%, Ctrl + / Ctrl - or Ctrl + mouse wheel) in a plain, classic Windows look
-- Report a problem in two clicks: a cleaned report (no names, IDs or screenshots) goes to this project's GitHub issues, and only after you press Submit
+- Send a problem report straight from the launcher: you see the cleaned report (no names, IDs or screenshots) first, and it is sent only when you press Send. You can post it on GitHub instead
 - Updates itself quietly from this repository's releases, checked against the published SHA-256 (can be turned off)
-- Plays offline: no accounts, no telemetry. The only connection is a tiny update check every few minutes while the launcher is open
+- Plays offline: no accounts, no telemetry. The only automatic connection is a tiny update check every few minutes while the launcher is open
 
 | Match rules | Presets: official playlists |
 | --- | --- |
@@ -31,8 +32,8 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 | ![Live](docs/screenshots/live.png) | ![Advanced](docs/screenshots/advanced.png) |
 | **Mutators** | **Installed mods** |
 | ![Mutators](docs/screenshots/mutators.png) | ![Installed mods](docs/screenshots/mods.png) |
-| **Settings** | |
-| ![Settings](docs/screenshots/settings.png) | |
+| **Squad: bots and enemies** | **Settings** |
+| ![Squad](docs/screenshots/squad.png) | ![Settings](docs/screenshots/settings.png) |
 
 ## Download
 
@@ -61,7 +62,8 @@ What the program does on your PC:
 - Sends keystrokes only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
 - Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
 - Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
-- No telemetry. Its only network access is the update check: it reads the latest release of this repository from GitHub, and when there is a newer one it downloads the zip, checks it against the release's SHA256SUMS.txt and replaces its own exe (Settings > About turns this off)
+- Sends a problem report only when you press Send in Settings > "Something went wrong?", after showing you all of it
+- No telemetry. Its only automatic network access is the update check: it reads the latest release of this repository from GitHub, and when there is a newer one it downloads the zip, checks it against the release's SHA256SUMS.txt and replaces its own exe (Settings > About turns this off)
 - Never changes game files and does not touch the anti-cheat. It is for local play only
 
 The exe is not code-signed, so SmartScreen may show "Windows protected your PC" (More info > Run anyway). Some antivirus tools are wary of programs that send keystrokes. To check a download:
@@ -80,7 +82,9 @@ Or build it yourself and compare (see below).
 
 Settings > "Something went wrong?" saves a report to `%APPDATA%\SandstormModLauncher\logs\reports`: launcher logs, settings, the end of the game log (account lines removed) and the console pictures. A report is also saved automatically when a launch fails. Every run of the launcher has its own log in `logs\sessions`.
 
-To report it here, use "Report on GitHub" next to it (or "Report this problem" after a failed launch). The launcher shows you the whole report first. It leaves out your Windows user and PC name, user folders, Steam IDs, e-mail and IP addresses, account and online lines, screenshots and console history. Your browser then opens the [problem report form](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues/new?template=problem-report.yml) filled in, and nothing is posted until you press Submit.
+To send it to me, use "Send a report..." next to it. The launcher shows you the whole report first. It leaves out your Windows user and PC name, user folders, Steam IDs, e-mail and IP addresses, account and online lines, screenshots and console history. "Send" delivers it to the project's report inbox (when the inbox is not reachable, it opens the GitHub form instead); "Post it on GitHub instead" opens the [problem report form](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/issues/new?template=problem-report.yml) filled in, and nothing is posted until you press Submit.
+
+If Game.ini cannot be written ("access to the path is denied"), the file was usually set to read-only by hand or by another tool. The launcher writes read-only files and keeps them read-only; if it still fails, another program has the file open or the folder is protected.
 
 ## Build from source (to check it)
 
@@ -98,6 +102,7 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 - `--probe-test out.txt shot1.png ...` checks the console detection against screenshots of the game
 - `--render folder` draws every page to PNG files without opening a window
 - `--data folder` keeps settings and logs in another folder (for testing)
+- `--cli command` works on the setup without a window: `status`, `presets`, `apply`, `set`, `mutators`, `plan`, `save`, `reset`, and `torture [steps] [seed]`, a random stress test that checks the whole setup logic after every step (see `Services/Cli.cs`)
 
 ## Releasing
 

@@ -98,6 +98,16 @@ namespace SandstormModLauncher.Models
         public string Description { get; set; }
         public Dictionary<string, Dictionary<string, string>> Rules { get; set; } = new Dictionary<string, Dictionary<string, string>>();
         public List<string> Mutators { get; set; } = new List<string>();
+
+        // A saved setup (1.5.0+) also keeps the map part; older saved presets only had rules and mutators.
+        public bool FullSetup { get; set; }
+        public string MapKey { get; set; }
+        public string ScenarioId { get; set; }
+        public string CustomMapId { get; set; }
+        public string Lighting { get; set; }
+        public bool Hardcore { get; set; }
+        public int MaxPlayers { get; set; }
+        public bool MutatorsEnabled { get; set; } = true;
     }
 
     public sealed class Profile
@@ -114,6 +124,8 @@ namespace SandstormModLauncher.Models
         public string MutatorPreset { get; set; }
         public Dictionary<string, Dictionary<string, string>> Rules { get; set; } = new Dictionary<string, Dictionary<string, string>>();
         public string RulesPresetName { get; set; }
+        /// <summary>"mode|key" of every rule the last applied match preset set, so the next one can take them back out.</summary>
+        public List<string> PresetKeys { get; set; } = new List<string>();
         public string LaunchRuleset { get; set; }            // official ruleset applied with -ruleset= at game start
         public string CustomIniMode { get; set; } = "Off";     // Off / Append / Replace
         public string CustomIniText { get; set; } = "";

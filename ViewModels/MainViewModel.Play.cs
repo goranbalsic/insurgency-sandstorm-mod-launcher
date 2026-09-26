@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,7 +22,6 @@ namespace SandstormModLauncher.ViewModels
         public ICommand SelectMapCommand { get; private set; }
         public ICommand SelectScenarioCommand { get; private set; }
         public ICommand RandomMissionCommand { get; private set; }
-        public ICommand PlayStyleCommand { get; private set; }
         public ICommand StepCommand { get; private set; }
         private MapItem selectedMap;
         private ScenarioItem selectedScenario;
@@ -35,7 +34,6 @@ namespace SandstormModLauncher.ViewModels
             SelectScenarioCommand = new RelayCommand(p => { if (p is ScenarioItem s) SelectedScenario = s; });
             SelectScenarioModeCommand = new RelayCommand(p => SelectScenarioMode(p as ScenarioModeItem));
             RandomMissionCommand = new RelayCommand(RandomMission);
-            PlayStyleCommand = new RelayCommand(p => ApplyPlayStyle(p as string));
             StepCommand = new RelayCommand(p => Step(p as string));
         }
 
@@ -264,7 +262,7 @@ namespace SandstormModLauncher.ViewModels
         {
             RaiseMany(nameof(Profile), nameof(Night), nameof(Day), nameof(Hardcore), nameof(MaxPlayers), nameof(MutatorsEnabled), nameof(ForceReload),
                       nameof(CustomIniMode), nameof(CustomIniText), nameof(ExtraUrlOptions), nameof(GameModeOverride), nameof(AfterLoadCommands),
-                      nameof(EnableCheatsAfterLoad), nameof(LaunchRuleset), nameof(CanHardcore));
+                      nameof(EnableCheatsAfterLoad), nameof(LaunchRuleset), nameof(CanHardcore), nameof(ActivePresetName));
             RaiseSquad();
         }
 
@@ -278,14 +276,8 @@ namespace SandstormModLauncher.ViewModels
 
         private void RuleSet(string cls, string key, string value)
         {
-            if (cls == null) return;
-            if (!Profile.Rules.TryGetValue(cls, out var d))
-            {
-                if (value == null) return;
-                Profile.Rules[cls] = d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            }
-            if (value == null) d.Remove(key); else d[key] = value;
-            if (d.Count == 0) Profile.Rules.Remove(cls);
+            // One place decides how a rule is stored (a value equal to the default is removed): Game/SetupEngine.
+            SetupEngine.SetRule(Profile, State.Rules, cls, key, value);
             ProfileChanged();
         }
 
@@ -329,7 +321,7 @@ namespace SandstormModLauncher.ViewModels
         public int SoloEnemies { get => EffectiveInt("SoloEnemies"); set => SetInt("SoloEnemies", value, 0, 64); }
         public int MinEnemies { get => EffectiveInt("MinimumEnemies"); set => SetInt("MinimumEnemies", value, 0, 64); }
         public int MaxEnemies { get => EffectiveInt("MaximumEnemies"); set => SetInt("MaximumEnemies", value, 0, 64); }
-        public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 0, 32); }
+        public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 1, 32); }
         public string TeammatesHint => "FriendlyBotQuota · mode default " + DefaultInt("FriendlyBotQuota");
         public string SoloEnemiesHint => "SoloEnemies · mode default " + DefaultInt("SoloEnemies");
         public string MinEnemiesHint => "MinimumEnemies · default " + DefaultInt("MinimumEnemies");
@@ -395,61 +387,6 @@ namespace SandstormModLauncher.ViewModels
             }
         }
 
-        public string PlayStyle
-        {
-            get
-            {
-                var mode = CurrentMode;
-                if (mode == null) return "Custom";
-                if (!mode.Coop)
-                {
-                    if (BotsEnabled && (BotQuota == 1 || BotQuota == 5 || BotQuota == 10) && RuleGet(mode.Cls, "BotQuota") != null) return "VS" + BotQuota;
-                    bool changed = RuleGet(mode.Cls, "bBots") != null || RuleGet(mode.Cls, "BotQuota") != null;
-                    if (!changed) return "Defaults";
-                    return "Custom";
-                }
-                bool any = new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty" }.Any(k => RuleGet(mode.Cls, k) != null);
-                if (!any) return "Defaults";
-                if (Teammates == 0) return "LoneWolf";
-                if (Teammates > 0 && RuleGet(mode.Cls, "SoloEnemies") == null && RuleGet(mode.Cls, "AIDifficulty") == null) return "Squad";
-                return "Custom";
-            }
-        }
-
-        private void ApplyPlayStyle(string style)
-        {
-            var mode = CurrentMode;
-            if (mode == null) return;
-            switch (style)
-            {
-                case "LoneWolf":
-                    if (mode.Coop) SetInt("FriendlyBotQuota", 0, 0, 32);
-                    ShowToast("Lone Wolf: no AI teammates. Tune the enemies below.");
-                    break;
-                case "Squad":
-                    if (mode.Coop) SetInt("FriendlyBotQuota", Math.Max(DefaultInt("FriendlyBotQuota"), Teammates == 0 ? DefaultInt("FriendlyBotQuota") : Teammates), 0, 32);
-                    else { BotsEnabled = true; if (BotQuota == 0) BotQuota = 10; }
-                    break;
-                case "VS1":
-                case "VS5":
-                case "VS10":
-                    if (mode.Coop) break;
-                    int size = int.Parse(style.Substring(2), CultureInfo.InvariantCulture);
-                    BotsEnabled = true;
-                    BotQuota = size;
-                    ShowToast(size == 1 ? "1 v 1: you against one bot" : size + " v " + size + ": you + " + (size - 1) + " AI against " + size + " bots");
-                    break;
-                case "Defaults":
-                    foreach (var k in new[] { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty", "bBots", "BotQuota" })
-                        foreach (var m in SquadModes(k)) RuleSet(m.Cls, k, null);
-                    if (!mode.Coop) RuleSet("*", "AIDifficulty", null);
-                    ShowToast(mode.Coop ? "Bot and enemy settings reset to each co-op mode's defaults" : "Bots back to the defaults: versus is played against bots");
-                    break;
-            }
-            RaiseSquad();
-            RefreshRuleItems();
-        }
-
         private void Step(string arg)
         {
             if (string.IsNullOrEmpty(arg)) return;
@@ -471,7 +408,7 @@ namespace SandstormModLauncher.ViewModels
             RaiseMany(nameof(Teammates), nameof(SoloEnemies), nameof(MinEnemies), nameof(MaxEnemies), nameof(BotQuota), nameof(BotsEnabled),
                       nameof(TeammatesHint), nameof(SoloEnemiesHint), nameof(MinEnemiesHint), nameof(MaxEnemiesHint), nameof(BotQuotaHint),
                       nameof(TeammatesChanged), nameof(SoloEnemiesChanged), nameof(MinEnemiesChanged), nameof(MaxEnemiesChanged), nameof(BotQuotaChanged),
-                      nameof(AiDifficulty), nameof(AiDifficultyLabel), nameof(PlayStyle), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName),
+                      nameof(AiDifficulty), nameof(AiDifficultyLabel), nameof(SquadKindLabel), nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName),
                       nameof(RuleChangeCount), nameof(RulesTabLabel), nameof(RulesModeTitle));
         }
 
