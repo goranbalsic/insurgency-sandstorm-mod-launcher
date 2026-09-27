@@ -113,7 +113,7 @@
                                 <Button DockPanel.Dock="Right" Content="Count bots" Style="{StaticResource GhostButton}" Padding="10,4" Command="{Binding CountBotsCommand}" />
                                 <TextBlock Text="Console" Style="{StaticResource H2}" VerticalAlignment="Center" />
                             </DockPanel>
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="Any console command, typed into the game console (needs the game in front). Join several with |." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="Any console command. The game runs it as if you typed it into its console, but it is sent over RCON, so nothing is typed and the game can stay in the background. Join several with |." />
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Send" Margin="8,0,0,0" Command="{Binding SendCustomCommand}" />
                                 <TextBox x:Name="commandBox" Text="{Binding CustomCommand, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Tag="e.g. SetRoundTimer 600"

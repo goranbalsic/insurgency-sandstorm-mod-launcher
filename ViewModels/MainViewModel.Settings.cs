@@ -73,8 +73,8 @@ namespace SandstormModLauncher.ViewModels
                 "2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n" +
                 "3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n" +
                 "4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
-                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Only cheats and the versus AI difficulty are typed into the game console (Settings can turn that off).\n\n" +
-                "6. PLAY > Live works during a match: restart rounds and change rules directly, plus cheat buttons (clock, bots, god mode) that use the game console.\n\n" +
+                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Cheats, the versus AI difficulty and your own commands go the same way: the game runs them as if you typed them into its console.\n\n" +
+                "6. PLAY > Live works during a match: restart rounds, change rules, cheat buttons (clock, bots, god mode) and any console command, all over RCON.\n\n" +
                 "Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC."));
         }
 
@@ -263,7 +263,7 @@ namespace SandstormModLauncher.ViewModels
                     string problem = await Task.Run(() => Rcon.Probe());
                     RconState = problem == null ? "Ready" : "Bad";
                     RconStatus = problem == null
-                        ? "Connected. Maps, rules and round restarts go straight to the game; nothing is typed and the game can stay in the background."
+                        ? "Connected. Maps, rules and console commands (cheats too) go straight to the game; nothing is typed and the game can stay in the background."
                         : "The game does not answer on RCON (" + problem + "). It was probably started before the launcher set it up: close it and launch from here once.";
                 }
                 if (announce) ShowToast(RconState == "Ready" ? "Connected to the game" : RconState == "Bad" ? "The game does not answer on RCON" : "The game is not running");

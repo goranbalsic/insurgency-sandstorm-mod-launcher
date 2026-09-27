@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using SandstormModLauncher.ViewModels;
 
 namespace SandstormModLauncher.Services
 {
@@ -19,11 +20,21 @@ namespace SandstormModLauncher.Services
     ///   launch &lt;ScenarioId&gt; [Cls.Key=Value ...] [slots=N] [night]   full launch (writes Game.ini, starts the game if needed)
     ///   console &lt;command | command&gt;                              run console commands, log the answer
     ///   wait &lt;seconds&gt;                                             sleep
-    ///   waitround [seconds]                                        wait for the round to be active
+    ///   waitround [seconds] [state]                                wait for the round (pre-round or active, or the given state)
     ///   count [label]                                              count players and bots per team
     ///   key &lt;F1|Enter|...&gt;                                         press one key in the game (only when it is in front)
     ///   rcon &lt;command&gt;                                             one RCON command, the reply is logged
     ///   prop &lt;Name&gt; [value] [expect=value]                         game mode property over RCON (FAIL when not as expected)
+    ///   start                                                      start the game without a match and wait for the main menu
+    ///   expect &lt;seconds&gt; [!]&lt;text&gt;                                a game log line since the last launch/start/rcon/console/key step
+    ///                                                              (or after the line the previous expect found) contains the text
+    ///                                                              (with !: no such line within the time); FAIL otherwise
+    ///   dilation [value]                                           the loaded map's game speed (Slomo); FAIL when not the value
+    ///   (launch also takes: reload, cheats, after=Cmd+arg;Cmd2 for the player's own after-load commands)
+    ///   ui-live &lt;button label&gt;                                    a Live tab button, through the launcher's own (hidden) window
+    ///   ui-console &lt;command | command&gt;                           the Live tab's console box
+    ///   ui-read / ui-count                                         the Live tab's "Read current values" / "Count bots"
+    ///   ui-apply Key=Value ...                                     the Live tab's rule boxes and "Apply now"
     ///   quit                                                       close the game (over RCON)
     /// launch takes "console" to allow typing into the game console; without it the launch must work over RCON alone.
     /// </summary>
@@ -55,6 +66,10 @@ namespace SandstormModLauncher.Services
             string gameIni = GameInstall.GameIniPath;
             string savedIni = File.Exists(gameIni) ? File.ReadAllText(gameIni) : null;
             Out("Game.ini saved for restore (" + (savedIni?.Length ?? 0) + " chars)");
+            // Game log lines, for "expect": searched from the start of the last step that makes the game do something.
+            var seen = new List<string>();
+            int mark = 0;
+            monitor.LineReceived += l => { lock (seen) seen.Add(l); };
             try
             {
                 foreach (var raw in File.ReadAllLines(scriptFile))
@@ -64,11 +79,52 @@ namespace SandstormModLauncher.Services
                     int sp = line.IndexOf(' ');
                     string cmd = sp < 0 ? line : line.Substring(0, sp), arg = sp < 0 ? "" : line.Substring(sp + 1).Trim();
                     Out("> " + line);
+                    monitor.Poll();
+                    if (new[] { "launch", "start", "rcon", "console", "key", "ui-live", "ui-console", "ui-apply", "ui-read", "ui-count" }.Contains(cmd.ToLowerInvariant())) lock (seen) mark = seen.Count;
                     try
                     {
                         switch (cmd.ToLowerInvariant())
                         {
                             case "launch": await Launch(arg, state, launcher, rcon, Out); break;
+                            case "start":
+                            {
+                                if (monitor.IsRunning) { Out("  already running"); break; }
+                                launcher.StartOnly(null);
+                                var until = DateTime.UtcNow.AddSeconds(180);
+                                while (DateTime.UtcNow < until && monitor.Phase != GamePhase.Menu) { await Task.Delay(500); monitor.Poll(); }
+                                Out("  phase " + monitor.Phase);
+                                break;
+                            }
+                            case "expect":
+                            {
+                                int sp2 = arg.IndexOf(' ');
+                                double max = double.Parse(arg.Substring(0, sp2), System.Globalization.CultureInfo.InvariantCulture);
+                                string text = arg.Substring(sp2 + 1);
+                                bool absent = text.StartsWith("!", StringComparison.Ordinal);
+                                if (absent) text = text.Substring(1);
+                                // The game's echo of an RCON command ("LogRcon: ... << ...") holds the command's own text: never a match.
+                                int Found() { lock (seen) { for (int i = mark; i < seen.Count; i++) if (seen[i].Contains(text) && !seen[i].Contains("LogRcon: ")) return i; } return -1; }
+                                var sw = System.Diagnostics.Stopwatch.StartNew();
+                                while (sw.Elapsed.TotalSeconds < max && Found() < 0) { await Task.Delay(250); monitor.Poll(); }
+                                int at = Found();
+                                string hit = null;
+                                if (at >= 0) lock (seen) hit = seen[at];
+                                // Expectations are met in order: the next one looks after this line.
+                                if (at >= 0 && !absent) mark = at + 1;
+                                string shown = hit == null ? null : LogSanitizer.Clean(Regex.Replace(hit, @"^\[[^\]]*\]\[[^\]]*\]", "")) ?? "<hidden>";
+                                if (absent) Out(hit == null ? "  OK not seen in " + max + " s" : "  FAIL seen: " + shown);
+                                else if (hit != null) Out("  OK after " + sw.Elapsed.TotalSeconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s: " + shown);
+                                else
+                                {
+                                    // What the log gave meanwhile tells a quiet game from a log that is not being read.
+                                    string last;
+                                    int since;
+                                    lock (seen) { since = seen.Count - mark; last = seen.Count > 0 ? seen[seen.Count - 1] : ""; }
+                                    Out("  FAIL not seen in " + max + " s: " + text + "  (" + since + " log lines since; last: " +
+                                        (LogSanitizer.Clean(last) ?? "<hidden>").Substring(0, Math.Min(120, (LogSanitizer.Clean(last) ?? "<hidden>").Length)) + ")");
+                                }
+                                break;
+                            }
                             case "console":
                             {
                                 var res = await console.Run(arg, CancellationToken.None, null, TimeSpan.FromSeconds(3));
@@ -81,13 +137,26 @@ namespace SandstormModLauncher.Services
                             case "wait": await Task.Delay(TimeSpan.FromSeconds(double.Parse(arg, System.Globalization.CultureInfo.InvariantCulture))); break;
                             case "waitround":
                             {
-                                double max = arg.Length > 0 ? double.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 60;
+                                // waitround [seconds] [state]: without a state, pre-round counts too
+                                var w = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                double max = w.Length > 0 ? double.Parse(w[0], System.Globalization.CultureInfo.InvariantCulture) : 60;
+                                string want = w.Length > 1 ? w[1] : null;
                                 var until = DateTime.UtcNow.AddSeconds(max);
-                                while (DateTime.UtcNow < until && monitor.RoundState != "RoundActive" && monitor.RoundState != "PreRound") { await Task.Delay(500); monitor.Poll(); }
+                                bool Reached() => want != null ? monitor.RoundState == want : monitor.RoundState == "RoundActive" || monitor.RoundState == "PreRound";
+                                while (DateTime.UtcNow < until && !Reached()) { await Task.Delay(500); monitor.Poll(); }
                                 Out("  round state: " + (monitor.RoundState ?? "none") + ", phase " + monitor.Phase);
                                 break;
                             }
                             case "count": Count(rcon, arg, Out); break;
+                            case "dilation":
+                            {
+                                // The game speed of the loaded map (Slomo), from its WorldSettings: dilation [expected value]
+                                string reply = rcon.Run(GameRcon.Quote("getall WorldSettings TimeDilation"))[0];
+                                var m = Regex.Match(reply, @"/Game/Maps/(\w+)/\1\.\1:PersistentLevel\.\w+\.TimeDilation = (-?\d+\.\d{6})");
+                                string now = m.Success ? m.Groups[2].Value : "(not found)";
+                                Out("  game speed " + now + (arg.Length > 0 ? (SameNumber(now, arg) ? "  (as expected)" : "  FAIL expected " + arg) : ""));
+                                break;
+                            }
                             case "rcon":
                             {
                                 var replies = rcon.Run(arg);
@@ -118,6 +187,51 @@ namespace SandstormModLauncher.Services
                                 await Task.Delay(500);
                                 input.Tap(vk);
                                 Out("  pressed " + arg);
+                                break;
+                            }
+                            case "ui-live":
+                            {
+                                var vm = await Ui(Out);
+                                var action = vm.LiveGroups.SelectMany(g => g.Actions).FirstOrDefault(a => a.Label.Equals(arg, StringComparison.OrdinalIgnoreCase));
+                                if (action == null) { Out("  FAIL no Live button called " + arg); break; }
+                                ShowOutput(await UiRun(vm, vm.RunLiveActionCommand, action), Out);
+                                break;
+                            }
+                            case "ui-console":
+                            {
+                                var vm = await Ui(Out);
+                                vm.CustomCommand = arg;
+                                ShowOutput(await UiRun(vm, vm.SendCustomCommand, null), Out);
+                                break;
+                            }
+                            case "ui-read":
+                            {
+                                var vm = await Ui(Out);
+                                ShowOutput(await UiRun(vm, vm.ReadLiveRulesCommand, null), Out);
+                                Out("  " + string.Join(", ", vm.LiveRules.Select(r => r.Key + "=" + r.Current)));
+                                break;
+                            }
+                            case "ui-apply":
+                            {
+                                // ui-apply Key=Value ... : the Live tab's rule boxes, then "Apply now" (restarts the round when that box is ticked)
+                                var vm = await Ui(Out);
+                                foreach (var kv in arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Split('=')))
+                                {
+                                    var rule = vm.LiveRules.FirstOrDefault(r => r.Key.Equals(kv[0], StringComparison.OrdinalIgnoreCase));
+                                    if (rule == null) Out("  FAIL no live rule " + kv[0]); else rule.Value = kv[1];
+                                }
+                                ShowOutput(await UiRun(vm, vm.ApplyLiveRulesCommand, null), Out);
+                                // "Apply now" reads the values back when it is done.
+                                for (int k = 0; k < 50 && (vm.LiveBusy || !vm.LiveOutput.StartsWith("Read", StringComparison.Ordinal)); k++) await Task.Delay(200);
+                                foreach (var r in vm.LiveRules.Where(r => !string.IsNullOrWhiteSpace(r.Value)))
+                                    Out("  " + r.Key + ": set " + r.Value + ", game has " + r.Current + (SameNumber(r.Value, r.Current) ? "  (as expected)" : "  FAIL"));
+                                foreach (var r in vm.LiveRules) r.Value = "";
+                                break;
+                            }
+                            case "ui-count":
+                            {
+                                var vm = await Ui(Out);
+                                ShowOutput(await UiRun(vm, vm.CountBotsCommand, null), Out);
                                 break;
                             }
                             case "quit": await launcher.StopGame(CancellationToken.None); Out("  game closed"); break;
@@ -158,6 +272,10 @@ namespace SandstormModLauncher.Services
                 if (kv.StartsWith("mutators=")) { p.Mutators = kv.Substring(9).Split(',').ToList(); p.MutatorsEnabled = true; continue; }
                 if (kv.StartsWith("*.")) { var gv = kv.Substring(2).Split('='); if (!p.Rules.TryGetValue("*", out var g)) p.Rules["*"] = g = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); g[gv[0]] = gv[1]; continue; }
                 if (kv == "hardcore") { p.Hardcore = true; continue; }
+                if (kv == "reload") { p.ForceReload = true; continue; }
+                if (kv == "cheats") { p.EnableCheatsAfterLoad = true; continue; }
+                // after=Cmd+arg;Cmd2 : the player's own after-load commands ("+" for a space, ";" between lines)
+                if (kv.StartsWith("after=")) { p.AfterLoadCommands = kv.Substring(6).Replace('+', ' ').Replace(';', '\n'); continue; }
                 if (kv.StartsWith("slots=")) { p.MaxPlayers = int.Parse(kv.Substring(6)); continue; }
                 int dot = kv.IndexOf('.'), eq = kv.IndexOf('=');
                 if (dot < 0 || eq < dot) continue;
@@ -179,6 +297,56 @@ namespace SandstormModLauncher.Services
             Out("  launch " + (report.Success ? "OK" : "FAILED: " + report.Message));
             foreach (var w in report.Warnings) Out("  warning: " + w);
         }
+
+        private static MainViewModel uiVm;
+
+        /// <summary>The launcher's real main window and view model (never shown), for steps that go through the Live tab's own code.</summary>
+        private static async Task<MainViewModel> Ui(Action<string> Out)
+        {
+            if (uiVm != null) return uiVm;
+            var win = new Views.MainWindow();
+            var vm = (MainViewModel)win.DataContext;
+            var root = (System.Windows.FrameworkElement)win.Content;
+            win.Content = null;
+            root.DataContext = vm;
+            var host = new System.Windows.Controls.Border { Child = root };
+            host.Measure(new System.Windows.Size(1536, 864));
+            host.Arrange(new System.Windows.Rect(0, 0, 1536, 864));
+            await vm.InitializeAsync();
+            for (int k = 0; k < 600 && vm.Loading; k++) await Task.Delay(100);
+            if (vm.DialogOpen) vm.DialogCommand.Execute(vm.DialogPrimary);
+            Out("  launcher window ready (not shown)");
+            return uiVm = vm;
+        }
+
+        /// <summary>Runs one of the view model's commands like a click (once it is allowed) and waits for the Live output it writes.</summary>
+        private static async Task<string> UiRun(MainViewModel vm, System.Windows.Input.ICommand cmd, object param)
+        {
+            var until = DateTime.UtcNow.AddSeconds(40);
+            while (DateTime.UtcNow < until && !cmd.CanExecute(param)) await Task.Delay(250);
+            if (!cmd.CanExecute(param)) return null;
+            vm.LiveOutput = "";
+            cmd.Execute(param);
+            await Task.Delay(300);
+            while (DateTime.UtcNow < until && (vm.LiveBusy || vm.LiveOutput.Length == 0))
+            {
+                if (vm.DialogOpen) vm.DialogCommand.Execute(vm.DialogPrimary);
+                await Task.Delay(200);
+            }
+            await Task.Delay(300);
+            return vm.LiveOutput;
+        }
+
+        private static void ShowOutput(string output, Action<string> Out)
+        {
+            if (output == null) { Out("  FAIL the button could not be used (no match running?)"); return; }
+            foreach (var l in output.Replace("\r", "").Split('\n').Where(l => l.Trim().Length > 0).Take(20))
+                Out("  | " + (LogSanitizer.Clean(l) ?? "<hidden>"));
+        }
+
+        private static bool SameNumber(string a, string b) =>
+            a == b || (double.TryParse(a, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) &&
+                       double.TryParse(b, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y) && Math.Abs(x - y) < 1e-4);
 
         private static void Count(GameRcon rcon, string label, Action<string> Out)
         {

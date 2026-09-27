@@ -64,7 +64,7 @@
                                 <TextBlock Text="Game connection (RCON)" Style="{StaticResource H2}" />
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                       Text="The launcher loads maps and changes rules through the game's own remote console, on this PC only (127.0.0.1, random password). No keys are pressed and the game does not need to be in front." />
+                                       Text="The launcher loads maps, changes rules and sends console commands (cheats too) through the game's own remote console, on this PC only (127.0.0.1, random password). No keys are pressed and the game does not need to be in front." />
                             <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=border}">
@@ -75,8 +75,8 @@
                             </WrapPanel>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AllowConsoleTyping}" Margin="0,6,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="Type into the game console when RCON cannot do it" FontSize="13.5" />
-                                    <TextBlock Text="Cheat buttons in Live, versus AI difficulty, your own after-load commands, and a game started before RCON was set up. Needs the game in front." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                    <TextBlock Text="Type into the game console when RCON is not available" FontSize="13.5" />
+                                    <TextBlock Text="Only for a game the launcher cannot reach over RCON, e.g. one started before the launcher set RCON up. Needs the game in front." Style="{StaticResource Mute}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </CheckBox>
                         </StackPanel>
@@ -87,7 +87,7 @@
                         <StackPanel>
                             <TextBlock Text="Console key" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                       Text="Only for what RCON cannot do (see above). Nothing is typed unless the console is seen open." />
+                                       Text="Only used when the game cannot be reached over RCON (see above). Nothing is typed unless the console is seen open." />
                             <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">

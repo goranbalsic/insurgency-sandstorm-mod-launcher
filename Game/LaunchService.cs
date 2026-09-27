@@ -24,7 +24,7 @@ namespace SandstormModLauncher.Game
     {
         public bool RestartIfNeeded;
         public bool ForceRestart;
-        /// <summary>The game's console may be typed into: for what RCON cannot do, and when RCON is not available.</summary>
+        /// <summary>The game's console may be typed into when the game cannot be reached over RCON.</summary>
         public bool AllowConsole = true;
         /// <summary>Bring the game to the front once the match is ready (the player launched from the launcher window).</summary>
         public bool BringToFront;
@@ -241,7 +241,8 @@ namespace SandstormModLauncher.Game
                     if (!sent.Sent) throw new LaunchException(sent.Detail ?? "The command could not be sent.");
                     if (!sent.Verified)
                     {
-                        if (sent.NotRecognized) throw new LaunchException(sent.Detail);
+                        // Over RCON the load shows within a moment, and Travel has already waited for it.
+                        if (sent.NotRecognized || useRcon) throw new LaunchException(sent.Detail ?? "The game did not start loading the map.");
                         // The map may still be on its way; the next step waits for it.
                         Report(4, StepState.Warning, "Sent; the game has not confirmed it yet");
                     }
@@ -255,6 +256,12 @@ namespace SandstormModLauncher.Game
                     List<string> snapshot;
                     lock (loadLines) snapshot = new List<string>(loadLines);
                     report.Warnings.AddRange(MutatorWarnings(plan, snapshot));
+                    // The game plays properly only once it has switched from its menu into play (see GameRcon.AsPlayer).
+                    if (monitor.InstanceState != null && monitor.InstanceState != "Playing")
+                    {
+                        AppLog.Warn("After loading, the game state is " + monitor.InstanceState + " instead of Playing");
+                        report.Warnings.Add("The map loaded, but the game did not switch from its menu into play, so it may keep you on the class screen. If you cannot move, close the game and press Launch again.");
+                    }
                     Report(5, report.Warnings.Count > plan.Warnings.Count ? StepState.Warning : StepState.Done, "Map loaded");
 
                     if (plan.Profile.ForceReload)
@@ -263,7 +270,8 @@ namespace SandstormModLauncher.Game
                         lock (loadLines) loadLines.Clear();
                         var again = useRcon ? await Travel(plan, loadLines, browsed, ct) : await console.Run(plan.OpenCommand, ct, browsed, TimeSpan.FromSeconds(12));
                         if (!again.Sent) throw new LaunchException("The reload was not sent: " + again.Detail);
-                        await WaitForMap(level, loadLines, 240, ct);
+                        if (useRcon && !again.Verified) throw new LaunchException("The reload did not start: " + again.Detail);
+                        await WaitForMap(level, loadLines, again.Verified ? 240 : 20, ct);
                         await WaitForLoadingScreen(ct);
                         Report(5, StepState.Done, "Map loaded (reloaded)");
                     }
@@ -273,7 +281,8 @@ namespace SandstormModLauncher.Game
                 if (options.BringToFront) BringToFront();
 
                 // 7. After the map: game mode properties over RCON (a game started by this launch already read them
-                // from Game.ini), then whatever only the console can do.
+                // from Game.ini), then the console commands (cheats, the versus AI difficulty, the player's own), run
+                // by the game as the player's own, also over RCON.
                 current = 6;
                 var props = startedNow ? new List<KeyValuePair<string, string>>() : plan.LiveProperties;
                 var done = new List<string>();
@@ -299,9 +308,30 @@ namespace SandstormModLauncher.Game
                 }
                 if (plan.ConsoleOnly.Count > 0)
                 {
-                    string what = string.Join(" | ", plan.ConsoleOnly);
-                    if (!options.AllowConsole) problems.Add("needs the game console, which is off in Settings: " + what);
-                    else if (!options.BringToFront && !new GameInput(monitor.Window).IsForeground) problems.Add("needs the game console, but the game was not in front: " + what);
+                    var commands = plan.ConsoleOnly.SelectMany(GameRcon.SplitCommands).ToList();
+                    string what = string.Join(" | ", commands);
+                    if (useRcon || await RconProblem() == null)
+                    {
+                        // Run by the game as the player's own console commands, over RCON: nothing is typed.
+                        Report(6, StepState.Active, "Console commands over RCON: " + what);
+                        var lines = new List<string>();
+                        void Grab(string l) { lock (lines) lines.Add(l); }
+                        monitor.LineReceived += Grab;
+                        try
+                        {
+                            await Task.Run(() => rcon.RunAsPlayer(commands), ct);
+                            done.Add(commands.Count + " console command(s)");
+                            AppLog.Info("RCON console commands: " + what);
+                            // The versus AI difficulty is the one the game confirms, in its log.
+                            string difficulty = commands.LastOrDefault(c => c.StartsWith("AIDifficulty ", StringComparison.OrdinalIgnoreCase))?.Substring(13).Trim();
+                            if (difficulty != null && !await WaitForLine(lines, l => DifficultyIs(l, difficulty), 4, ct))
+                                problems.Add("the game did not confirm the AI difficulty " + difficulty);
+                        }
+                        catch (RconException ex) { problems.Add("console commands: no answer from the game (" + ex.Message + ")" + (ex.Delivered ? "; they may still arrive" : "")); }
+                        finally { monitor.LineReceived -= Grab; }
+                    }
+                    else if (!options.AllowConsole) problems.Add("the game cannot be reached over RCON, and typing into its console is off in Settings: " + what);
+                    else if (!options.BringToFront && !new GameInput(monitor.Window).IsForeground) problems.Add("the game cannot be reached over RCON, and it was not in front to type into its console: " + what);
                     else
                     {
                         Report(6, StepState.Active, "Typing into the game console: " + what);
@@ -348,14 +378,20 @@ namespace SandstormModLauncher.Game
 
         /// <summary>
         /// Loads the map over RCON, confirmed by the game's Browse line. No keys are pressed and the game does not have
-        /// to be in front. First the console's own open command (a fresh URL, exactly what the console would load);
-        /// if the game does not start loading, RCON's travel with every option the launcher may have set before spelled
-        /// out (travel keeps the options of the map before, e.g. hardcore or the mutators).
+        /// to be in front. The console's own open command (a fresh URL), run as the player's console command: only that
+        /// makes the game switch from its menu into play (see GameRcon.AsPlayer). For a game already in play, if it does
+        /// not start loading, RCON's travel with every option the launcher may have set before spelled out (travel keeps
+        /// the options of the map before, e.g. hardcore or the mutators).
         /// </summary>
         private async Task<CommandResult> Travel(LaunchPlan plan, List<string> loadLines, Func<string, bool> browsed, CancellationToken ct)
         {
             var result = new CommandResult();
-            try { await Task.Run(() => rcon.Run(GameRcon.Quote(plan.OpenCommand)), ct); }
+            try { await Task.Run(() => rcon.Run(GameRcon.AsPlayer(plan.OpenCommand)), ct); }
+            catch (RconException ex) when (ex.Delivered)
+            {
+                // The game answers once the map has loaded (loading freezes it), so a long load outlasts the wait; its log tells.
+                AppLog.Debug("RCON open: no answer yet (" + ex.Message + ")");
+            }
             catch (RconException ex)
             {
                 AppLog.Warn("RCON open failed: " + ex.Message);
@@ -373,14 +409,33 @@ namespace SandstormModLauncher.Game
                 if (!result.Verified) result.Detail = "The game started travelling, but not to the map that was sent.";
                 return result;
             }
+            // From the menu, RCON's travel would load the map with the game still in its menu state: stuck on the class screen.
+            if (monitor.InstanceState != "Playing")
+            {
+                AppLog.Warn("RCON open gave no map load (game state " + (monitor.InstanceState ?? "unknown") + ")");
+                result.Detail = "The game did not start loading the map. If a message is open in the game, close it and press Launch again.";
+                return result;
+            }
 
             string url = plan.TravelUrl + TravelResets(plan);
             var reply = await Task.Run(() => rcon.Travel(url), ct);
-            AppLog.Info("RCON open gave no map load; travel: " + (reply.Ok ? reply.Text : "failed: " + reply.Error));
-            if (!reply.Ok) { result.Detail = "The game did not take the map over RCON: " + reply.Error; return result; }
+            AppLog.Info("RCON open gave no map load; travel: " + (reply.Ok ? reply.Text : reply.Delivered ? "sent, no answer yet" : "failed: " + reply.Error));
+            if (!reply.Ok && !reply.Delivered) { result.Detail = "The game did not take the map over RCON: " + reply.Error; return result; }
             result.Verified = await WaitForLine(loadLines, browsed, 20, ct);
             if (!result.Verified) result.Detail = "The game answered but has not started loading the map.";
             return result;
+        }
+
+        /// <summary>True for the game's log line that confirms the AI difficulty (numbers compared as numbers).</summary>
+        public static bool DifficultyIs(string line, string wanted)
+        {
+            const string Marker = "AI difficulty set to ";
+            int i = line?.IndexOf(Marker, StringComparison.Ordinal) ?? -1;
+            if (i < 0) return false;
+            string got = line.Substring(i + Marker.Length).Trim();
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var fl = System.Globalization.NumberStyles.Float;
+            return double.TryParse(got, fl, inv, out var a) && double.TryParse(wanted, fl, inv, out var b) ? Math.Abs(a - b) < 1e-3 : got == (wanted ?? "").Trim();
         }
 
         private async Task<bool> WaitForLine(List<string> lines, Func<string, bool> match, int seconds, CancellationToken ct)

@@ -11,6 +11,8 @@ namespace SandstormModLauncher.Core
     public sealed class RconException : Exception
     {
         public RconError Kind { get; }
+        /// <summary>The command had been sent when this happened, so the game may still carry it out.</summary>
+        public bool Delivered { get; set; }
         public RconException(RconError kind, string message) : base(message) { Kind = kind; }
     }
 
@@ -77,16 +79,20 @@ namespace SandstormModLauncher.Core
             if (!Connected) throw new RconException(RconError.Closed, "not connected");
             int id = nextId++, marker = nextId++;
             Write(id, Exec, command ?? "");
-            Write(marker, Exec, MarkerCommand);
-            var reply = new StringBuilder();
-            var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            while (true)
+            try
             {
-                var p = Read(Remaining(until));
-                if (p.Id == marker) return reply.ToString();
-                if (p.Id == id) reply.Append(p.Body);
-                // Anything else (a late reply to an earlier, timed-out command) is skipped.
+                Write(marker, Exec, MarkerCommand);
+                var reply = new StringBuilder();
+                var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+                while (true)
+                {
+                    var p = Read(Remaining(until));
+                    if (p.Id == marker) return reply.ToString();
+                    if (p.Id == id) reply.Append(p.Body);
+                    // Anything else (a late reply to an earlier, timed-out command) is skipped.
+                }
             }
+            catch (RconException ex) { ex.Delivered = true; throw; }
         }
 
         private int Remaining(DateTime until)
