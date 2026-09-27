@@ -79,7 +79,8 @@ https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher
 
 License
 -------
-Source available, all rights reserved: see LICENSE.txt. The code is public to
-read and check; copying, redistributing or reusing it needs written permission.
+Open source for non-commercial use: PolyForm Noncommercial License 1.0.0, see
+LICENSE.txt. Use it, change it, fork it and share it, as long as nothing makes
+money from it. Forks and pull requests are welcome on GitHub (link above).
 The Oswald font is under the SIL Open Font License, see OFL-Oswald-font.txt
 Not affiliated with New World Interactive or Focus Entertainment.

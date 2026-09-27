@@ -4,7 +4,7 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 
 [![Build](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml/badge.svg)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/goranbalsic/insurgency-sandstorm-mod-launcher)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest)
-[![License: source available](https://img.shields.io/badge/license-source%20available-lightgrey.svg)](LICENSE)
+[![License: open source, non-commercial](https://img.shields.io/badge/license-open%20source%2C%20non--commercial-blue.svg)](LICENSE)
 
 ![Play page](docs/screenshots/play.png)
 
@@ -92,9 +92,9 @@ To send it to me, use "Send a report..." next to it. The launcher shows you the 
 
 If Game.ini cannot be written ("access to the path is denied"), the file was usually set to read-only by hand or by another tool. The launcher writes read-only files and keeps them read-only; if it still fails, another program has the file open or the folder is protected.
 
-## Build from source (to check it)
+## Build it yourself
 
-The license lets you build the code on your own PC to check that it matches the released program, nothing more (no redistribution, no reuse in other projects). Needs the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer on Windows.
+Build it to check that it matches the released program, or to work on your own version. Needs the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer on Windows.
 
 ```
 git clone https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher.git
@@ -111,6 +111,10 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 - `--cli command` works on the setup without a window: `status`, `presets`, `apply`, `set`, `mutators`, `plan`, `save`, `reset`, and `torture [steps] [seed]`, a random stress test that checks the whole setup logic after every step, including that what you set is what the game gets (see `Services/Cli.cs`)
 - `--cli rcon "command"` sends commands to the running game over RCON; `rcon-status` checks the connection; `rcon-torture [steps] [seed]` tests the RCON code against a fake game that splits, delays and drops its answers
 - `--ui-torture out.txt [steps] [seed]` drives the real window at random (maps, presets, rules, mutators, profiles, saved setups, text sizes) and checks after every step that the screen, the saved profile and the launch plan agree. Use it with `--data` and a copy of a data folder
+
+## Contributing
+
+Forks and pull requests are welcome: new features, fixes, support for more maps and mods. Fork the repository, make your change, run the tests that fit it (`--cli torture`, `--ui-torture`, `--cli rcon-torture`, see above) and open a pull request against `main`. Have an idea but no time to build it? Open an issue and describe it. See [CONTRIBUTING.md](CONTRIBUTING.md) for the details.
 
 ## Releasing
 
@@ -132,6 +136,6 @@ Made and tested with the Steam version. The Epic install is detected too.
 
 ## License
 
-Source available, all rights reserved: see [LICENSE](LICENSE). You may read the code, build it to check it and use the released program. You may not copy, redistribute or reuse any part of it, not even in personal projects, without written permission. Versions up to 1.3.5 were released under MIT and keep that license. The Oswald font is under the SIL Open Font License ([Assets/OFL.txt](Assets/OFL.txt)).
+Open source for non-commercial use, under the [PolyForm Noncommercial License 1.0.0](LICENSE): use it, study it, change it, fork it and share your version, for anything that does not make money. Selling it, or using it in a commercial product or service, is not allowed. Keep the license and its `Required Notice` line with every copy. Earlier versions keep the license they were released with. The Oswald font is under the SIL Open Font License ([Assets/OFL.txt](Assets/OFL.txt)).
 
 Insurgency: Sandstorm is a trademark of its owners. This project is not affiliated with New World Interactive or Focus Entertainment.
