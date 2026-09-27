@@ -65,7 +65,7 @@ Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full mat
 
 **Changes in 1.3.6**
 
-- New license: source available, all rights reserved. The code stays public so anyone can read and check it, but it may not be copied, redistributed or reused in other projects (personal ones included) without permission. Versions up to 1.3.5 keep their MIT license.
+- New license (see LICENSE). Versions up to 1.3.5 keep their MIT license.
 
 **Changes in 1.3.5**
 
