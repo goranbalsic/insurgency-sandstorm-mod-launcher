@@ -159,7 +159,7 @@ namespace SandstormModLauncher.Models
         public List<string> ManagedIniKeys { get; set; } = new List<string>();   // "section\nkey" of extra Game.ini lines written last time
         public int RconPort { get; set; }                         // the game's RCON server on 127.0.0.1 (chosen once)
         public string RconPassword { get; set; }                  // random, set up by the launcher
-        public bool AllowConsoleTyping { get; set; } = true;      // type into the game console for what RCON cannot do
+        public bool AllowConsoleTyping { get; set; } = true;      // type into the game console when RCON is not available
         public string InputMethod { get; set; } = "Paste";      // Paste / Type
         public int KeyDelayMs { get; set; } = 60;
         public bool AutoStartGame { get; set; } = true;

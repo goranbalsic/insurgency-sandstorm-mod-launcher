@@ -43,7 +43,7 @@ namespace SandstormModLauncher.Services
                 s.AppendLine("Game: " + LogSanitizer.Clean(install?.GameDir ?? "not found") + "   store " + install?.Store + "   build " + install?.BuildId);
                 if (monitor != null)
                 {
-                    s.AppendLine($"Game state: {monitor.Phase}   running {monitor.IsRunning}   window {(monitor.Window != IntPtr.Zero ? "yes" : "no")}   level {monitor.CurrentLevel}   round {monitor.RoundState}   mods mounted {monitor.ModsMounted}");
+                    s.AppendLine($"Game state: {monitor.Phase}   running {monitor.IsRunning}   window {(monitor.Window != IntPtr.Zero ? "yes" : "no")}   level {monitor.CurrentLevel}   round {monitor.RoundState}   game instance {monitor.InstanceState}   mods mounted {monitor.ModsMounted}");
                     s.AppendLine("Game url: " + LogSanitizer.Clean(monitor.CurrentUrl ?? ""));
                 }
                 try { s.AppendLine("Console keys: " + string.Join(", ", ConsoleBridge.ConfiguredKeys(state?.Official))); } catch { }
@@ -104,7 +104,7 @@ namespace SandstormModLauncher.Services
             var install = state?.Install;
             head.AppendLine("Game: " + (install?.IsValid == true ? "found" : "not found") + ", " + install?.Store + " build " + install?.BuildId);
             if (monitor != null)
-                head.AppendLine($"Game state: {monitor.Phase}, running {monitor.IsRunning}, window {(monitor.Window != IntPtr.Zero ? "yes" : "no")}, level {monitor.CurrentLevel}, round {monitor.RoundState}, mods mounted {monitor.ModsMounted}");
+                head.AppendLine($"Game state: {monitor.Phase}, running {monitor.IsRunning}, window {(monitor.Window != IntPtr.Zero ? "yes" : "no")}, level {monitor.CurrentLevel}, round {monitor.RoundState}, game instance {monitor.InstanceState}, mods mounted {monitor.ModsMounted}");
             try { head.AppendLine("Console keys: " + string.Join(", ", ConsoleBridge.ConfiguredKeys(state?.Official))); } catch { }
             head.AppendLine("Display: " + string.Join("  ", ReadLines(Path.Combine(GameInstall.ConfigDir, "GameUserSettings.ini"))
                 .Where(l => l.StartsWith("FullscreenMode") || l.StartsWith("ResolutionSize"))));

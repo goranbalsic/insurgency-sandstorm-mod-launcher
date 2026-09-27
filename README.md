@@ -18,8 +18,8 @@ Local play launcher for **Insurgency: Sandstorm**. Play offline with bots, mods 
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
 - The official rulesets and the official online playlists as presets, tagged co-op (PvE, solo or with AI) or versus (against bots offline)
 - Live match control: restart rounds, change rules mid-match, respawn or freeze bots, set the clock, and every console command the game has, searchable
-- One click: writes your rules, starts the game, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed, no window has to be in front, and every step is confirmed by the game
-- Cheats and the versus AI difficulty, which the game only takes from its own console, are typed into it only after the console is seen open on screen, on any keyboard layout (F10 is added as a console key). Settings can turn that typing off
+- One click: writes your rules, starts the game, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed, no window has to be in front, and the game confirms the map load and every rule it sets
+- Cheats, the versus AI difficulty and your own console commands go over RCON too: the game runs them as if you had typed them into its console, but nothing is typed
 - Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - Adjustable text size (90% to 150%, Ctrl + / Ctrl - or Ctrl + mouse wheel) in a plain, classic Windows look
 - Send a problem report straight from the launcher: you see the cleaned report (no names, IDs or screenshots) first, and it is sent only when you press Send. You can post it on GitHub instead
@@ -46,12 +46,14 @@ Requirements: Windows 10 or 11, Insurgency: Sandstorm, .NET Framework 4.8 (part 
 
 1. Rules you change are written to your `Game.ini` while the game is closed (backed up first), one line per setting, so bots spawn with your values from the first second. Older copies of the same settings are removed, because the game uses the first value it finds.
 2. The launcher starts the game if needed and follows the game log until the main menu is up.
-3. It sends the `open` command (map, scenario, lighting, mutators) through the game's own RCON server, the remote console that server admins use. The game confirms it in its log. Nothing is typed and the game can stay in the background, so no key can ever land in a menu.
+3. It sends the `open` command (map, scenario, lighting, mutators) through the game's own RCON server, the remote console that server admins use. The game runs it as if you had typed it into its console (the engine's `defer` command), because only then does the game switch from its menu into play. The game confirms the load in its log. Nothing is typed and the game can stay in the background, so no key can ever land in a menu.
 4. If the game was already running, the rules are set in the match over RCON, and the game answers with each new value.
 
 RCON is set up by the launcher: it listens on 127.0.0.1 only (this PC, never the network), with a random password, through the `[Rcon]` section of `Game.ini`. The game starts it however you start the game, from the launcher or from Steam.
 
-Only cheats and the versus AI difficulty are left to the game's own console, because the game takes them from nowhere else. The launcher presses the console key, checks on screen that the console line opened, pastes the line, and checks each step before it presses Enter. It uses the ` key when your keyboard layout has it; on layouts without it (Serbian, German, French and others) it adds F10 as a console key while the game is closed.
+Cheats, the versus AI difficulty and your own after-load commands go the same way: console commands the game runs for the player, sent over RCON. The game confirms the AI difficulty in its log.
+
+Typing into the game's console is only a fallback for a game the launcher cannot reach over RCON (for example one started before the launcher set RCON up). Then the launcher presses the console key, checks on screen that the console line opened, pastes the line, and checks each step before it presses Enter. It uses the ` key when your keyboard layout has it; on layouts without it (Serbian, German, French and others) it adds F10 as a console key while the game is closed.
 
 ## Is it safe?
 
@@ -63,7 +65,7 @@ What the program does on your PC:
 - Writes only match rules (game mode settings) and its RCON settings in `Game.ini`, and adds F10 as a console key in `Input.ini` while the game is closed. Both files are backed up first
 - Talks to the game over RCON on 127.0.0.1 (this PC only) with a random password; nothing from outside can reach it. The password never appears in logs or problem reports
 - Keeps copies of your game key bindings before it sends any key to the game, and can put them back (Settings > Game key bindings). It never edits them itself
-- Sends keystrokes (only for cheats and the versus AI difficulty) only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
+- Sends keystrokes only when it cannot reach the game over RCON (and Settings allow it), only to the Insurgency: Sandstorm window, and only after it has seen the console line open on screen
 - Reads the bottom strip of the game picture to see the console line. The pictures stay on your PC (a few are kept in the log folder for troubleshooting)
 - Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
 - Sends a problem report only when you press Send in Settings > "Something went wrong?", after showing you all of it

@@ -105,10 +105,7 @@ namespace SandstormModLauncher.ViewModels
             // Measured in the game: these only exist in the co-op game modes and are rejected in versus.
             var coopOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CheatCounterAttack", "CheatFinishCounterAttack", "SkipToExtraction", "AIIgnorePlayers" };
             foreach (var a in LiveGroups.SelectMany(g => g.Actions))
-            {
                 if (coopOnly.Contains(a.Command.Split(' ')[0])) a.CoopOnly = true;
-                a.ViaRcon = a.Command == "AdminRestartRound 0" || a.Command == "AdminRestartRound 1";
-            }
         }
 
         private bool liveIsCoop = true;
@@ -197,16 +194,54 @@ namespace SandstormModLauncher.ViewModels
             }
         }
 
+        /// <summary>Game log lines worth showing after a console command (its answers, errors, state changes).</summary>
+        private static List<string> Interesting(IEnumerable<string> lines) =>
+            lines.Where(l => !l.Contains("LogViewport") && !l.Contains("LogCosmetics") && !l.Contains("LogFX") && !l.Contains("LogRagdoll") && !l.Contains("LogRcon")
+                             && (l.Contains("Command not recognized") || l.Contains("Bad or missing") || l.Contains("LogAI: Display: AI difficulty")
+                                 || l.Contains(") ") || l.Contains("LogGameMode: Display: State") || l.Contains("LogExec") || l.Contains("Cheat")))
+                 .Select(l => Regex.Replace(l, @"^\[[^\]]*\]\[[^\]]*\]", "")).Take(12).ToList();
+
+        /// <summary>
+        /// Runs console commands in the game as the player, over RCON: the game runs them as if they were typed into its
+        /// console, but nothing is typed and the game can stay in the background. Null when the game cannot be reached
+        /// over RCON. The game does not answer these commands, so what it writes to its log right after is returned.
+        /// </summary>
+        private async Task<List<string>> RunAsPlayer(IEnumerable<string> commands)
+        {
+            if (Rcon == null || Monitor == null) return null;
+            var list = commands.SelectMany(GameRcon.SplitCommands).ToList();
+            var lines = new List<string>();
+            void Grab(string l) { lock (lines) lines.Add(l); }
+            LiveBusy = true;
+            Monitor.LineReceived += Grab;
+            try
+            {
+                bool busy = false;
+                string problem = await Task.Run(() => Rcon.Probe(out busy));
+                if (problem != null && !busy) return null;
+                try { await Task.Run(() => Rcon.RunAsPlayer(list)); }
+                catch (RconException ex)
+                {
+                    AppLog.Warn("RCON: " + ex.Message);
+                    LiveOutput = "No answer from the game over RCON (" + ex.Message + ")." + (ex.Delivered ? " The command may still arrive." : "");
+                    ShowToast("No answer from the game");
+                    throw new OperationCanceledException();
+                }
+                AppLog.Info("Live over RCON: " + string.Join(" | ", list));
+                await Task.Delay(1500);
+                Monitor.Poll();
+                lock (lines) return lines.ToList();
+            }
+            finally { Monitor.LineReceived -= Grab; LiveBusy = false; }
+        }
+
         private async Task<CommandResult> RunConsole(string command, TimeSpan? verify = null)
         {
             LiveBusy = true;
             try
             {
                 var res = await Console.Run(command, CancellationToken.None, null, verify ?? TimeSpan.FromSeconds(2.5));
-                var interesting = res.Lines.Where(l => !l.Contains("LogViewport") && !l.Contains("LogCosmetics") && !l.Contains("LogFX") && !l.Contains("LogRagdoll")
-                                                      && (l.Contains("Command not recognized") || l.Contains("Bad or missing") || l.Contains("LogAI: Display: AI difficulty")
-                                                          || l.Contains(") ") || l.Contains("LogGameMode: Display: State") || l.Contains("LogExec") || l.Contains("Cheat")))
-                                           .Select(l => Regex.Replace(l, @"^\[[^\]]*\]\[[^\]]*\]", "")).Take(12).ToList();
+                var interesting = Interesting(res.Lines);
                 LiveOutput = !res.Sent ? "Not sent: " + res.Detail : res.NotRecognized ? res.Detail : interesting.Count > 0 ? string.Join("\n", interesting) : "Sent: " + command;
                 if (!res.Sent)
                 {
@@ -226,24 +261,36 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task RunLiveActionCore(LiveAction action)
         {
-            // Round restarts are RCON commands: no typing, the game can stay where it is.
+            // Round restarts are RCON's own command (the game answers it); the rest run as the player's console
+            // commands over RCON. Nothing is typed and the game can stay where it is.
             if (action.Command == "AdminRestartRound 0" || action.Command == "AdminRestartRound 1")
             {
                 var r = await OverRcon(() => Rcon.RestartRound(action.Command.EndsWith("1")));
                 if (r != null)
                 {
-                    LiveOutput = r.Ok ? action.Label + ": done (RCON)" : "Not done: " + r.Error;
+                    LiveOutput = r.Ok ? action.Label + ": done" : "Not done: " + r.Error;
                     ShowToast(r.Ok ? action.Label + ": done" : "Not done: " + r.Error);
+                    return;
+                }
+            }
+            else
+            {
+                // Cheats are only needed for cheat commands, but switching them on is harmless in local play.
+                var lines = await RunAsPlayer(new[] { "EnableCheats", action.Command });
+                if (lines != null)
+                {
+                    var shown = Interesting(lines);
+                    LiveOutput = action.Label + ": sent (" + action.Command + ")" + (shown.Count > 0 ? "\n" + string.Join("\n", shown) : "");
+                    ShowToast(action.Label + ": sent");
                     return;
                 }
             }
             if (!State.Settings.AllowConsoleTyping)
             {
-                LiveOutput = "This one needs the game's console, and typing into the console is off in Settings.";
-                ShowToast("Needs the game console (off in Settings)");
+                LiveOutput = NoRconLive;
+                ShowToast("The game cannot be reached over RCON");
                 return;
             }
-            // Cheats are only needed for cheat commands, but switching them on is harmless in local play.
             var res = await RunConsole("EnableCheats | " + action.Command);
             if (res.Sent) ShowToast(res.NotRecognized ? res.Detail : action.Label + ": done");
         }
@@ -356,10 +403,25 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task SendCustom()
         {
-            string cmd = customCommand.Trim();
-            if (cmd.Length == 0) return;
-            if (cheatsForCustom && !cmd.StartsWith("EnableCheats", StringComparison.OrdinalIgnoreCase)) cmd = "EnableCheats | " + cmd;
-            var res = await RunConsole(cmd, TimeSpan.FromSeconds(3));
+            try { await SendCustomCore(); } catch (OperationCanceledException) { }
+        }
+
+        private async Task SendCustomCore()
+        {
+            var commands = GameRcon.SplitCommands(customCommand);
+            if (commands.Count == 0) return;
+            if (cheatsForCustom && !commands[0].StartsWith("EnableCheats", StringComparison.OrdinalIgnoreCase)) commands.Insert(0, "EnableCheats");
+            var lines = await RunAsPlayer(commands);
+            if (lines != null)
+            {
+                var shown = Interesting(lines);
+                LiveOutput = "Sent: " + string.Join(" | ", commands) + "\n" +
+                             (shown.Count > 0 ? string.Join("\n", shown) : "The game does not answer console commands. If nothing happens, check the name in the list below.");
+                CustomCommand = "";
+                return;
+            }
+            if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
+            var res = await RunConsole(string.Join(" | ", commands), TimeSpan.FromSeconds(3));
             if (res.Sent && !res.NotRecognized) CustomCommand = "";
         }
 

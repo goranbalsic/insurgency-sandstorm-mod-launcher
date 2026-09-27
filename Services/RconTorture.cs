@@ -29,6 +29,10 @@ namespace SandstormModLauncher.Services
         public readonly List<(int team, bool bot)> Players = new List<(int, bool)>();
         public string LastTravel;
         public int RoundRestarts, Exits;
+        /// <summary>Commands run as the player ("defer ..."), in the order the game got them.</summary>
+        public readonly List<string> Deferred = new List<string>();
+        /// <summary>How long a map load freezes the game after a deferred open (the next answer comes after it).</summary>
+        public int LoadMs;
         private readonly Random rnd;
         private readonly object sync = new object();
         private TcpListener listener;
@@ -105,6 +109,8 @@ namespace SandstormModLauncher.Services
                         int chunk = Chaos ? 1 + Next(700) : 4096;
                         for (int at = 0; at == 0 || at < reply.Length; at += chunk)
                             Send(s, id, 0, reply.Substring(at, Math.Min(chunk, reply.Length - at)));
+                        // A deferred open loads the map on the next frame: the game answers nothing more until it is done.
+                        if (body.StartsWith("\"defer open ", StringComparison.Ordinal) && LoadMs > 0) Thread.Sleep(LoadMs);
                     }
                 }
             }
@@ -116,6 +122,12 @@ namespace SandstormModLauncher.Services
             lock (sync)
             {
                 if (cmd.StartsWith("help ", StringComparison.Ordinal)) return "Listing commands containing \"" + cmd.Substring(5) + "\"\n";
+                // The quoted console line "defer X": the engine queues X for the local player and answers nothing.
+                if (cmd.StartsWith("\"defer ", StringComparison.Ordinal) && cmd.EndsWith("\"", StringComparison.Ordinal) && cmd.Length > 8)
+                {
+                    lock (Deferred) Deferred.Add(cmd.Substring(7, cmd.Length - 8));
+                    return "";
+                }
                 if (cmd.StartsWith("travel ", StringComparison.Ordinal)) { LastTravel = cmd.Substring(7); return "Travelling to \"" + LastTravel + "\"..."; }
                 if (cmd.StartsWith("restartround", StringComparison.Ordinal)) { RoundRestarts++; return ""; }
                 if (cmd.StartsWith("gamemodeproperty ", StringComparison.Ordinal))
@@ -182,12 +194,76 @@ namespace SandstormModLauncher.Services
             a == b || (double.TryParse(a, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var x) &&
                        double.TryParse(b, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var y) && Math.Abs(x - y) < 1e-9);
 
+        /// <summary>
+        /// Fixed checks of what the launch reads from the game log (lines from real sessions): the game's own state,
+        /// which tells a match the game really plays from one it loaded while staying in its menu state, and the line
+        /// that confirms the AI difficulty.
+        /// </summary>
+        private static void LogChecks(Action<string> fail)
+        {
+            using (var m = GameMonitor.Detached())
+            {
+                void Feed(params string[] lines) { foreach (var l in lines) m.Feed("[2026.09.26-20.41.51:410][  1]" + l); }
+                Feed("LogINSGameInstance: State transition: 'None' -> 'WelcomeScreen'", "LogINSGameInstance: State transition: 'WelcomeScreen' -> 'MainMenu'");
+                if (m.Phase != GamePhase.Menu || m.InstanceState != "MainMenu") fail("log: at the main menu: " + m.Phase + " / " + m.InstanceState);
+                // A map opened over RCON without "defer" (1.6.0): loaded, but the game is still in its menu state.
+                Feed("LogLoad: LoadMap: /Game/Maps/Citadel/Citadel?Scenario=Scenario_Citadel_Checkpoint_Security?MaxPlayers=8?Lighting=Day",
+                     "LogLoad: Took 3.804450 seconds to LoadMap(/Game/Maps/Citadel/Citadel)");
+                if (m.Phase != GamePhase.InMatch || m.InstanceState != "MainMenu") fail("log: map loaded without the switch into play: " + m.Phase + " / " + m.InstanceState);
+                Feed("LogINSGameInstance: State transition: 'MainMenu' -> 'Playing'");
+                if (m.Phase != GamePhase.InMatch || m.InstanceState != "Playing") fail("log: after the switch into play: " + m.Phase + " / " + m.InstanceState);
+                // "disconnect" goes back to the menu map without a state line.
+                Feed("LogLoad: LoadMap: /Game/Maps/Utility/Entry?closed", "LogLoad: Took 0.153096 seconds to LoadMap(/Game/Maps/Utility/Entry)");
+                if (m.Phase != GamePhase.Menu || m.CurrentLevel != null) fail("log: back on the menu map: " + m.Phase + " / " + m.CurrentLevel);
+                m.Feed("Log file open, 09/26/26 22:41:50");
+                if (m.InstanceState != null) fail("log: a new log kept the old state " + m.InstanceState);
+            }
+            // The privacy filter keeps the game lines the launch follows, even with mod names like "Authentic..." or
+            // "...Tickets", and still drops account lines and URL secrets.
+            foreach (var (line, secret) in new[]
+            {
+                ("[2026.09.26-21.53.12:865][415]LogNet: Browse: /Game/Maps/Farmhouse/Farmhouse?Scenario=Scenario_Farmhouse_Push_Security?Mutators=AuthenticRecoil,NoTickets,SessionFix", false),
+                ("[2026.09.26-21.53.12:865][415]LogLoad: LoadMap: /Game/Maps/Farmhouse/Farmhouse?Scenario=S?Mutators=TokenMod", false),
+                ("[2026.09.26-21.50.45:738][382]LogGameState: Round reset. Authority:3", false),
+                ("[2026.09.26-21.50.45:735][382]LogGameMode: Display: State: RoundActive -> PreRound", false),
+                ("[2026.09.26-21.08.33:085][703]LogINSGameInstance: State transition: 'MainMenu' -> 'Playing'", false),
+                ("[2026.09.26-21.00.22:427][969]LogAI: Display: AI difficulty set to 0.9", false),
+                ("[2026.09.26-21.53.12:865][415]LogNet: Browse: 203.0.113.5:27102?Password=secret123", true),
+                ("[2026.09.26-21.53.12:865][415]LogNet: Browse: /Game/Maps/X/X?AuthTicket=abc", true),
+                ("[2026.09.26-20.37.54:000][  0]LogInit: Command Line: -Rcon -RconPassword=abc -RconListenPort=27700", true),
+                ("[2026.09.26-20.37.54:000][  0]LogPros: Verbose: token eyJhbGciOi", true),
+                ("[2026.09.26-20.37.54:000][  0]LogOnline: Display: STEAM: logged in", true),
+                ("[2026.09.26-20.37.54:000][  0]LogINSGameInstance: OnAuthTokenReceived invalid auth token. Service: x error: y", true),
+                ("[2026.09.26-20.37.54:000][  0]LogRcon: 127.0.0.1:50000 << \"defer open X?Mutators=AuthenticRecoil\"", true),
+            })
+                if (LogSanitizer.IsSensitive(line) != secret) fail("privacy filter: " + (secret ? "kept " : "dropped ") + line);
+            using (var m = GameMonitor.Detached())
+            {
+                var got = new List<string>();
+                m.LineReceived += got.Add;
+                m.Feed("[2026.09.26-21.53.12:865][415]LogNet: Browse: /Game/Maps/Farmhouse/Farmhouse?Scenario=Scenario_Farmhouse_Push_Security?Mutators=AuthenticRecoil");
+                m.Feed("[2026.09.26-20.37.54:000][  0]LogPros: Verbose: token eyJhbGciOi");
+                if (got.Count != 1 || !got[0].Contains("LogNet: Browse:")) fail("log: lines passed on: " + got.Count + " (the Browse line with an 'Authentic' mod must pass, the account line must not)");
+            }
+            foreach (var (line, wanted, ok) in new[]
+            {
+                ("[2026.09.26-21.00.22:427][969]LogAI: Display: AI difficulty set to 0.9", "0.9", true),
+                ("LogAI: Display: AI difficulty set to 0.9", "0.90", true),
+                ("LogAI: Display: AI difficulty set to 1", "1.0", true),
+                ("LogAI: Display: AI difficulty set to 0.5", "0.8", false),
+                ("LogRcon: 127.0.0.1:50000 << \"defer AIDifficulty 0.8\"", "0.8", false),
+                (null, "0.8", false),
+            })
+                if (LaunchService.DifficultyIs(line, wanted) != ok) fail("difficulty line '" + line + "' against " + wanted + " gave " + !ok);
+        }
+
         public static int Run(int steps, int seed, Action<string> print)
         {
             var rnd = new Random(seed);
             var failures = new List<string>();
             var ops = new Dictionary<string, int>();
             void Fail(string m) { failures.Add(m); if (failures.Count <= 40) print("FAIL " + m); }
+            LogChecks(Fail);
             var settings = new AppSettings();
             RconSetup.EnsureSettings(settings);
             using (var server = new FakeRconServer(settings.RconPassword, seed) { Chaos = true, SlowMs = 1400 })
@@ -197,8 +273,8 @@ namespace SandstormModLauncher.Services
                 int transient = 0, lastTransient = 0;
                 for (int i = 1; i <= steps; i++)
                 {
-                    int op = rnd.Next(8);
-                    string name = new[] { "travel", "set", "read", "count", "restart", "wrong password", "probe", "raw" }[op];
+                    int op = rnd.Next(10);
+                    string name = new[] { "travel", "set", "read", "count", "restart", "wrong password", "probe", "raw", "as player", "open while loading" }[op];
                     ops[name] = ops.TryGetValue(name, out var c) ? c + 1 : 1;
                     var sw = Stopwatch.StartNew();
                     try
@@ -276,6 +352,50 @@ namespace SandstormModLauncher.Services
                             case 6:
                                 if (rcon.Probe() != null) transient++;
                                 break;
+                            case 8:
+                            {
+                                // Console commands run as the player: every single command, in order, "|" split, quotes made safe.
+                                var pool = new[] { "EnableCheats", "AIDifficulty 0." + rnd.Next(10), "Slomo 1", "say \"hi\" | GodMode", " | ", "SetRoundTimer " + rnd.Next(2000) + " |AIToggle" };
+                                var lines = Enumerable.Range(0, 1 + rnd.Next(4)).Select(k => pool[rnd.Next(pool.Length)]).ToList();
+                                var want = lines.SelectMany(l => l.Split('|')).Select(c => c.Trim().Replace("\"", "'")).Where(c => c.Length > 0).ToList();
+                                int before;
+                                lock (server.Deferred) before = server.Deferred.Count;
+                                try { rcon.RunAsPlayer(lines); }
+                                catch (RconException) { transient++; break; }
+                                List<string> got;
+                                lock (server.Deferred) got = server.Deferred.Skip(before).ToList();
+                                if (!got.SequenceEqual(want)) Fail(i + " as player: the game got [" + string.Join(" / ", got) + "] instead of [" + string.Join(" / ", want) + "]");
+                                break;
+                            }
+                            case 9:
+                            {
+                                // A deferred open freezes the game while the map loads: no answer in time, but the command is known to be sent.
+                                string open = "open Map" + rnd.Next(100) + "?Scenario=Scenario_" + rnd.Next(1000);
+                                bool slow = rnd.Next(2) == 0;
+                                server.LoadMs = slow ? rcon.ReplyTimeoutMs + 500 : 0;
+                                int before;
+                                lock (server.Deferred) before = server.Deferred.Count;
+                                try
+                                {
+                                    rcon.Run(GameRcon.AsPlayer(open));
+                                    if (slow) Fail(i + " open while loading: an answer came although the game was still loading");
+                                }
+                                catch (RconException ex)
+                                {
+                                    transient++;
+                                    if (!slow && ex.Kind != RconError.Timeout && ex.Kind != RconError.Closed) Fail(i + " open: " + ex.Kind + " " + ex.Message);
+                                    if (slow && ex.Kind == RconError.Timeout && !ex.Delivered) Fail(i + " open while loading: the timeout does not say the command was sent");
+                                    if (ex.Kind == RconError.Timeout && !ex.Delivered) break;
+                                    if (ex.Kind != RconError.Timeout) break;
+                                }
+                                finally { server.LoadMs = 0; }
+                                // A busy game gets to the command late, but it gets it.
+                                bool Arrived() { lock (server.Deferred) return server.Deferred.Skip(before).Contains(open); }
+                                var until = DateTime.UtcNow.AddMilliseconds(server.SlowMs + 800);
+                                while (!Arrived() && DateTime.UtcNow < until) Thread.Sleep(20);
+                                if (!Arrived()) Fail(i + " open: the game did not get " + open);
+                                break;
+                            }
                             default:
                             {
                                 // Unknown and odd commands: an answer (maybe empty) or a clean error, never a hang.

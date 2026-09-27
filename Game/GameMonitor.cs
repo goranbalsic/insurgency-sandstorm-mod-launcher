@@ -37,6 +37,11 @@ namespace SandstormModLauncher.Game
         public string CurrentLevel { get; private set; }
         public string CurrentUrl { get; private set; }
         public string RoundState { get; private set; }
+        /// <summary>
+        /// The game's own state from its log (WelcomeScreen, MainMenu, Playing...). A map opened any other way than as the
+        /// player's console command stays at MainMenu, and the game then keeps the menu's input after the class screen.
+        /// </summary>
+        public string InstanceState { get; private set; }
         public int ModsMounted { get; private set; }
         /// <summary>The game's loading picture is covering the viewport (the console cannot open under it).</summary>
         public bool LoadingScreenUp { get; private set; }
@@ -45,12 +50,23 @@ namespace SandstormModLauncher.Game
         public IntPtr Window { get; private set; }
         public bool IsRunning => ProcessId != 0;
 
-        public GameMonitor()
+        public GameMonitor() : this(true) { }
+
+        private GameMonitor(bool watch)
         {
-            timer = new Timer(_ => Poll(), null, 0, 400);
+            if (watch) timer = new Timer(_ => Poll(), null, 0, 400);
         }
 
-        public void Dispose() => timer.Dispose();
+        /// <summary>For tests: a monitor that does not watch the game or its log; lines are given to <see cref="Feed"/>.</summary>
+        public static GameMonitor Detached() => new GameMonitor(false);
+
+        /// <summary>For tests: reads one game log line as if it had just been written.</summary>
+        public void Feed(string line)
+        {
+            lock (sync) Take(line ?? "");
+        }
+
+        public void Dispose() => timer?.Dispose();
 
         public void Poll()
         {
@@ -77,7 +93,7 @@ namespace SandstormModLauncher.Game
             {
                 if (ProcessId == 0) return false;
                 ProcessId = 0; ProcessStartUtc = null; Window = IntPtr.Zero; LoadingScreenUp = false;
-                Phase = GamePhase.NotRunning; CurrentLevel = null; RoundState = null; mapLoaded = false;
+                Phase = GamePhase.NotRunning; CurrentLevel = null; RoundState = null; mapLoaded = false; InstanceState = null;
                 return true;
             }
             bool changed = false;
@@ -146,16 +162,23 @@ namespace SandstormModLauncher.Game
             foreach (var raw in text.Substring(0, last).Split('\n'))
             {
                 string line = raw.TrimEnd('\r').TrimStart('﻿');
-                if (line.Length == 0 || LogSanitizer.IsSensitive(line)) continue;
-                changed |= Parse(line);
-                try { LineReceived?.Invoke(line); } catch { }
+                changed |= Take(line);
             }
+            return changed;
+        }
+
+        /// <summary>One log line: account lines are dropped before anything else sees them.</summary>
+        private bool Take(string line)
+        {
+            if (line.Length == 0 || LogSanitizer.IsSensitive(line)) return false;
+            bool changed = Parse(line);
+            try { LineReceived?.Invoke(line); } catch { }
             return changed;
         }
 
         private bool Parse(string line)
         {
-            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; LoadingScreenUp = false; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
+            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; LoadingScreenUp = false; InstanceState = null; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
             if (line.Contains("LoadingScreen: EndLoadingScreen")) { LoadingScreenUp = false; return true; }
             if (line.Contains("LogLoad: BeginLoadingScreen") || line.Contains("Restoring loading screen widget")) { LoadingScreenUp = true; return true; }
             // The game logs "-> Playing" just after a map finishes loading, so it only means
@@ -163,6 +186,7 @@ namespace SandstormModLauncher.Game
             var t = Transition.Match(line);
             if (t.Success)
             {
+                InstanceState = t.Groups[2].Value;
                 switch (t.Groups[2].Value)
                 {
                     case "MainMenu": Phase = GamePhase.Menu; mapLoaded = false; CurrentLevel = null; RoundState = null; break;
@@ -185,7 +209,8 @@ namespace SandstormModLauncher.Game
                 string level = ld.Groups[1].Value;
                 if (level.IndexOf("/Utility/", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    if (Phase == GamePhase.Loading && CurrentLevel != null) Phase = GamePhase.Menu;
+                    // The menu map after a match: back at the menu (a "disconnect" gets there without a state line).
+                    if ((Phase == GamePhase.Loading || Phase == GamePhase.InMatch) && CurrentLevel != null) { Phase = GamePhase.Menu; RoundState = null; }
                     CurrentLevel = null;
                     mapLoaded = false;
                 }

@@ -131,12 +131,14 @@ namespace SandstormModLauncher.Game
         public bool Ok;
         public string Text = "";
         public string Error;
+        /// <summary>No answer came, but the command had been sent (a map load freezes the game for seconds).</summary>
+        public bool Delivered;
     }
 
     /// <summary>
-    /// Talks to the running game over its RCON server: loading maps (travel), game mode properties, round restarts,
-    /// reading values and closing the game. No keys are pressed and the game does not need to be in front.
-    /// One connection per call keeps it simple and survives map changes and game restarts.
+    /// Talks to the running game over its RCON server: loading maps and running console commands as the player,
+    /// game mode properties, round restarts, reading values and closing the game. No keys are pressed and the game
+    /// does not need to be in front. One connection per call keeps it simple and survives map changes and game restarts.
     /// </summary>
     public sealed class GameRcon
     {
@@ -192,7 +194,27 @@ namespace SandstormModLauncher.Game
         /// <summary>A console command line for the game. The whole line is quoted: the game's RCON server passes only the first word to the console otherwise.</summary>
         public static string Quote(string commandLine) => "\"" + (commandLine ?? "").Replace("\"", "'").Trim() + "\"";
 
-        /// <summary>Loads a map: the part after "open " (map?Scenario=...?options).</summary>
+        /// <summary>
+        /// A console command for the game to run as the player, exactly as if it was typed into its console: the
+        /// engine's "defer" runs it on the next frame through the local player. "open" needs that path: only then does
+        /// the game switch from its menu into play (a map opened any other way keeps the menu's input, and the player
+        /// is stuck on the class screen). The player's own commands need it too (cheats, the versus AI difficulty).
+        /// One command per call, as "|" is not split there. The game gives no answer; any output goes to its log.
+        /// </summary>
+        public static string AsPlayer(string command) => Quote("defer " + (command ?? "").Trim());
+
+        /// <summary>The single commands of a console line ("a | b").</summary>
+        public static List<string> SplitCommands(string line) =>
+            (line ?? "").Split('|').Select(c => c.Trim()).Where(c => c.Length > 0).ToList();
+
+        /// <summary>Runs console commands as the player (see <see cref="AsPlayer"/>), in order. Lines with "|" are split.</summary>
+        public void RunAsPlayer(IEnumerable<string> commands)
+        {
+            var list = commands.SelectMany(SplitCommands).Select(AsPlayer).ToArray();
+            if (list.Length > 0) Run(list);
+        }
+
+        /// <summary>RCON's own travel (the fallback for a game already in a match): the part after "open " (map?Scenario=...?options).</summary>
         public RconReply Travel(string url)
         {
             var r = new RconReply();
@@ -202,7 +224,7 @@ namespace SandstormModLauncher.Game
                 r.Ok = r.Text.StartsWith("Travelling to", StringComparison.OrdinalIgnoreCase);
                 if (!r.Ok) r.Error = r.Text.Length > 0 ? r.Text : "the game gave no answer to travel";
             }
-            catch (RconException ex) { r.Error = ex.Message; }
+            catch (RconException ex) { r.Error = ex.Message; r.Delivered = ex.Delivered; }
             return r;
         }
 

@@ -16,8 +16,20 @@ namespace SandstormModLauncher.Core
         private static readonly Regex Email = new Regex(@"[\w.+-]+@[\w-]+\.[\w.]+", RegexOptions.Compiled);
         private static readonly Regex UserPath = new Regex(@"(?i)(C:\\Users\\)[^\\]+", RegexOptions.Compiled);
 
+        /// <summary>
+        /// Game lines the launcher follows (map loads, match and round states, the game's own state, the AI difficulty,
+        /// asset errors). They hold no account data, only map, mode and mod names, and a mod called "Authentic..." or
+        /// "...Tickets" must not hide them: the launch would miss its own map load. Only a URL option such as
+        /// ?Password= makes one of them private.
+        /// </summary>
+        private static readonly Regex GameFlow = new Regex(
+            @"^(\[[^\]]*\]\[[^\]]*\])?(LogNet: Browse: |LogLoad: LoadMap: |LogLoad: Took |LogGameState: |LogGameMode: Display: State: |LogINSGameInstance: State transition: |LogAI: Display: AI difficulty set to |LogStreaming: Error: )",
+            RegexOptions.Compiled);
+        private static readonly Regex UrlSecret = new Regex(@"[?&](password|pwd|token|ticket|auth\w*|signature|session_?id)=", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         /// <summary>True for lines from online services that may hold tokens or account ids.</summary>
-        public static bool IsSensitive(string line) => Sensitive.IsMatch(line);
+        public static bool IsSensitive(string line) =>
+            line != null && (GameFlow.IsMatch(line) ? UrlSecret.IsMatch(line) : Sensitive.IsMatch(line));
 
         /// <summary>The line with addresses, names and ids masked, or null when the whole line should be dropped.</summary>
         public static string Clean(string line)

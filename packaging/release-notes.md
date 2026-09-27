@@ -1,5 +1,14 @@
 Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
 
+**Changes in 1.6.1**
+
+- Fixed: after a launch from the main menu the game could keep you on the class selection screen. The round started, but you could not move. A map opened over RCON left the game in its menu state. The launcher now has the game run the open command as if you had typed it into its console, which switches the game into play like before, still without pressing any keys.
+- Cheats, the versus AI difficulty, your own after-load commands, the Live tab buttons and the Live console now go over RCON the same way. Nothing is typed into the game any more and the game does not need to be in front. The game confirms the versus AI difficulty.
+- Typing into the game console is now only a fallback for a game the launcher cannot reach over RCON (for example one started before the launcher set RCON up).
+- Fixed: a map that took more than a few seconds to load could be reported as "cannot be reached over RCON" while it was loading.
+- Fixed: with a mod or mutator whose name contains words such as "Authentic" or "Tickets", the launcher could miss the map load and report a failed launch although the map loaded. The filter that keeps account lines out of the launcher's logs no longer hides the game's own map and match lines.
+- The launcher warns if a match loads without the game switching into play, and notices when the game goes back to its main menu.
+
 **Changes in 1.6.0**
 
 - Launching no longer types into the game. The launcher now talks to the game through its own remote console (RCON, the one server admins use), on this PC only (127.0.0.1) with a random password. Maps load and rules are set without any key presses, the game can stay in the background, and the game confirms every step. This fixes the command that sometimes stayed in the console until you pressed Enter yourself, and the focus problems around it.

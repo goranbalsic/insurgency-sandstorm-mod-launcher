@@ -262,9 +262,7 @@ namespace SandstormModLauncher.ViewModels
         public string Command { get; set; }
         public string Tip { get; set; }
         public bool CoopOnly { get; set; }
-        /// <summary>Sent over RCON (no typing); everything else is typed into the game console.</summary>
-        public bool ViaRcon { get; set; }
-        public string CommandHint => Command + (ViaRcon ? "  ·  direct (RCON)" : "  ·  game console");
+        public string CommandHint => Command;
     }
 
     public sealed class LiveGroup
