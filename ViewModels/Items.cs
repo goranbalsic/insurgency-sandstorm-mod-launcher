@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Input;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -18,16 +19,16 @@ namespace SandstormModLauncher.ViewModels
 
         public string Key => Custom != null ? "custom:" + Custom.Id : Info.Key;
         public string Name => Custom?.Label ?? Info.DisplayName;
-        public string Sub => Custom != null ? "Custom entry · " + Custom.Level
+        public string Sub => Custom != null ? F("Custom entry · {0}", Custom.Level)
             : Info.Source == ContentSource.Mod ? Info.ModName
-            : Info.LevelName.Equals(Info.DisplayName.Replace(" ", ""), StringComparison.OrdinalIgnoreCase) ? "Official map" : "Level " + Info.LevelName;
-        public string Tag => Custom != null ? "CUSTOM" : Info.Source == ContentSource.Mod ? "MOD" : "";
+            : Info.LevelName.Equals(Info.DisplayName.Replace(" ", ""), StringComparison.OrdinalIgnoreCase) ? T("Official map") : F("Level {0}", Info.LevelName);
+        public string Tag => Custom != null ? T("CUSTOM") : Info.Source == ContentSource.Mod ? T("MOD") : "";
         public string Source => Custom != null ? "Custom" : Info.Source == ContentSource.Mod ? "Mods" : "Official";
         public string Thumb => night ? (Info.ThumbNight ?? Info.ThumbDay) : Info.ThumbDay;
         public string Initials => string.IsNullOrEmpty(Name) ? "?" : new string(Name.Split(' ').Where(w => w.Length > 0).Take(2).Select(w => char.ToUpperInvariant(w[0])).ToArray());
         public int CoopCount => Info.Scenarios.Count(s => s.Category == "Co-op");
         public int VersusCount => Info.Scenarios.Count(s => s.Category == "Versus");
-        public string Counts => Custom != null ? Custom.Scenario : $"{CoopCount} co-op · {VersusCount} versus";
+        public string Counts => Custom != null ? Custom.Scenario : F("{0} co-op · {1} versus", CoopCount, VersusCount);
         public bool Night { get => night; set { if (Set(ref night, value)) Raise(nameof(Thumb)); } }
         public bool IsSelected { get => selected; set => Set(ref selected, value); }
     }
@@ -50,6 +51,7 @@ namespace SandstormModLauncher.ViewModels
     {
         private bool selected;
         public string Mode { get; set; }
+        public string ModeLabel => T(Mode);
         public string Category { get; set; }
         public List<ScenarioItem> Items { get; set; } = new List<ScenarioItem>();
         public string Tip => string.Join("\n", Items.Select(i => i.Id));
@@ -75,16 +77,16 @@ namespace SandstormModLauncher.ViewModels
 
         public string Id => Info.Id;
         public string Name => Info.DisplayName;
-        public string Description => string.IsNullOrWhiteSpace(Info.Description) ? "No description in the mod files." : Info.Description;
+        public string Description => string.IsNullOrWhiteSpace(Info.Description) ? T("No description in the mod files.") : Info.Description;
         /// <summary>Set for official mutators: which official playlists (co-op, versus) use it.</summary>
         public string OfficialGroup { get; set; }
         public int GroupRank { get; set; }
-        public string Group => Info.Source == ContentSource.Official ? OfficialGroup ?? "Official"
-                             : Info.Source == ContentSource.Custom ? "Added by name" : Info.ModName;
+        public string Group => Info.Source == ContentSource.Official ? OfficialGroup ?? T("Official")
+                             : Info.Source == ContentSource.Custom ? T("Added by name") : Info.ModName;
         public string SourceKey => Info.Source.ToString();
         public bool IsBase => Info.IsBaseClass;
         public bool NotRegistered => !Info.Registered;
-        public string Warning => Info.Warning;
+        public string Warning => T(Info.Warning);
         public bool ShowId => !string.Equals(Info.Id, Info.DisplayName?.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
 
         public bool IsActive
@@ -111,26 +113,27 @@ namespace SandstormModLauncher.ViewModels
         public ModInfo Info { get; }
         public ModItem(ModInfo info) { Info = info; }
         public string Name => Info.Name;
-        public string Author => string.IsNullOrEmpty(Info.Author) ? "" : "by " + Info.Author;
+        public string Author => string.IsNullOrEmpty(Info.Author) ? "" : F("by {0}", Info.Author);
         public string Summary => Info.Summary;
         public string Logo => Info.LogoFile;
         public string Version => string.IsNullOrEmpty(Info.Version) ? "" : "v" + Info.Version;
-        public string Updated => Info.Updated.HasValue ? "Updated " + Info.Updated.Value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) : "";
+        public string Updated => Info.Updated.HasValue ? F("Updated {0}", Info.Updated.Value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)) : "";
         public int MutatorCount => Info.Mutators.Count(m => m.Registered && !m.IsBaseClass);
         public string Counts
         {
             get
             {
                 var parts = new List<string>();
-                if (MutatorCount > 0) parts.Add(MutatorCount + " mutator" + (MutatorCount == 1 ? "" : "s"));
-                if (Info.Scenarios.Count > 0) parts.Add(Info.Scenarios.Count + " scenario" + (Info.Scenarios.Count == 1 ? "" : "s"));
-                if (parts.Count == 0) parts.Add(Info.Tags.Count > 0 ? string.Join(" · ", Info.Tags) : "Content pack");
+                if (MutatorCount > 0) parts.Add(MutatorCount == 1 ? T("1 mutator") : F("{0} mutators", MutatorCount));
+                if (Info.Scenarios.Count > 0) parts.Add(Info.Scenarios.Count == 1 ? T("1 scenario") : F("{0} scenarios", Info.Scenarios.Count));
+                if (parts.Count == 0) parts.Add(Info.Tags.Count > 0 ? string.Join(" · ", Info.Tags) : T("Content pack"));
                 return string.Join(" · ", parts);
             }
         }
         public string Tags => string.Join(" · ", Info.Tags);
         public bool HasWarnings => Info.Warnings.Count > 0;
-        public string WarningText => string.Join("\n", Info.Warnings);
+        public string WarningText => string.Join("\n", Info.Warnings.Select(T));
+        public string StateLabel => T(Info.State);
         public string Initials => string.IsNullOrEmpty(Name) ? "?" : Name.Substring(0, 1).ToUpperInvariant();
     }
 
@@ -149,9 +152,9 @@ namespace SandstormModLauncher.ViewModels
         }
 
         public string Key => Prop.Key;
-        public string Label => Prop.Label;
-        public string Description => Prop.Description;
-        public const string UnavailableCategory = "Not in this mode";
+        public string Label => T(Prop.Label);
+        public string Description => T(Prop.Description);
+        public static readonly string UnavailableCategory = N("Not in this mode");
         public bool IsAvailable { get; set; } = true;
         public string AvailabilityNote { get; set; }
         public string Category => IsAvailable ? Prop.Category : UnavailableCategory;
@@ -181,8 +184,8 @@ namespace SandstormModLauncher.ViewModels
 
         public string Effective => Value ?? Default;
         public bool Changed => Value != null;
-        public string DisplayDefault => IsBool ? (LaunchPlanner.IsTrue(Default) ? "On" : "Off") : Default;
-        public string DisplayValue => IsBool ? (LaunchPlanner.IsTrue(Effective) ? "On" : "Off") : Effective;
+        public string DisplayDefault => IsBool ? (LaunchPlanner.IsTrue(Default) ? T("On") : T("Off")) : Default;
+        public string DisplayValue => IsBool ? (LaunchPlanner.IsTrue(Effective) ? T("On") : T("Off")) : Effective;
 
         public double Number
         {
@@ -228,6 +231,7 @@ namespace SandstormModLauncher.ViewModels
     {
         private int changes;
         public string Name { get; set; }
+        public string Label => T(Name);
         public int Count { get; set; }
         public int Changes { get => changes; set => Set(ref changes, value); }
     }
@@ -241,6 +245,7 @@ namespace SandstormModLauncher.ViewModels
         /// <summary>"Co-op" (PvE: solo or with AI teammates) or "Versus" (PvP, played against bots offline); empty for none.</summary>
         public string Tag { get; set; } = "";
         public bool HasTag => Tag.Length > 0;
+        public string TagLabel => T(Tag);
         public bool IsVersus => Tag == "Versus";
         /// <summary>Extra line, e.g. which mode a playlist was made for.</summary>
         public string Note { get; set; } = "";

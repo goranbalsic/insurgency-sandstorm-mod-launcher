@@ -217,6 +217,15 @@ namespace SandstormModLauncher.Services
                 if (m.Phase != GamePhase.Menu || m.CurrentLevel != null) fail("log: back on the menu map: " + m.Phase + " / " + m.CurrentLevel);
                 m.Feed("Log file open, 09/26/26 22:41:50");
                 if (m.InstanceState != null) fail("log: a new log kept the old state " + m.InstanceState);
+                // The game on its way to the menu travels to a menu map the way a server changes maps: no match yet.
+                Feed("LogLoad: LoadMap: /Game/Maps/Utility/Entry?Name=Player", "LogLoad: Took 0.151852 seconds to LoadMap(/Game/Maps/Utility/Entry)",
+                     "LogWorld: SeamlessTravel to: /Game/Maps/Utility/MainMenu_Hold", "LogWorld: ----SeamlessTravel finished in 2.09 seconds ------");
+                if (m.Phase == GamePhase.InMatch || m.CurrentLevel != null) fail("log: the menu map was taken for a match: " + m.Phase + " / " + m.CurrentLevel);
+                // A server changing maps: the match is there once the travel has finished.
+                Feed("LogGameMode: ProcessServerTravel: Farmhouse?Scenario=Scenario_Farmhouse_Push_Security", "LogWorld: SeamlessTravel to: /Game/Maps/Farmhouse/Farmhouse");
+                if (m.Phase != GamePhase.Loading) fail("log: a server travel is not loading: " + m.Phase);
+                Feed("LogWorld: ----SeamlessTravel finished in 4.10 seconds ------");
+                if (m.Phase != GamePhase.InMatch || m.CurrentLevel != "/Game/Maps/Farmhouse/Farmhouse") fail("log: after a server travel: " + m.Phase + " / " + m.CurrentLevel);
             }
             // The privacy filter keeps the game lines the launch follows, even with mod names like "Authentic..." or
             // "...Tickets", and still drops account lines and URL secrets.
@@ -257,6 +266,155 @@ namespace SandstormModLauncher.Services
                 if (LaunchService.DifficultyIs(line, wanted) != ok) fail("difficulty line '" + line + "' against " + wanted + " gave " + !ok);
         }
 
+        /// <summary>The dedicated server's text formats: MapCycle.txt (written and read back) and listplayers.</summary>
+        private static void ServerFormatChecks(Random rnd, Action<string> fail)
+        {
+            var parsed = MapCycle.Parse("Scenario_Crossing_Skirmish\r\n\r\n(Scenario=“Scenario_Town_Checkpoint_Security”, Mode=“CheckpointHardcore”)\n"
+                                        + "// my comment\n(Scenario=\"Scenario_Refinery_Push_Security\",Lighting=\"Night\",Options=\"x\")\nnot a scenario line\n");
+            if (parsed.Count != 5) fail("map cycle: " + parsed.Count + " lines instead of 5");
+            else
+            {
+                if (parsed[0].Scenario != "Scenario_Crossing_Skirmish" || parsed[0].Raw != null) fail("map cycle: a plain scenario line was not read");
+                if (parsed[1].Scenario != "Scenario_Town_Checkpoint_Security" || parsed[1].Mode != "CheckpointHardcore" || parsed[1].Raw != null) fail("map cycle: curly quotes and spaces were not read");
+                if (parsed[2].Raw != "// my comment" || parsed[2].IsEntry) fail("map cycle: a comment was not kept");
+                if (parsed[3].Raw == null || parsed[3].Scenario != "Scenario_Refinery_Push_Security") fail("map cycle: an entry with unknown settings was not kept as written");
+                if (parsed[4].Raw != "not a scenario line") fail("map cycle: an unknown line was not kept");
+            }
+            string[] scenarios = { "Scenario_Farmhouse_Checkpoint_Security", "Scenario_Town_Push_Insurgents", "Scenario_Bab_Survival", "Scenario_Crossing_Skirmish" };
+            for (int i = 0; i < 200; i++)
+            {
+                var list = Enumerable.Range(0, rnd.Next(8)).Select(k => new MapCycleEntry
+                {
+                    Scenario = scenarios[rnd.Next(scenarios.Length)],
+                    Lighting = new[] { null, "Day", "Night" }[rnd.Next(3)],
+                    Mode = new[] { null, null, "CheckpointHardcore" }[rnd.Next(3)],
+                }).ToList();
+                var back = MapCycle.Parse(MapCycle.Render(list));
+                string a = string.Join("|", list.Select(e => e.Scenario + "," + e.Lighting + "," + e.Mode));
+                string b = string.Join("|", back.Select(e => e.Scenario + "," + e.Lighting + "," + e.Mode));
+                if (a != b || back.Any(e => e.Raw != null)) { fail("map cycle round trip: " + a + " came back as " + b); break; }
+            }
+            var players = ServerService.ParsePlayers("ID\t | Name\t\t\t\t | NetID\t\t\t | IP\t\t\t | Score\t\t |\n" + new string('=', 79) + "\n"
+                                                     + "0\t | Some Player\t | SteamNWI:76561198000000001\t | 203.0.113.9\t | 120\t\t |\n1\t | a|b\t | x\t | y\t | 5 |\n");
+            if (players.Count != 2 || players[0].Id != "0" || players[0].Name != "Some Player" || players[0].Score != "120") fail("listplayers: " + players.Count + " players read wrongly");
+            else if (players[1].Name != "a|b" || players[1].Score != "5" || players[1].Id != "1") fail("listplayers: a name with | was read as " + players[1].Name + " / score " + players[1].Score);
+            if (ServerService.ParsePlayers("ID\t | Name\t | NetID\t | IP\t | Score\t |\n" + new string('=', 79) + "\n").Count != 0) fail("listplayers: an empty server has players");
+        }
+
+        /// <summary>The player's own start command: program and arguments, and where the launcher's options go.</summary>
+        private static void StartCommandChecks(Action<string> fail)
+        {
+            // Chat text and reasons stay one command: a | in them would make the game run what follows it.
+            string said = ServerService.Reason("hi | exit\n\"x\"");
+            if (said.Contains("|") || said.Contains("\n") || said.Contains("\"")) fail("chat text reaches the server as " + said);
+            string dir = Path.Combine(Path.GetTempPath(), "sml start " + Guid.NewGuid().ToString("N").Substring(0, 6));
+            string bat = Path.Combine(dir, "my start.bat");
+            try
+            {
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(bat, "@echo off");
+                var cases = new[]
+                {
+                    ("\"" + bat + "\" -a {options} -b", "-x 1", bat, "-a -x 1 -b"),
+                    ("\"" + bat + "\"", "-x 1", bat, "-x 1"),
+                    (bat + " -a", "-x", bat, "-a -x"),                      // a path with spaces, no quotes
+                    (bat, "", bat, ""),
+                    ("tool.exe {options}", "-x  -y", "tool.exe", "-x -y"),
+                    ("  tool.exe   -a  ", "", "tool.exe", "-a"),
+                    ("\"C:\\no such\\x.exe\" -a", "-o", "C:\\no such\\x.exe", "-a -o"),
+                };
+                foreach (var (cmd, options, file, args) in cases)
+                {
+                    var (f, a) = LaunchService.SplitCommand(cmd, options);
+                    if (f != file || a != args) fail("start command " + cmd + " with " + options + ": " + f + " | " + a + " instead of " + file + " | " + args);
+                }
+            }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
+        /// <summary>Translation tables: reading what Excel, Sheets and LibreOffice save, writing, and using them.</summary>
+        private static void TranslationChecks(Random rnd, Action<string> fail)
+        {
+            string[] bits = { "a", "Launch", "中文", "ñ", " ", ",", ";", "\"", "\"\"", "\n", "{0}", "·", "x y", "'", "\t", "=" };
+            string Random(int max, bool trim)
+            {
+                var sb = new StringBuilder();
+                int n = 1 + rnd.Next(max);
+                for (int k = 0; k < n; k++) sb.Append(bits[rnd.Next(bits.Length)]);
+                string s = sb.ToString();
+                return trim ? Loc.Key(s) : s;
+            }
+            for (int i = 0; i < 300; i++)
+            {
+                var rows = new List<Loc.Row>();
+                int count = rnd.Next(6);
+                for (int k = 0; k < count; k++)
+                {
+                    string en = Random(6, true);
+                    if (en.Length == 0) en = "text " + k;
+                    rows.Add(new Loc.Row { English = en, Translation = Random(6, false), Where = Random(3, false) });
+                }
+                var back = Loc.ReadCsv(Loc.WriteCsv(rows));
+                string a = string.Join("¦", rows.Select(r => r.English + "→" + r.Translation + "→" + r.Where));
+                string b = string.Join("¦", back.Select(r => r.English + "→" + r.Translation + "→" + r.Where));
+                if (a != b) { fail("translation table round trip: " + a + " came back as " + b); break; }
+            }
+            // As spreadsheet programs save it: semicolons, other column orders, no header, the byte order mark, CRLF.
+            var semi = Loc.ReadCsv("﻿English;Translation;Where\r\n\"Hello; there\";\"Hola\";\"Main window\"\r\nPlay;Jugar;\r\n");
+            if (semi.Count != 2 || semi[0].English != "Hello; there" || semi[0].Translation != "Hola" || semi[1].Translation != "Jugar") fail("translation table: a semicolon file was read wrongly");
+            var order = Loc.ReadCsv("Where,Note,Translation,English\nMain window,x,Einstellungen,Settings\n");
+            if (order.Count != 1 || order[0].English != "Settings" || order[0].Translation != "Einstellungen" || order[0].Where != "Main window")
+                fail("translation table: columns in another order were read wrongly");
+            var bare = Loc.ReadCsv("Launch,启动\n\"Two\nlines\",\"两\n行\"\n");
+            if (bare.Count != 2 || bare[0].Translation != "启动" || bare[1].English != "Two\nlines" || bare[1].Translation != "两\n行") fail("translation table: a file without a header was read wrongly");
+            if (Loc.ReadCsv("English,Translation\n,x\n  ,y\n").Count != 0) fail("translation table: rows without English text were kept");
+            // Files: UTF-8 with or without the mark, and a file saved in the PC's old code page does not stop anything.
+            string tmp = Path.Combine(Path.GetTempPath(), "sml-loc-" + Guid.NewGuid().ToString("N") + ".csv");
+            try
+            {
+                File.WriteAllText(tmp, "English,Translation\nPlay,玩\n", new UTF8Encoding(false));
+                if (Loc.ReadCsv(Loc.ReadFile(tmp)).FirstOrDefault()?.Translation != "玩") fail("translation file: UTF-8 without the byte order mark was read wrongly");
+                File.WriteAllBytes(tmp, new byte[] { (byte)'P', (byte)'l', (byte)'a', (byte)'y', (byte)',', 0xE9, 0xFF, (byte)'\n' });
+                if (Loc.ReadCsv(Loc.ReadFile(tmp)).FirstOrDefault()?.Translation != Encoding.Default.GetString(new byte[] { 0xE9, 0xFF }))
+                    fail("translation file: a file in the old code page was not read with it");
+                Loc.MakeTranslationFile(null, tmp);
+                var made = Loc.ReadCsv(Loc.ReadFile(tmp));
+                var template = Loc.Template();
+                if (made.Count != template.Count + 2 || made[0].English != Loc.LanguageKey || made[1].English != Loc.TranslatorKey || made.Any(r => r.Translation.Length > 0))
+                    fail("translation file: a new file has " + made.Count + " rows for " + template.Count + " texts, or translations filled in");
+                if (!File.ReadAllBytes(tmp).Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF })) fail("translation file: saved without the byte order mark Excel needs");
+            }
+            finally { try { File.Delete(tmp); } catch { } }
+            // The table the launcher carries: every text once, and every {n} usable.
+            var all = Loc.Template();
+            if (all.Count < 500 || !all.Any(r => r.English == "Launch") || !all.Any(r => r.English == "Settings")) fail("translation template: " + all.Count + " texts, some missing");
+            foreach (var dup in all.GroupBy(r => r.English).Where(g => g.Count() > 1).Take(3)) fail("translation template: \"" + dup.Key + "\" is there twice");
+            foreach (var r in all.Where(r => System.Text.RegularExpressions.Regex.IsMatch(r.English, @"\{\d")))
+                try { string.Format(r.English, "a", "b", "c", "d", "e"); }
+                catch (FormatException) { fail("translation template: bad placeholder in \"" + r.English + "\""); }
+            // Using a table: spaces around a piece stay, a translation that breaks the placeholders falls back to English.
+            try
+            {
+                Loc.UseTable(new[]
+                {
+                    new Loc.Row { English = "Loading", Translation = "Cargando" },
+                    new Loc.Row { English = "Found {0} maps", Translation = "{0} mapas" },
+                    new Loc.Row { English = "{0} of {1}", Translation = "{0} de {2}" },
+                    new Loc.Row { English = "Two\nlines", Translation = "Dos\r\nlíneas " },
+                    new Loc.Row { English = Loc.LanguageKey, Translation = "Español" },
+                }, "test");
+                if (Loc.T(" Loading ") != " Cargando ") fail("translation: spaces around a text were lost (" + Loc.T(" Loading ") + ")");
+                if (Loc.F("Found {0} maps", 3) != "3 mapas") fail("translation: a text with a value was " + Loc.F("Found {0} maps", 3));
+                if (Loc.F("{0} of {1}", 1, 2) != "1 of 2") fail("translation: a broken translation was used: " + Loc.F("{0} of {1}", 1, 2));
+                if (Loc.T("Two\r\nlines") != "Dos\nlíneas") fail("translation: a text over two lines was " + Loc.T("Two\r\nlines"));
+                if (Loc.T("Not there") != "Not there" || Loc.T(null) != null || Loc.T("") != "") fail("translation: a text without translation changed");
+                if (Loc.T(Loc.LanguageKey) != Loc.LanguageKey) fail("translation: the language name row is used as a text");
+                if (Loc.CurrentId != "test" || Loc.IsEnglish) fail("translation: the table in use is not the test one");
+            }
+            finally { Loc.UseTable(null, ""); }
+            if (!Loc.IsEnglish || Loc.CurrentId != "" || Loc.T("Loading") != "Loading") fail("translation: English is not back after the test");
+        }
+
         public static int Run(int steps, int seed, Action<string> print)
         {
             var rnd = new Random(seed);
@@ -264,6 +422,9 @@ namespace SandstormModLauncher.Services
             var ops = new Dictionary<string, int>();
             void Fail(string m) { failures.Add(m); if (failures.Count <= 40) print("FAIL " + m); }
             LogChecks(Fail);
+            ServerFormatChecks(new Random(seed), Fail);
+            TranslationChecks(new Random(seed), Fail);
+            StartCommandChecks(Fail);
             var settings = new AppSettings();
             RconSetup.EnsureSettings(settings);
             using (var server = new FakeRconServer(settings.RconPassword, seed) { Chaos = true, SlowMs = 1400 })

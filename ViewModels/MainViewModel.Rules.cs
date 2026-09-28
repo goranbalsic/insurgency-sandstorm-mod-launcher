@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -83,7 +84,7 @@ namespace SandstormModLauncher.ViewModels
             BuildRuleItems();
         }
 
-        public string RulesModeTitle => rulesMode == null ? "" : rulesMode.Name;
+        public string RulesModeTitle => rulesMode == null ? "" : T(rulesMode.Name);
 
         private void BuildRuleItems()
         {
@@ -100,17 +101,17 @@ namespace SandstormModLauncher.ViewModels
                 if (SquadKeys.Contains(p.Key) || rulesMode.Defaults.ContainsKey(p.Key)) continue;
                 var owners = State.Rules.Modes.Where(m => m.Defaults.ContainsKey(p.Key)).ToList();
                 if (owners.Count == 0) continue;
-                string who = owners.All(m => m.Coop) ? "co-op modes" : owners.All(m => !m.Coop) ? "versus modes" : string.Join(", ", owners.Select(m => m.Name));
+                string who = owners.All(m => m.Coop) ? T("co-op modes") : owners.All(m => !m.Coop) ? T("versus modes") : string.Join(", ", owners.Select(m => T(m.Name)));
                 RuleItems.Add(new RuleItem(p, rulesMode.Cls, owners[0].Defaults[p.Key], (c, k) => null, (c, k, v) => { })
                 {
                     IsAvailable = false,
-                    AvailabilityNote = "Only in " + who + ". " + rulesMode.Name + " has no such setting, so the game would ignore it."
+                    AvailabilityNote = F("Only in {0}. {1} has no such setting, so the game would ignore it.", who, T(rulesMode.Name))
                 });
             }
             string keep = ruleCategory?.Name ?? "All settings";
             RuleCategories.Clear();
-            RuleCategories.Add(new CategoryItem { Name = "All settings", Count = RuleItems.Count(r => r.IsAvailable) });
-            RuleCategories.Add(new CategoryItem { Name = "Changed", Count = 0 });
+            RuleCategories.Add(new CategoryItem { Name = N("All settings"), Count = RuleItems.Count(r => r.IsAvailable) });
+            RuleCategories.Add(new CategoryItem { Name = N("Changed"), Count = 0 });
             foreach (var name in CategoryOrder)
             {
                 int count = RuleItems.Count(r => r.Category == name && r.IsAvailable);
@@ -158,7 +159,7 @@ namespace SandstormModLauncher.ViewModels
 
         /// <summary>Changed settings in the rules list (the squad card shows its own).</summary>
         public int RuleChangeCount => RuleItems.Count(r => r.Changed);
-        public string RulesTabLabel => RuleChangeCount == 0 ? "Rules" : "Rules · " + RuleChangeCount;
+        public string RulesTabLabel => RuleChangeCount == 0 ? T("Rules") : F("Rules · {0}", RuleChangeCount);
 
         public CategoryItem RuleCategory
         {
@@ -185,12 +186,13 @@ namespace SandstormModLauncher.ViewModels
         }
 
         private bool CurrentIsCoop => CurrentMode == null || CurrentMode.Coop;
-        public string SquadKindLabel => CurrentIsCoop ? "co-op" : "versus";
+        public string SquadKindLabel => CurrentIsCoop ? T("For every co-op mode. Applying one replaces the bot values it is about; fine-tune them on the right.")
+                                                     : T("For every versus mode. Applying one replaces the bot values it is about; fine-tune them on the right.");
         /// <summary>The last preset applied or saved setup loaded (shown in the match summary).</summary>
         public string ActivePresetName => SetupEngine.PresetLabel(Profile);
 
         private static PresetItem Item(Preset p) =>
-            new PresetItem { Name = p.Name, Group = p.Group, Description = p.Description, Tag = p.Tag, Note = p.Note, Source = p };
+            new PresetItem { Name = T(p.Name), Group = p.Group, Description = T(p.Description), Tag = p.Tag, Note = T(p.Note), Source = p };
 
         private void BuildPresets()
         {
@@ -257,7 +259,7 @@ namespace SandstormModLauncher.ViewModels
             var existing = State.Settings.RulesPresets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
-                if (await Ask("Replace preset?", "A preset called \"" + existing.Name + "\" already exists. Replace it?", "Replace") != "Replace") return;
+                if (await Ask("Replace preset?", F("A preset called \"{0}\" already exists. Replace it?", existing.Name), "Replace") != "Replace") return;
                 State.Settings.RulesPresets.Remove(existing);
             }
             State.Settings.RulesPresets.Add(SetupEngine.Capture(Profile, name));
@@ -265,13 +267,13 @@ namespace SandstormModLauncher.ViewModels
             Raise(nameof(ActivePresetName));
             SaveNow();
             if (PresetFilter == "Saved") BuildPresets(); else PresetFilter = "Saved";
-            ShowToast("Setup saved as \"" + name + "\"");
+            ShowToast(F("Setup saved as \"{0}\"", name));
         }
 
         private async Task DeleteRulesPreset(PresetItem item)
         {
             if (!(item?.Source is Preset p) || p.Saved == null || !State.Settings.RulesPresets.Contains(p.Saved)) return;
-            if (await Ask("Delete preset", "Delete \"" + p.Name + "\"?", "Delete") != "Delete") return;
+            if (await Ask("Delete preset", F("Delete \"{0}\"?", p.Name), "Delete") != "Delete") return;
             State.Settings.RulesPresets.Remove(p.Saved);
             if (string.Equals(Profile.RulesPresetName, p.Saved.Name, StringComparison.OrdinalIgnoreCase)) { Profile.RulesPresetName = null; Raise(nameof(ActivePresetName)); }
             SaveNow();
@@ -281,7 +283,7 @@ namespace SandstormModLauncher.ViewModels
         private async Task ResetMode()
         {
             if (rulesMode == null) return;
-            if (await Ask("Reset " + rulesMode.Name, "Put every " + rulesMode.Name + " setting back to the game default?", "Reset") != "Reset") return;
+            if (await Ask(F("Reset {0}", T(rulesMode.Name)), F("Put every {0} setting back to the game default?", T(rulesMode.Name)), "Reset") != "Reset") return;
             string cls = rulesMode.Cls;
             SetupEngine.ClearRules(Profile, (c, k) => c == cls);
             RefreshFromProfile(false);
@@ -312,7 +314,7 @@ namespace SandstormModLauncher.ViewModels
             {
                 var plan = CurrentPlan;
                 int n = plan?.Overrides.Count ?? 0;
-                return n == 0 ? "Game default rules" : n + " rule change" + (n == 1 ? "" : "s");
+                return n == 0 ? T("Game default rules") : n == 1 ? T("1 rule change") : F("{0} rule changes", n);
             }
         }
 

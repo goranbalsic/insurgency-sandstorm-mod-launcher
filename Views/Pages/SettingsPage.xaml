@@ -203,6 +203,22 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- language -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Language" Style="{StaticResource H2}" />
+                            <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" DisplayMemberPath="Name" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding LanguageNote}" Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding LanguageNote, Converter={StaticResource Vis}}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Text="Translations are made by players. To make one: save the translation file, fill in its Translation column (Excel, Google Sheets or LibreOffice; save it as CSV UTF-8), put it in the languages folder and press Reload to try it. Then send it in on GitHub or mod.io so everyone gets it." />
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button Content="Save a translation file..." Margin="0,0,8,6" Command="{Binding MakeTranslationFileCommand}" />
+                                <Button Content="Open the languages folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenLanguagesFolderCommand}" />
+                                <Button Content="Reload" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ReloadLanguagesCommand}" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
                     <!-- launching -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -210,7 +226,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoStartGame}" Margin="0,12,0,6">
                                 <StackPanel>
                                     <TextBlock Text="Start the game automatically" FontSize="13.5" />
-                                    <TextBlock Text="Through Steam or Epic when it is not running" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="When it is not running, the way chosen below" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding MinimizeOnLaunch}">
@@ -239,6 +255,17 @@
                                     <RadioButton Style="{StaticResource Segment}" Content="Never" IsChecked="{Binding RestartPolicy, Converter={StaticResource Eq}, ConverterParameter=Never}" />
                                 </UniformGrid>
                             </Border>
+                            <TextBlock Text="Start the game with" Style="{StaticResource Label}" />
+                            <Border Style="{StaticResource SegmentHost}">
+                                <UniformGrid Rows="1">
+                                    <RadioButton Style="{StaticResource Segment}" Content="Steam or Epic" IsChecked="{Binding StartWith, Converter={StaticResource Eq}, ConverterParameter=Store}" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="The game's exe" IsChecked="{Binding StartWith, Converter={StaticResource Eq}, ConverterParameter=Exe}" />
+                                    <RadioButton Style="{StaticResource Segment}" Content="My own command" IsChecked="{Binding StartWith, Converter={StaticResource Eq}, ConverterParameter=Command}" />
+                                </UniformGrid>
+                            </Border>
+                            <TextBox Text="{Binding StartCommand, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Margin="0,8,0,0"
+                                     Visibility="{Binding StartWithCommand, Converter={StaticResource Vis}}" Tag="e.g. &quot;D:\Games\start-sandstorm.bat&quot; {options}" />
+                            <TextBlock Text="{Binding StartWithNote}" Style="{StaticResource Mute}" TextWrapping="Wrap" Margin="0,6,0,0" />
                             <TextBlock Text="Extra game start options" Style="{StaticResource Label}" />
                             <TextBox Text="{Binding LaunchArgs, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="e.g. -nomovies" />
                             <TextBlock Style="{StaticResource Label}">
@@ -311,7 +338,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding AutoUpdate}" Margin="0,12,0,4">
                                 <StackPanel>
                                     <TextBlock Text="Keep the launcher up to date" FontSize="13.5" />
-                                    <TextBlock Text="{Binding AutoUpdateHint, Mode=OneTime}" Style="{StaticResource Mute}" />
+                                    <TextBlock Text="{Binding AutoUpdateHint, Mode=OneWay}" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
                             <DockPanel Margin="0,4,0,0">

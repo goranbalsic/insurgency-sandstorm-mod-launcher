@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -215,7 +216,7 @@ namespace SandstormModLauncher.Game
         {
             if (string.IsNullOrEmpty(p.RulesPresetName)) return "";
             bool full = p.PresetCheck != null && p.PresetCheck.StartsWith("S|");
-            return p.PresetCheck == null || PresetCheck(p, full) == p.PresetCheck ? p.RulesPresetName : p.RulesPresetName + " (changed)";
+            return p.PresetCheck == null || PresetCheck(p, full) == p.PresetCheck ? T(p.RulesPresetName) : F("{0} (changed)", T(p.RulesPresetName));
         }
 
         /// <summary>Remembers the setup as the named preset left it.</summary>
@@ -240,7 +241,7 @@ namespace SandstormModLauncher.Game
                     var modes = db.Modes.Where(m => m.Coop == preset.Coop).Select(m => m.Cls).ToList();
                     ClearRules(p, (cls, key) => preset.Owns.Contains(key) && (modes.Contains(cls) || (cls == "*" && !preset.Coop)));
                     foreach (var mode in preset.Rules) foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
-                    return preset.Name + " applied to " + (preset.Coop ? "co-op" : "versus") + " bots and enemies";
+                    return preset.Coop ? F("{0} applied to co-op bots and enemies", T(preset.Name)) : F("{0} applied to versus bots and enemies", T(preset.Name));
                 }
                 case PresetKind.Match:
                 {
@@ -261,9 +262,13 @@ namespace SandstormModLauncher.Game
                     if (fits && preset.Night) p.Lighting = "Night";
                     if (fits && preset.HardcoreCheckpoint && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode") p.Hardcore = true;
                     MarkPreset(p, preset.Name, false);
-                    string mut = preset.Mutators == null ? "" : " with " + (p.Mutators.Count == 0 ? "no mutators" : p.Mutators.Count + " mutator" + (p.Mutators.Count == 1 ? "" : "s"));
-                    string made = fits || preset.ForModes.Count == 0 ? "" : ". Made for " + string.Join(", ", preset.ForModes.Select(m => db.Mode(m)?.Name ?? m).Distinct()) + ": pick one of those on the Map tab for the full effect";
-                    return preset.Name + " applied" + mut + made + (missing.Count > 0 ? ". Not installed: " + string.Join(", ", missing) : "");
+                    string text = preset.Mutators == null ? F("{0} applied", T(preset.Name))
+                                 : p.Mutators.Count == 0 ? F("{0} applied with no mutators", T(preset.Name))
+                                 : p.Mutators.Count == 1 ? F("{0} applied with 1 mutator", T(preset.Name))
+                                 : F("{0} applied with {1} mutators", T(preset.Name), p.Mutators.Count);
+                    if (!fits && preset.ForModes.Count > 0)
+                        text += ". " + F("Made for {0}: pick one of those on the Map tab for the full effect", string.Join(", ", preset.ForModes.Select(m => T(db.Mode(m)?.Name ?? m)).Distinct()));
+                    return text + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
                 }
                 default:
                 {
@@ -282,7 +287,7 @@ namespace SandstormModLauncher.Game
                         p.MutatorsEnabled = saved.MutatorsEnabled;
                     }
                     MarkPreset(p, saved.Name, true);
-                    return saved.Name + " loaded" + (missing.Count > 0 ? ". Not installed: " + string.Join(", ", missing) : "");
+                    return F("{0} loaded", saved.Name) + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
                 }
             }
         }
@@ -322,26 +327,26 @@ namespace SandstormModLauncher.Game
             var list = new List<Preset>();
             if (coop)
             {
-                list.Add(Squad(db, true, "Lone Wolf", "Just you against the insurgency, default enemy numbers.", CoopSquad, ("FriendlyBotQuota", "0")));
-                list.Add(Squad(db, true, "Lone Wolf: Hardened", "No teammates, more and sharper enemies.", CoopSquad, ("FriendlyBotQuota", "0"), ("SoloEnemies", "10"), ("AIDifficulty", "0.75")));
-                list.Add(Squad(db, true, "Fireteam", "You plus two AI riflemen against a slightly larger force.", CoopSquad, ("FriendlyBotQuota", "2"), ("SoloEnemies", "8")));
-                list.Add(Squad(db, true, "Squad Leader", "Lead six AI teammates into heavier resistance.", CoopSquad,
+                list.Add(Squad(db, true, N("Lone Wolf"), N("Just you against the insurgency, default enemy numbers."), CoopSquad, ("FriendlyBotQuota", "0")));
+                list.Add(Squad(db, true, N("Lone Wolf: Hardened"), N("No teammates, more and sharper enemies."), CoopSquad, ("FriendlyBotQuota", "0"), ("SoloEnemies", "10"), ("AIDifficulty", "0.75")));
+                list.Add(Squad(db, true, N("Fireteam"), N("You plus two AI riflemen against a slightly larger force."), CoopSquad, ("FriendlyBotQuota", "2"), ("SoloEnemies", "8")));
+                list.Add(Squad(db, true, N("Squad Leader"), N("Lead six AI teammates into heavier resistance."), CoopSquad,
                     ("FriendlyBotQuota", "6"), ("SoloEnemies", "12"), ("MinimumEnemies", "6"), ("MaximumEnemies", "16")));
-                list.Add(Squad(db, true, "Full Platoon", "Ten teammates, big enemy waves, a war-sized fight.", CoopSquad,
+                list.Add(Squad(db, true, N("Full Platoon"), N("Ten teammates, big enemy waves, a war-sized fight."), CoopSquad,
                     ("FriendlyBotQuota", "10"), ("SoloEnemies", "18"), ("MinimumEnemies", "10"), ("MaximumEnemies", "24"), ("AIDifficulty", "0.6")));
-                list.Add(Squad(db, true, "Relaxed", "Fewer, slower-reacting enemies. Good for learning maps.", CoopSquad, ("AIDifficulty", "0.25"), ("SoloEnemies", "4")));
-                list.Add(Squad(db, true, "Mode defaults", "Bots and enemies as the game mode has them.", CoopSquad));
+                list.Add(Squad(db, true, N("Relaxed"), N("Fewer, slower-reacting enemies. Good for learning maps."), CoopSquad, ("AIDifficulty", "0.25"), ("SoloEnemies", "4")));
+                list.Add(Squad(db, true, N("Mode defaults"), N("Bots and enemies as the game mode has them."), CoopSquad));
             }
             else
             {
                 var size = new[] { "bBots", "BotQuota" };
-                list.Add(Squad(db, false, "Duel: 1 v 1", "You against a single bot.", size, ("bBots", "True"), ("BotQuota", "1")));
-                list.Add(Squad(db, false, "Small teams: 5 v 5", "You and four AI against five bots.", size, ("bBots", "True"), ("BotQuota", "5")));
-                list.Add(Squad(db, false, "Battle: 10 v 10", "You and nine AI against ten bots.", size, ("bBots", "True"), ("BotQuota", "10")));
-                list.Add(Squad(db, false, "Big battle: 16 v 16", "Full teams: you and fifteen AI against sixteen bots.", size, ("bBots", "True"), ("BotQuota", "16")));
-                list.Add(Squad(db, false, "Relaxed bots", "Slower, less accurate bots (team size stays).", new[] { "AIDifficulty" }, ("*AIDifficulty", "0.25")));
-                list.Add(Squad(db, false, "Elite bots", "Fast, accurate bots (team size stays).", new[] { "AIDifficulty" }, ("*AIDifficulty", "0.9")));
-                list.Add(Squad(db, false, "Mode defaults", "Bot teams and difficulty back to normal: versus is still played against bots.", SquadKeys));
+                list.Add(Squad(db, false, N("Duel: 1 v 1"), N("You against a single bot."), size, ("bBots", "True"), ("BotQuota", "1")));
+                list.Add(Squad(db, false, N("Small teams: 5 v 5"), N("You and four AI against five bots."), size, ("bBots", "True"), ("BotQuota", "5")));
+                list.Add(Squad(db, false, N("Battle: 10 v 10"), N("You and nine AI against ten bots."), size, ("bBots", "True"), ("BotQuota", "10")));
+                list.Add(Squad(db, false, N("Big battle: 16 v 16"), N("Full teams: you and fifteen AI against sixteen bots."), size, ("bBots", "True"), ("BotQuota", "16")));
+                list.Add(Squad(db, false, N("Relaxed bots"), N("Slower, less accurate bots (team size stays)."), new[] { "AIDifficulty" }, ("*AIDifficulty", "0.25")));
+                list.Add(Squad(db, false, N("Elite bots"), N("Fast, accurate bots (team size stays)."), new[] { "AIDifficulty" }, ("*AIDifficulty", "0.9")));
+                list.Add(Squad(db, false, N("Mode defaults"), N("Bot teams and difficulty back to normal: versus is still played against bots."), SquadKeys));
             }
             return list;
         }
@@ -364,13 +369,13 @@ namespace SandstormModLauncher.Game
             var all = db.Modes.Select(m => m.Cls).ToList();
             return new List<Preset>
             {
-                Match(db, "Game defaults", "Every match rule back to the game's own values (bots and mutators stay).", "Style", all),
-                Match(db, "Realism", "No death camera, no floating markers, no kill feed, full friendly fire damage.", "Style", all,
+                Match(db, N("Game defaults"), N("Every match rule back to the game's own values (bots and mutators stay)."), "Style", all),
+                Match(db, N("Realism"), N("No death camera, no floating markers, no kill feed, full friendly fire damage."), "Style", all,
                     ("bAllowDeathCamera", "False"), ("FloatingObjectiveVisibility", "HideAll"), ("bKillFeed", "False"), ("bKillerInfo", "False"), ("FriendlyFireModifier", "1")),
-                Match(db, "Sandbox", "Practice without pressure: rounds never end, huge supply, long clock.", "Style", all,
+                Match(db, N("Sandbox"), N("Practice without pressure: rounds never end, huge supply, long clock."), "Style", all,
                     ("bIgnoreRoundOver", "True"), ("RoundTime", "7200"), ("SoloRoundTime", "7200"), ("InitialSupply", "100"), ("MaximumSupply", "100"), ("SoloWaves", "50")),
-                Match(db, "Quick rounds", "Five-minute rounds and a short wait before each one.", "Style", all, ("PreRoundTime", "5"), ("RoundTime", "300")),
-                Match(db, "Long rounds", "Thirty-minute rounds for slow, careful play.", "Style", all, ("RoundTime", "1800"), ("SoloRoundTime", "1800")),
+                Match(db, N("Quick rounds"), N("Five-minute rounds and a short wait before each one."), "Style", all, ("PreRoundTime", "5"), ("RoundTime", "300")),
+                Match(db, N("Long rounds"), N("Thirty-minute rounds for slow, careful play."), "Style", all, ("RoundTime", "1800"), ("SoloRoundTime", "1800")),
             };
         }
 
@@ -394,7 +399,7 @@ namespace SandstormModLauncher.Game
             {
                 var p = new Preset { Name = r.Name, Kind = PresetKind.Match, Group = "Official", Source = r, Tag = Kind(db, r.Rules.Keys),
                                      Mutators = r.Mutators.Count > 0 ? new List<string>(r.Mutators) : null,
-                                     Description = r.Id + (r.Notes.Count > 0 ? ". " + string.Join(" ", r.Notes) : "") };
+                                     Description = r.Id + (r.Notes.Count > 0 ? ". " + string.Join(" ", r.Notes.Select(T)) : "") };
                 foreach (var kv in r.Rules) p.Rules[kv.Key] = new Dictionary<string, string>(kv.Value, StringComparer.OrdinalIgnoreCase);
                 return p;
             }).ToList();
@@ -428,11 +433,11 @@ namespace SandstormModLauncher.Game
                                     map[kv.Key] = kv.Value;
                                 }
                     }
-                    string modes = string.Join(", ", pl.Modes.Select(m => db.Mode(m)?.Name ?? m).Distinct());
-                    string what = pl.Mutators.Count > 0 ? string.Join(", ", pl.Mutators.Select(id => s.FindMutator(id)?.DisplayName ?? id)) : "rules only";
-                    p.Description = (string.IsNullOrWhiteSpace(pl.Description) ? "" : pl.Description.Trim() + " ") + "Mutators: " + what + ".";
-                    p.Note = ((modes.Length > 0 ? "Made for " + modes + "." : "") + (pl.Lighting == "Night" ? " Night." : "")
-                              + (pl.Missing.Count > 0 ? " Not in the current game: " + string.Join(", ", pl.Missing) + "." : "")).Trim();
+                    string modes = string.Join(", ", pl.Modes.Select(m => T(db.Mode(m)?.Name ?? m)).Distinct());
+                    string what = pl.Mutators.Count > 0 ? string.Join(", ", pl.Mutators.Select(id => s.FindMutator(id)?.DisplayName ?? id)) : T("rules only");
+                    p.Description = (string.IsNullOrWhiteSpace(pl.Description) ? "" : T(pl.Description.Trim()) + " ") + F("Mutators: {0}.", what);
+                    p.Note = ((modes.Length > 0 ? F("Made for {0}.", modes) : "") + (pl.Lighting == "Night" ? " " + T("Night.") : "")
+                              + (pl.Missing.Count > 0 ? " " + F("Not in the current game: {0}.", string.Join(", ", pl.Missing)) : "")).Trim();
                     return p;
                 }).ToList();
         }
@@ -447,8 +452,8 @@ namespace SandstormModLauncher.Game
         public static string Summary(AppState s, RulesPreset r)
         {
             int n = r.Rules.Values.Sum(v => v.Count);
-            string where = r.FullSetup ? (s.AllScenarios.FirstOrDefault(x => x.Id == r.ScenarioId)?.Id ?? r.ScenarioId ?? "") + (r.Lighting == "Night" ? ", night" : "") + (r.Hardcore ? ", hardcore" : "") + ". " : "";
-            return where + n + " rule" + (n == 1 ? "" : "s") + ", " + r.Mutators.Count + " mutator" + (r.Mutators.Count == 1 ? "" : "s");
+            string where = r.FullSetup ? (s.AllScenarios.FirstOrDefault(x => x.Id == r.ScenarioId)?.Id ?? r.ScenarioId ?? "") + (r.Lighting == "Night" ? ", " + T("night") : "") + (r.Hardcore ? ", " + T("hardcore") : "") + ". " : "";
+            return where + (n == 1 ? T("1 rule") : F("{0} rules", n)) + ", " + (r.Mutators.Count == 1 ? T("1 mutator") : F("{0} mutators", r.Mutators.Count));
         }
 
         /// <summary>

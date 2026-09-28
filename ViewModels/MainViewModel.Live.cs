@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
 using SandstormModLauncher.Core;
+using static SandstormModLauncher.Core.Loc;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Services;
 using SandstormModLauncher.Models;
@@ -19,8 +20,11 @@ namespace SandstormModLauncher.ViewModels
     {
         private string value, current;
         public string Key { get; set; }
-        public string Label { get; set; }
+        /// <summary>The rule's name in English; <see cref="Label"/> shows it in the player's language.</summary>
+        public string English { get; set; }
+        public string Label => T(English);
         public string Default { get; set; }
+        public void Relabel() => Raise(nameof(Label));
         public string Value { get => value; set => Set(ref this.value, value); }
         public string Current { get => current; set => Set(ref current, value); }
     }
@@ -59,48 +63,55 @@ namespace SandstormModLauncher.ViewModels
                 CommandSuggestions.Clear();
             });
 
+            RebuildLiveGroups();
+        }
+
+        /// <summary>The Live tab's buttons (again after a language change).</summary>
+        private void RebuildLiveGroups()
+        {
+            LiveGroups.Clear();
             LiveGroup G(string title, bool cheat, params (string label, string cmd, string tip)[] actions) => new LiveGroup
             {
-                Title = title, Cheat = cheat, Badge = cheat ? "CHEAT" : "ADMIN",
+                Title = title, Cheat = cheat, Badge = cheat ? T("CHEAT") : T("ADMIN"),
                 Actions = actions.Select(a => new LiveAction { Label = a.label, Command = a.cmd, Tip = a.tip }).ToList()
             };
-            LiveGroups.Add(G("Round", false,
-                ("Restart round", "AdminRestartRound 0", "Starts the round again with the current settings."),
-                ("Restart and switch sides", "AdminRestartRound 1", "Restarts the round with the teams swapped."),
-                ("5 minutes left", "SetRoundTimer 300", "Sets the round clock to 5:00."),
-                ("15 minutes left", "SetRoundTimer 900", "Sets the round clock to 15:00."),
-                ("30 minutes left", "SetRoundTimer 1800", "Sets the round clock to 30:00."),
-                ("Add about 1 hour", "AdminExtendRoundTimer", "The game's own round extension: adds roughly an hour to the clock."),
-                ("Round never ends", "IgnoreRoundOver 1", "The round keeps going when it would end."),
-                ("Round can end again", "IgnoreRoundOver 0", "Turns \"Round never ends\" off."),
-                ("End the match", "AdminForceGameOver", "Ends the match immediately.")));
-            LiveGroups.Add(G("Objectives", true,
-                ("Capture current objective", "InstaCap", "Captures the objective you are attacking."),
-                ("Start a counter-attack", "CheatCounterAttack", "Co-op: triggers a counter-attack now."),
-                ("Finish the counter-attack", "CheatFinishCounterAttack", "Co-op: ends the running counter-attack."),
-                ("Skip to extraction", "SkipToExtraction", "Co-op with extraction: jumps to the final extraction.")));
-            LiveGroups.Add(G("Bots", true,
-                ("Respawn all bots", "RespawnAllBots", "Brings every bot back."),
-                ("Respawn enemy bots", "AIRespawnEnemyBots", "Brings enemy bots back."),
-                ("Respawn AI teammates", "AIRespawnFriendlyBots", "Brings dead AI teammates back."),
-                ("Remove all enemies", "AIPurgeEnemy", "Removes every enemy bot."),
-                ("Remove AI teammates", "AIPurgeFriendly", "Removes the bots on your team."),
-                ("Freeze or unfreeze all AI", "AIToggle", "Stops every bot in place, press again to resume."),
-                ("Bots ignore everyone", "AIIgnorePlayers", "Co-op: bots stop attacking players. Press again to undo."),
-                ("Bots ignore me", "AINoTargetPlayer", "Enemies stop targeting you.")));
-            LiveGroups.Add(G("Your soldier", true,
-                ("God mode", "GodMode", "You can't take damage. Press again to turn off."),
-                ("Refill ammo and gear", "ResupplyNow", "Instant resupply."),
-                ("Give 10 supply points", "GiveSupplyPointsUnrestricted 10", "Extra supply for your loadout."),
-                ("Respawn me", "RespawnMe", "Respawns your soldier."),
-                ("Revive me", "Revive", "Gets you back up."),
-                ("Fly through walls", "Noclip", "Free movement through geometry. Press again to land.")));
-            LiveGroups.Add(G("Match & view", true,
-                ("Respawn every player", "AdminRespawnAllPlayers", "Respawns all players on both teams."),
-                ("Slow motion", "Slomo 0.4", "Game runs at 40% speed."),
-                ("Normal speed", "Slomo 1", "Back to normal game speed."),
-                ("Free camera", "ToggleDebugCamera", "Detached camera for screenshots. Press again to return."),
-                ("Hide or show HUD", "ShowHUD", "Toggles the HUD for clean screenshots.")));
+            LiveGroups.Add(G(T("Round"), false,
+                (T("Restart round"), "AdminRestartRound 0", T("Starts the round again with the current settings.")),
+                (T("Restart and switch sides"), "AdminRestartRound 1", T("Restarts the round with the teams swapped.")),
+                (T("5 minutes left"), "SetRoundTimer 300", T("Sets the round clock to 5:00.")),
+                (T("15 minutes left"), "SetRoundTimer 900", T("Sets the round clock to 15:00.")),
+                (T("30 minutes left"), "SetRoundTimer 1800", T("Sets the round clock to 30:00.")),
+                (T("Add about 1 hour"), "AdminExtendRoundTimer", T("The game's own round extension: adds roughly an hour to the clock.")),
+                (T("Round never ends"), "IgnoreRoundOver 1", T("The round keeps going when it would end.")),
+                (T("Round can end again"), "IgnoreRoundOver 0", T("Turns \"Round never ends\" off.")),
+                (T("End the match"), "AdminForceGameOver", T("Ends the match immediately."))));
+            LiveGroups.Add(G(T("Objectives"), true,
+                (T("Capture current objective"), "InstaCap", T("Captures the objective you are attacking.")),
+                (T("Start a counter-attack"), "CheatCounterAttack", T("Co-op: triggers a counter-attack now.")),
+                (T("Finish the counter-attack"), "CheatFinishCounterAttack", T("Co-op: ends the running counter-attack.")),
+                (T("Skip to extraction"), "SkipToExtraction", T("Co-op with extraction: jumps to the final extraction."))));
+            LiveGroups.Add(G(T("Bots"), true,
+                (T("Respawn all bots"), "RespawnAllBots", T("Brings every bot back.")),
+                (T("Respawn enemy bots"), "AIRespawnEnemyBots", T("Brings enemy bots back.")),
+                (T("Respawn AI teammates"), "AIRespawnFriendlyBots", T("Brings dead AI teammates back.")),
+                (T("Remove all enemies"), "AIPurgeEnemy", T("Removes every enemy bot.")),
+                (T("Remove AI teammates"), "AIPurgeFriendly", T("Removes the bots on your team.")),
+                (T("Freeze or unfreeze all AI"), "AIToggle", T("Stops every bot in place, press again to resume.")),
+                (T("Bots ignore everyone"), "AIIgnorePlayers", T("Co-op: bots stop attacking players. Press again to undo.")),
+                (T("Bots ignore me"), "AINoTargetPlayer", T("Enemies stop targeting you."))));
+            LiveGroups.Add(G(T("Your soldier"), true,
+                (T("God mode"), "GodMode", T("You can't take damage. Press again to turn off.")),
+                (T("Refill ammo and gear"), "ResupplyNow", T("Instant resupply.")),
+                (T("Give 10 supply points"), "GiveSupplyPointsUnrestricted 10", T("Extra supply for your loadout.")),
+                (T("Respawn me"), "RespawnMe", T("Respawns your soldier.")),
+                (T("Revive me"), "Revive", T("Gets you back up.")),
+                (T("Fly through walls"), "Noclip", T("Free movement through geometry. Press again to land."))));
+            LiveGroups.Add(G(T("Match & view"), true,
+                (T("Respawn every player"), "AdminRespawnAllPlayers", T("Respawns all players on both teams.")),
+                (T("Slow motion"), "Slomo 0.4", T("Game runs at 40% speed.")),
+                (T("Normal speed"), "Slomo 1", T("Back to normal game speed.")),
+                (T("Free camera"), "ToggleDebugCamera", T("Detached camera for screenshots. Press again to return.")),
+                (T("Hide or show HUD"), "ShowHUD", T("Toggles the HUD for clean screenshots."))));
 
             // Measured in the game: these only exist in the co-op game modes and are rejected in versus.
             var coopOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "CheatCounterAttack", "CheatFinishCounterAttack", "SkipToExtraction", "AIIgnorePlayers" };
@@ -190,7 +201,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var k in keys)
             {
                 if (!mode.Defaults.TryGetValue(k, out var def)) continue;
-                LiveRules.Add(new LiveRule { Key = k, Label = State.Rules.Prop(k)?.Label ?? k, Default = def });
+                LiveRules.Add(new LiveRule { Key = k, English = State.Rules.Prop(k)?.Label ?? k, Default = def });
             }
         }
 
@@ -223,7 +234,7 @@ namespace SandstormModLauncher.ViewModels
                 catch (RconException ex)
                 {
                     AppLog.Warn("RCON: " + ex.Message);
-                    LiveOutput = "No answer from the game over RCON (" + ex.Message + ")." + (ex.Delivered ? " The command may still arrive." : "");
+                    LiveOutput = F("No answer from the game over RCON ({0}).", ex.Message) + (ex.Delivered ? " " + T("The command may still arrive.") : "");
                     ShowToast("No answer from the game");
                     throw new OperationCanceledException();
                 }
@@ -242,10 +253,10 @@ namespace SandstormModLauncher.ViewModels
             {
                 var res = await Console.Run(command, CancellationToken.None, null, verify ?? TimeSpan.FromSeconds(2.5));
                 var interesting = Interesting(res.Lines);
-                LiveOutput = !res.Sent ? "Not sent: " + res.Detail : res.NotRecognized ? res.Detail : interesting.Count > 0 ? string.Join("\n", interesting) : "Sent: " + command;
+                LiveOutput = !res.Sent ? F("Not sent: {0}", res.Detail) : res.NotRecognized ? res.Detail : interesting.Count > 0 ? string.Join("\n", interesting) : F("Sent: {0}", command);
                 if (!res.Sent)
                 {
-                    ShowToast("Not sent: " + res.Detail);
+                    ShowToast(F("Not sent: {0}", res.Detail));
                     DebugReport.Auto("console-failed", res.Detail, State, Monitor);
                 }
                 return res;
@@ -268,8 +279,8 @@ namespace SandstormModLauncher.ViewModels
                 var r = await OverRcon(() => Rcon.RestartRound(action.Command.EndsWith("1")));
                 if (r != null)
                 {
-                    LiveOutput = r.Ok ? action.Label + ": done" : "Not done: " + r.Error;
-                    ShowToast(r.Ok ? action.Label + ": done" : "Not done: " + r.Error);
+                    LiveOutput = r.Ok ? F("{0}: done", action.Label) : F("Not done: {0}", r.Error);
+                    ShowToast(r.Ok ? F("{0}: done", action.Label) : F("Not done: {0}", r.Error));
                     return;
                 }
             }
@@ -280,8 +291,8 @@ namespace SandstormModLauncher.ViewModels
                 if (lines != null)
                 {
                     var shown = Interesting(lines);
-                    LiveOutput = action.Label + ": sent (" + action.Command + ")" + (shown.Count > 0 ? "\n" + string.Join("\n", shown) : "");
-                    ShowToast(action.Label + ": sent");
+                    LiveOutput = F("{0}: sent ({1})", action.Label, action.Command) + (shown.Count > 0 ? "\n" + string.Join("\n", shown) : "");
+                    ShowToast(F("{0}: sent", action.Label));
                     return;
                 }
             }
@@ -292,7 +303,7 @@ namespace SandstormModLauncher.ViewModels
                 return;
             }
             var res = await RunConsole("EnableCheats | " + action.Command);
-            if (res.Sent) ShowToast(res.NotRecognized ? res.Detail : action.Label + ": done");
+            if (res.Sent) ShowToast(res.NotRecognized ? res.Detail : F("{0}: done", action.Label));
         }
 
         /// <summary>
@@ -313,7 +324,7 @@ namespace SandstormModLauncher.ViewModels
                 catch (RconException ex)
                 {
                     AppLog.Warn("RCON: " + ex.Message);
-                    LiveOutput = "No answer from the game over RCON (" + ex.Message + "). The change may still arrive; press Read to check.";
+                    LiveOutput = F("No answer from the game over RCON ({0}). The change may still arrive; press Read to check.", ex.Message);
                     ShowToast("No answer from the game");
                     throw new OperationCanceledException();
                 }
@@ -333,7 +344,7 @@ namespace SandstormModLauncher.ViewModels
             if (read != null)
             {
                 foreach (var r in LiveRules) r.Current = read.TryGetValue(r.Key, out var v) ? TrimNumber(v) : "?";
-                LiveOutput = read.Count > 0 ? "Read " + LiveRules.Count(r => r.Current != "?") + " live values from the match (RCON)." : "No values came back. Make sure the match has finished loading.";
+                LiveOutput = read.Count > 0 ? F("Read {0} live values from the match (RCON).", LiveRules.Count(r => r.Current != "?")) : T("No values came back. Make sure the match has finished loading.");
                 return;
             }
             if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
@@ -342,12 +353,12 @@ namespace SandstormModLauncher.ViewModels
             {
                 var values = await Console.ReadLive(liveModeCls, LiveRules.Select(r => r.Key), CancellationToken.None);
                 foreach (var r in LiveRules) r.Current = values.TryGetValue(r.Key, out var v) ? TrimNumber(v) : "?";
-                LiveOutput = values.Count > 0 ? "Read " + values.Count + " live values from the match." : "No values came back. Make sure the match has finished loading.";
+                LiveOutput = values.Count > 0 ? F("Read {0} live values from the match.", values.Count) : T("No values came back. Make sure the match has finished loading.");
             }
             finally { LiveBusy = false; }
         }
 
-        private const string NoRconLive = "The launcher cannot reach the game over RCON (the game was probably started before the launcher set it up). Restart the game from the launcher, or allow typing into the game console in Settings.";
+        private static string NoRconLive => T("The launcher cannot reach the game over RCON (the game was probably started before the launcher set it up). Restart the game from the launcher, or allow typing into the game console in Settings.");
 
         private static string TrimNumber(string v)
         {
@@ -372,7 +383,7 @@ namespace SandstormModLauncher.ViewModels
                 if (clean == null) bad.Add(r.Label);
                 else cmds.Add("AdminSetGamemodeProperty " + r.Key + " " + clean);
             }
-            if (bad.Count > 0) { ShowToast("Not a valid value: " + string.Join(", ", bad)); return; }
+            if (bad.Count > 0) { ShowToast(F("Not a valid value: {0}", string.Join(", ", bad))); return; }
             if (cmds.Count == 0) return;
             var props = cmds.Select(c => c.Split(' ')).Select(w => new KeyValuePair<string, string>(w[1], w[2])).ToList();
             var failed = await OverRcon(() =>
@@ -384,9 +395,9 @@ namespace SandstormModLauncher.ViewModels
             if (failed != null)
             {
                 int ok = props.Count - failed.Count(f => f.Key != "restart");
-                LiveOutput = ok + " live change(s) set over RCON" + (restartAfterApply && !failed.ContainsKey("restart") ? ", round restarted" : "") +
-                             (failed.Count > 0 ? "\nNot taken: " + string.Join("; ", failed.Select(f => f.Key + " (" + f.Value + ")")) : "");
-                ShowToast(failed.Count == 0 ? ok + " live change(s) set" : "Some changes were not taken");
+                LiveOutput = F("{0} live change(s) set over RCON", ok) + (restartAfterApply && !failed.ContainsKey("restart") ? ", " + T("round restarted") : "") +
+                             (failed.Count > 0 ? "\n" + T("Not taken:") + " " + string.Join("; ", failed.Select(f => f.Key + " (" + f.Value + ")")) : "");
+                ShowToast(failed.Count == 0 ? F("{0} live change(s) set", ok) : T("Some changes were not taken"));
                 await ReadLiveRules();
                 return;
             }
@@ -395,7 +406,7 @@ namespace SandstormModLauncher.ViewModels
             var res = await RunConsole(string.Join(" | ", cmds));
             if (res.Sent)
             {
-                ShowToast(cmds.Count - (restartAfterApply ? 1 : 0) + " live change(s) sent" + (restartAfterApply ? ", round restarted" : ""));
+                ShowToast(F("{0} live change(s) sent", cmds.Count - (restartAfterApply ? 1 : 0)) + (restartAfterApply ? ", " + T("round restarted") : ""));
                 await Task.Delay(800);
                 await ReadLiveRules();
             }
@@ -415,8 +426,8 @@ namespace SandstormModLauncher.ViewModels
             if (lines != null)
             {
                 var shown = Interesting(lines);
-                LiveOutput = "Sent: " + string.Join(" | ", commands) + "\n" +
-                             (shown.Count > 0 ? string.Join("\n", shown) : "The game does not answer console commands. If nothing happens, check the name in the list below.");
+                LiveOutput = F("Sent: {0}", string.Join(" | ", commands)) + "\n" +
+                             (shown.Count > 0 ? string.Join("\n", shown) : T("The game does not answer console commands. If nothing happens, check the name in the list below."));
                 CustomCommand = "";
                 return;
             }
@@ -435,17 +446,17 @@ namespace SandstormModLauncher.ViewModels
             var counted = await OverRcon(() => Rcon.CountPlayers());
             if (counted != null)
             {
-                if (counted.Count == 0) { LiveOutput = "No players came back. Make sure the match has finished loading."; return; }
+                if (counted.Count == 0) { LiveOutput = T("No players came back. Make sure the match has finished loading."); return; }
                 if (counted.Values.All(c => c.bots == 0))
                 {
-                    LiveOutput = "No bots have joined yet. They join when the round starts (after you pick a class).";
+                    LiveOutput = T("No bots have joined yet. They join when the round starts (after you pick a class).");
                     ShowToast("No bots yet: they join when the round starts");
                     return;
                 }
                 var mine = counted.FirstOrDefault(kv => kv.Value.humans > 0);
                 int myMates = mine.Value.bots, theirs = counted.Where(kv => kv.Key != mine.Key).Sum(kv => kv.Value.humans + kv.Value.bots);
                 LiveOutput = $"Your team: you + {myMates} AI teammate{(myMates == 1 ? "" : "s")}\nEnemy team: {theirs} bot{(theirs == 1 ? "" : "s")}";
-                ShowToast($"You + {myMates} AI vs {theirs} enemies");
+                ShowToast(F("You + {0} AI vs {1} enemies", myMates, theirs));
                 return;
             }
             if (!State.Settings.AllowConsoleTyping) { LiveOutput = NoRconLive; return; }
@@ -461,12 +472,12 @@ namespace SandstormModLauncher.ViewModels
             }
             if (teams.Count == 0)
             {
-                if (res.Sent) LiveOutput = "No players came back. Make sure the match has finished loading.";
+                if (res.Sent) LiveOutput = T("No players came back. Make sure the match has finished loading.");
                 return;
             }
             if (bots.Count > 0 && bots.Values.All(b => !b))
             {
-                LiveOutput = "No bots have joined yet. They join when the round starts (after you pick a class).";
+                LiveOutput = T("No bots have joined yet. They join when the round starts (after you pick a class).");
                 ShowToast("No bots yet: they join when the round starts");
                 return;
             }
@@ -474,7 +485,7 @@ namespace SandstormModLauncher.ViewModels
             int mates = teams.Count(kv => kv.Value == humanTeam && bots.TryGetValue(kv.Key, out var isBot) && isBot);
             int enemies = teams.Count(kv => kv.Value != humanTeam);
             LiveOutput = $"Your team: you + {mates} AI teammate{(mates == 1 ? "" : "s")}\nEnemy team: {enemies} bot{(enemies == 1 ? "" : "s")}";
-            ShowToast($"You + {mates} AI vs {enemies} enemies");
+            ShowToast(F("You + {0} AI vs {1} enemies", mates, enemies));
         }
     }
 }

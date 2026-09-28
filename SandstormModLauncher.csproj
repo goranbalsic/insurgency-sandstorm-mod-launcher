@@ -9,8 +9,8 @@
     <RootNamespace>SandstormModLauncher</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.6.2</Version>
-    <FileVersion>1.6.2.0</FileVersion>
+    <Version>1.7.0</Version>
+    <FileVersion>1.7.0.0</FileVersion>
     <Product>Sandstorm Mod Launcher</Product>
     <AssemblyTitle>Sandstorm Mod Launcher</AssemblyTitle>
     <Description>Local play launcher with mods and mutators for Insurgency: Sandstorm</Description>
@@ -51,6 +51,7 @@
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\logo.png" />
     <EmbeddedResource Include="Resources\GameRules.json" />
+    <EmbeddedResource Include="Resources\Languages\*.csv" />
   </ItemGroup>
 
 </Project>

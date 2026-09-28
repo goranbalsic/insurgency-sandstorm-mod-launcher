@@ -12,6 +12,7 @@ using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
 using SandstormModLauncher.Services;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -42,7 +43,7 @@ namespace SandstormModLauncher.ViewModels
         {
             SetupF10Command = new RelayCommand(SetupF10);
             ChangeGameDirCommand = new AsyncCommand(ChangeGameDir);
-            ResetGameDirCommand = new AsyncCommand(async () => { State.Settings.GameDirOverride = ""; await ReloadEverything("Looking for the game..."); }, () => !string.IsNullOrEmpty(State.Settings.GameDirOverride));
+            ResetGameDirCommand = new AsyncCommand(async () => { State.Settings.GameDirOverride = ""; await ReloadEverything(T("Looking for the game...")); }, () => !string.IsNullOrEmpty(State.Settings.GameDirOverride));
             AddModFolderCommand = new AsyncCommand(AddModFolder);
             RemoveModFolderCommand = new AsyncCommand(async p =>
             {
@@ -69,13 +70,13 @@ namespace SandstormModLauncher.ViewModels
             DeleteCustomMapCommand = new AsyncCommand(p => DeleteCustomMap((p as MapItem)?.Custom ?? editingMap));
             CancelCustomMapCommand = new RelayCommand(() => MapEditorOpen = false);
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
-                "1. PLAY > Map: pick a map and scenario, day or night. The right column (Your match) always shows the whole setup; click a line to change it.\n\n" +
-                "2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n" +
-                "3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n" +
-                "4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n" +
-                "5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Cheats, the versus AI difficulty and your own commands go the same way: the game runs them as if you typed them into its console.\n\n" +
-                "6. PLAY > Live works during a match: restart rounds, change rules, cheat buttons (clock, bots, god mode) and any console command, all over RCON.\n\n" +
-                "Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC."));
+                T("1. PLAY > Map: pick a map and scenario, day or night. The right column (Your match) always shows the whole setup; click a line to change it.\n\n") +
+                T("2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n") +
+                T("3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n") +
+                T("4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n") +
+                T("5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Cheats, the versus AI difficulty and your own commands go the same way: the game runs them as if you typed them into its console.\n\n") +
+                T("6. PLAY > Live works during a match: restart rounds, change rules, cheat buttons (clock, bots, god mode) and any console command, all over RCON.\n\n") +
+                T("Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC.")));
         }
 
         public ICommand HelpCommand { get; private set; }
@@ -87,15 +88,15 @@ namespace SandstormModLauncher.ViewModels
             ExtraModFolders.Clear();
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
-                      nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs),
+                      nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs), nameof(StartWith), nameof(StartCommand), nameof(StartWithCommand), nameof(StartWithNote),
                       nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate), nameof(UiScale), nameof(UiScaleText));
         }
 
         // ------------------------------------------------------------------ game install
 
-        public string GameDir => State.Install?.GameDir ?? "Not found";
+        public string GameDir => State.Install?.GameDir ?? T("Not found");
         public string GameStore => State.Install?.Store ?? "";
-        public string GameBuild => string.IsNullOrEmpty(State.Install?.BuildId) ? "" : "Build " + State.Install.BuildId;
+        public string GameBuild => string.IsNullOrEmpty(State.Install?.BuildId) ? "" : F("Build {0}", State.Install.BuildId);
         public bool GameFound => State.Install?.IsValid == true;
         public bool GameDirIsManual => !string.IsNullOrEmpty(State.Settings.GameDirOverride);
         public string DataDir => AppPaths.DataDir;
@@ -103,7 +104,7 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task ChangeGameDir()
         {
-            string dir = FolderPicker.Pick(OwnerHandle, "Pick the Insurgency: Sandstorm folder (it contains \"Insurgency\" and \"Insurgency.exe\")", State.Install?.GameDir);
+            string dir = FolderPicker.Pick(OwnerHandle, T("Pick the Insurgency: Sandstorm folder (it contains \"Insurgency\" and \"Insurgency.exe\")"), State.Install?.GameDir);
             if (dir == null) return;
             if (!GameInstall.IsGameDir(dir))
             {
@@ -112,7 +113,7 @@ namespace SandstormModLauncher.ViewModels
                 else { await ShowMessage("That is not the game folder", "Pick the folder that contains the \"Insurgency\" folder, usually ...\\steamapps\\common\\sandstorm."); return; }
             }
             State.Settings.GameDirOverride = dir;
-            await ReloadEverything("Reading the game...");
+            await ReloadEverything(T("Reading the game..."));
         }
 
         private async Task ReloadEverything(string message)
@@ -141,7 +142,7 @@ namespace SandstormModLauncher.ViewModels
                 RaiseSettings();
                 UpdatePlan();
             }
-            ShowToast(State.Install.IsValid ? "Found " + State.AllMutators.Count + " mutators and " + State.Maps.Count + " maps" : "The game was not found");
+            ShowToast(State.Install.IsValid ? F("Found {0} mutators and {1} maps", State.AllMutators.Count, State.Maps.Count) : T("The game was not found"));
         }
 
         private async Task ClearCache()
@@ -155,14 +156,14 @@ namespace SandstormModLauncher.ViewModels
                 }
             }
             catch (Exception ex) { AppLog.Warn("Cache clear: " + ex.Message); }
-            await ReloadEverything("Rebuilding the catalog from the game files...");
+            await ReloadEverything(T("Rebuilding the catalog from the game files..."));
         }
 
         // ------------------------------------------------------------------ mod folders
 
         private async Task AddModFolder()
         {
-            string dir = FolderPicker.Pick(OwnerHandle, "Pick a folder with extra mod .pak files", GameInstall.ModioRoot);
+            string dir = FolderPicker.Pick(OwnerHandle, T("Pick a folder with extra mod .pak files"), GameInstall.ModioRoot);
             if (dir == null) return;
             if (State.Settings.ExtraModFolders.Contains(dir, StringComparer.OrdinalIgnoreCase)) return;
             State.Settings.ExtraModFolders.Add(dir);
@@ -208,7 +209,7 @@ namespace SandstormModLauncher.ViewModels
             if (direction == 0) { UiScale = 1.0; }
             else if (direction > 0) UiScale = UiScales.FirstOrDefault(v => v > UiScale + 0.001) is double up && up > 0 ? up : UiScale;
             else UiScale = UiScales.LastOrDefault(v => v < UiScale - 0.001) is double down && down > 0 ? down : UiScale;
-            ShowToast("Text size " + UiScaleText);
+            ShowToast(F("Text size {0}", UiScaleText));
         }
 
         /// <summary>Scales the window content and its pop-ups (tooltips, menus, drop-downs) through one shared transform.</summary>
@@ -227,11 +228,24 @@ namespace SandstormModLauncher.ViewModels
         public int KeyDelayMs { get => State.Settings.KeyDelayMs; set => SetSetting(() => State.Settings.KeyDelayMs = Math.Max(30, Math.Min(250, value))); }
         public string RestartPolicy { get => State.Settings.RestartPolicy ?? "Ask"; set => SetSetting(() => State.Settings.RestartPolicy = value ?? "Ask"); }
         public string LaunchArgs { get => State.Settings.LaunchArgs ?? ""; set => SetSetting(() => State.Settings.LaunchArgs = value ?? ""); }
+        /// <summary>How the game is started: Store (Steam or Epic), Exe (the game's own exe) or Command (the player's own).</summary>
+        public string StartWith
+        {
+            get => State.Settings.StartWith == "Exe" || State.Settings.StartWith == "Command" ? State.Settings.StartWith : "Store";
+            set { SetSetting(() => State.Settings.StartWith = value ?? "Store"); RaiseMany(nameof(StartWithCommand), nameof(StartWithNote)); }
+        }
+        public bool StartWithCommand => StartWith == "Command";
+        public string StartCommand { get => State.Settings.StartCommand ?? ""; set { SetSetting(() => State.Settings.StartCommand = (value ?? "").Trim()); Raise(nameof(StartWithNote)); } }
+        public string StartWithNote =>
+            StartWith == "Exe" ? T("Runs the game's own exe, without Steam or Epic starting it. Steam still has to be running for online features.")
+            : StartWith == "Command" ? (StartCommand.Length == 0 ? T("Type the command. Until then the game starts through Steam or Epic.")
+                                        : F("Runs your command (a program, script or shortcut). The launcher's start options go where you write {0}, else at the end.", "{options}"))
+            : T("The usual way: Steam or Epic starts the game.");
         public int StartTimeoutSec { get => State.Settings.StartTimeoutSec; set => SetSetting(() => State.Settings.StartTimeoutSec = Math.Max(60, Math.Min(900, value))); }
 
         // ------------------------------------------------------------------ game connection (RCON)
 
-        private string rconStatus = "Checking...", rconState = "Off";
+        private string rconStatus = T("Checking..."), rconState = "Off";
         public string RconStatus { get => rconStatus; set => Set(ref rconStatus, value); }
         /// <summary>Ready (connected), Bad (the game runs but cannot be reached), Off (the game is not running), Busy (checking).</summary>
         public string RconState { get => rconState; set => Set(ref rconState, value); }
@@ -253,18 +267,18 @@ namespace SandstormModLauncher.ViewModels
                     bool set = !AppPaths.TestRun && await Task.Run(() => RconSetup.GameIniHasIt(State.Settings));
                     RconState = "Off";
                     RconStatus = set
-                        ? "The game is not running. It opens its RCON connection when it starts (set up in Game.ini), however you start it."
-                        : "The game is not running. RCON is set up the next time the launcher starts the game.";
+                        ? T("The game is not running. It opens its RCON connection when it starts (set up in Game.ini), however you start it.")
+                        : T("The game is not running. RCON is set up the next time the launcher starts the game.");
                 }
                 else
                 {
                     RconState = "Busy";
-                    RconStatus = "Checking the connection...";
+                    RconStatus = T("Checking the connection...");
                     string problem = await Task.Run(() => Rcon.Probe());
                     RconState = problem == null ? "Ready" : "Bad";
                     RconStatus = problem == null
-                        ? "Connected. Maps, rules and console commands (cheats too) go straight to the game; nothing is typed and the game can stay in the background."
-                        : "The game does not answer on RCON (" + problem + "). It was probably started before the launcher set it up: close it and launch from here once.";
+                        ? T("Connected. Maps, rules and console commands (cheats too) go straight to the game; nothing is typed and the game can stay in the background.")
+                        : F("The game does not answer on RCON ({0}). It was probably started before the launcher set it up: close it and launch from here once.", problem);
                 }
                 if (announce) ShowToast(RconState == "Ready" ? "Connected to the game" : RconState == "Bad" ? "The game does not answer on RCON" : "The game is not running");
             }
@@ -304,34 +318,34 @@ namespace SandstormModLauncher.ViewModels
                 if (fn != null && !pending)
                 {
                     ConsoleKeyOk = true;
-                    ConsoleKeyStatus = "Ready. The launcher opens the console with " + fn + ", which works on every keyboard layout.";
+                    ConsoleKeyStatus = F("Ready. The launcher opens the console with {0}, which works on every keyboard layout.", fn);
                 }
                 else if (fn != null)
                 {
                     ConsoleKeyOk = layoutKey;
                     ConsoleKeyStatus = layoutKey
-                        ? "Ready with ` for now. " + fn + " takes over after the game restarts, so any keyboard layout works."
-                        : fn + " is set up but only works after the game restarts. Until then switch the keyboard to English (Win+Space), or close the game and launch from here.";
+                        ? F("Ready with ` for now. {0} takes over after the game restarts, so any keyboard layout works.", fn)
+                        : F("{0} is set up but only works after the game restarts. Until then switch the keyboard to English (Win+Space), or close the game and launch from here.", fn);
                 }
                 else if (layoutKey)
                 {
                     ConsoleKeyOk = true;
-                    ConsoleKeyStatus = "Ready with ` (" + layout + " keyboard). " + (State.Settings.AutoConsoleKey
-                        ? "F10 is added the next time the game is closed, so other keyboard layouts work too."
-                        : "Turn on the switch below so other keyboard layouts work too.");
+                    ConsoleKeyStatus = F("Ready with ` ({0} keyboard).", layout) + " " + (State.Settings.AutoConsoleKey
+                        ? T("F10 is added the next time the game is closed, so other keyboard layouts work too.")
+                        : T("Turn on the switch below so other keyboard layouts work too."));
                 }
                 else
                 {
                     ConsoleKeyOk = false;
-                    ConsoleKeyStatus = "The " + layout + " keyboard layout has no ` key, which the game uses for its console. " + (State.Settings.AutoConsoleKey
-                        ? "Close the game and launch from here: the launcher adds F10 first, which works on every layout. Or switch the keyboard to English (Win+Space)."
-                        : "Turn on the switch below, or switch the keyboard to English (Win+Space).");
+                    ConsoleKeyStatus = F("The {0} keyboard layout has no ` key, which the game uses for its console.", layout) + " " + (State.Settings.AutoConsoleKey
+                        ? T("Close the game and launch from here: the launcher adds F10 first, which works on every layout. Or switch the keyboard to English (Win+Space).")
+                        : T("Turn on the switch below, or switch the keyboard to English (Win+Space)."));
                 }
             }
             catch (Exception ex)
             {
                 ConsoleKeyOk = false;
-                ConsoleKeyStatus = "Could not read Input.ini: " + ex.Message;
+                ConsoleKeyStatus = F("Could not read Input.ini: {0}", ex.Message);
                 AppLog.Warn("Console key status: " + ex.Message);
             }
         }
@@ -347,7 +361,7 @@ namespace SandstormModLauncher.ViewModels
             }
             string key = ConsoleBridge.EnsureLayoutFreeKey(State.Official, State.Settings, false);
             SaveSettingsSoon();
-            ShowToast(key != null ? key + " is set up as a console key" : "Could not add a console key. See the launcher log.");
+            ShowToast(key != null ? F("{0} is set up as a console key", key) : T("Could not add a console key. See the launcher log."));
             RefreshConsoleKeyStatus();
         }
 
@@ -375,7 +389,7 @@ namespace SandstormModLauncher.ViewModels
             var b = SelectedKeyBackup;
             if (b == null) return;
             if (GameProcessRunning) { await ShowMessage("Close the game first", "The game rewrites its key bindings while it runs, so close it and then restore."); return; }
-            if (await Ask("Restore key bindings?", "Put back your game key bindings from " + b.Label + "? The current ones are copied first, so this can be undone.", "Restore") != "Restore") return;
+            if (await Ask("Restore key bindings?", F("Put back your game key bindings from {0}? The current ones are copied first, so this can be undone.", b.Label), "Restore") != "Restore") return;
             string error = KeyBindings.Restore(b);
             RefreshKeyBackups();
             if (error != null) await ShowMessage("Could not restore", error);
@@ -395,7 +409,7 @@ namespace SandstormModLauncher.ViewModels
             string dir = await Task.Run(() => DebugReport.Write("manual", note, State, Monitor));
             if (dir == null) { ShowToast("Could not save the report. See the launcher log."); return; }
             ReportNote = "";
-            ShowToast("Report saved: " + Path.GetFileName(dir));
+            ShowToast(F("Report saved: {0}", Path.GetFileName(dir)));
         }
 
         // Report on GitHub: the player sees exactly what would be posted, then the browser opens the issue form
@@ -417,7 +431,7 @@ namespace SandstormModLauncher.ViewModels
             CancelShareCommand = new RelayCommand(() => ShareReportOpen = false);
             ReportLaunchProblemCommand = new AsyncCommand(async () =>
             {
-                ReportNote = "Launch failed: " + (LaunchResult ?? "");
+                ReportNote = F("Launch failed: {0}", LaunchResult ?? "");
                 LaunchOverlayOpen = false;
                 Page = "Settings";
                 await PrepareShare();
@@ -450,7 +464,7 @@ namespace SandstormModLauncher.ViewModels
                 string id = await Task.Run(() => DebugReport.Send(note, s, f));
                 ShareReportOpen = false;
                 ReportNote = "";
-                ShowToast("Report sent (id " + id + "). Thank you!");
+                ShowToast(F("Report sent (id {0}). Thank you!", id));
             }
             catch (DebugReport.NoInboxException)
             {
@@ -460,7 +474,7 @@ namespace SandstormModLauncher.ViewModels
             catch (Exception ex)
             {
                 AppLog.Warn("Report not sent: " + ex.Message);
-                ShowToast("The report could not be sent (" + ex.Message + "). It is saved on this PC; you can also post it on GitHub.");
+                ShowToast(F("The report could not be sent ({0}). It is saved on this PC; you can also post it on GitHub.", ex.Message));
             }
             finally
             {
@@ -515,11 +529,11 @@ namespace SandstormModLauncher.ViewModels
                 t.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { exe });
                 t.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(exe) });
                 t.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { exe + ",0" });
-                t.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Local play launcher for Insurgency: Sandstorm" });
+                t.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { T("Launcher for Insurgency: Sandstorm") });
                 t.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
                 ShowToast("Desktop shortcut created");
             }
-            catch (Exception ex) { ShowToast("Could not create the shortcut: " + ex.Message); }
+            catch (Exception ex) { ShowToast(F("Could not create the shortcut: {0}", ex.Message)); }
         }
 
         private async Task RemoveIniRules()
@@ -584,7 +598,7 @@ namespace SandstormModLauncher.ViewModels
             RefreshCatalogUi();
             var tile = Maps.FirstOrDefault(m => m.Custom?.Id == entry.Id);
             if (tile != null) SelectedMap = tile;
-            ShowToast("Custom map \"" + entry.Label + "\" saved");
+            ShowToast(F("Custom map \"{0}\" saved", entry.Label));
         }
 
         private string GuessModeClass(string scenario)
@@ -602,7 +616,7 @@ namespace SandstormModLauncher.ViewModels
         private async Task DeleteCustomMap(CustomMapEntry entry)
         {
             if (entry == null) return;
-            if (await Ask("Delete custom map", "Delete the custom map entry \"" + entry.Label + "\"?", "Delete") != "Delete") return;
+            if (await Ask("Delete custom map", F("Delete the custom map entry \"{0}\"?", entry.Label), "Delete") != "Delete") return;
             State.Settings.CustomMaps.Remove(entry);
             if (Profile.CustomMapId == entry.Id) Profile.CustomMapId = null;
             SaveSettingsSoon();

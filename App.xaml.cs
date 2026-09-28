@@ -37,6 +37,14 @@ namespace SandstormModLauncher
             }
             var eArgs = args.ToArray();
             AppLog.Init(Path.Combine(AppPaths.DataDir, "logs"));
+            // Translations: the pages follow the language picked in Settings from the first moment on.
+            Views.LocHook.Install();
+            try
+            {
+                string lang = File.Exists(AppPaths.SettingsFile) ? Json.Parse(File.ReadAllText(AppPaths.SettingsFile)).Get("Language").Str() : null;
+                if (!string.IsNullOrEmpty(lang)) Loc.Use(lang);
+            }
+            catch (Exception ex) { AppLog.Warn("Language: " + ex.Message); }
             DispatcherUnhandledException += (s, ex) =>
             {
                 // No Windows message box: the player may be in the game. Log it and say so inside the launcher.
@@ -271,6 +279,17 @@ namespace SandstormModLauncher
             }
         }
 
+        private static System.Collections.Generic.IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+        {
+            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+                if (child is T t) yield return t;
+                foreach (var d in Descendants<T>(child)) yield return d;
+            }
+        }
+
         /// <summary>
         /// --render &lt;folder&gt; [Page ...]: draws the launcher pages to PNG files without ever showing a window
         /// (1920x1080 at 125% scaling). Used to check the layout while someone else is using the PC.
@@ -297,8 +316,11 @@ namespace SandstormModLauncher
                 var init = vm.InitializeAsync();
                 for (int i = 0; i < 600 && vm.Loading; i++) await Task.Delay(100);
                 if (pages.Count == 0) pages = new System.Collections.Generic.List<string> { "Play", "Play-Rules", "Mods", "Mods-Installed", "Play-Live", "Play-Advanced", "Settings" };
-                foreach (var page in pages)
+                foreach (var entry in pages)
                 {
+                    // "Server@end" = the page scrolled to its end (to check the lower part of a long page)
+                    bool toEnd = entry.EndsWith("@end", StringComparison.Ordinal);
+                    string page = toEnd ? entry.Substring(0, entry.Length - 4) : entry;
                     // "Play-Rules" = page Play, tab Rules
                     var parts = page.Split('-');
                     vm.Page = parts[0];
@@ -311,6 +333,16 @@ namespace SandstormModLauncher
                     Layout();
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                     Layout();
+                    if (toEnd)
+                    {
+                        foreach (var sv in Descendants<System.Windows.Controls.ScrollViewer>(host).Where(s => s.ActualHeight > 0 && s.ScrollableHeight > 0)) sv.ScrollToEnd();
+                        Layout();
+                    }
+                    // Off screen nothing is "loaded", so the XAML texts are translated here (in a window that happens as they appear).
+                    Views.LocHook.ApplyTree(host);
+                    Layout();
+                    Views.LocHook.ApplyTree(host);   // list items made by that layout
+                    Layout();
                     // The first pass lets WPF prepare the glyphs of new text sizes; the second is the real picture.
                     var warm = new System.Windows.Media.Imaging.RenderTargetBitmap(1920, 1080, 120, 120, System.Windows.Media.PixelFormats.Pbgra32);
                     warm.Render(host);
@@ -320,7 +352,19 @@ namespace SandstormModLauncher
                     bmp.Render(host);
                     var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
                     enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
-                    using (var fs = File.Create(Path.Combine(outDir, page + ".png"))) enc.Save(fs);
+                    using (var fs = File.Create(Path.Combine(outDir, (toEnd ? page + "-end" : page) + ".png"))) enc.Save(fs);
+                    // In another language, the texts on the page too, to find those that stayed English.
+                    if (!Core.Loc.IsEnglish)
+                    {
+                        var texts = new System.Collections.Generic.List<string>();
+                        foreach (var fe in Descendants<FrameworkElement>(host).Where(e => e.ActualWidth > 0 && e.ActualHeight > 0))
+                        {
+                            if (fe is System.Windows.Controls.TextBlock tb && !string.IsNullOrWhiteSpace(tb.Text)) texts.Add(tb.Text.Replace("\n", " | "));
+                            if (fe is System.Windows.Controls.TextBox tx && tx.Tag is string tag && tag.Length > 0) texts.Add("hint: " + tag.Replace("\n", " | "));
+                            if (fe.ToolTip is string tip && tip.Length > 0) texts.Add("tip: " + tip.Replace("\n", " | "));
+                        }
+                        File.WriteAllLines(Path.Combine(outDir, (toEnd ? page + "-end" : page) + ".txt"), texts.Distinct());
+                    }
                 }
                 vm.Dispose();
             }

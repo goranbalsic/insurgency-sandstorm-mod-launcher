@@ -13,6 +13,7 @@ using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
 using SandstormModLauncher.ViewModels;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Services
 {
@@ -86,11 +87,47 @@ namespace SandstormModLauncher.Services
             "CurrentModeName", "RulesModeTitle", "SelectedScenarioId", "SelectedMapTitle", "SquadSummary", "MutatorSummary", "RulesSummary", "MapSummary",
             "ModeSummary", "PlanCommand", "PlanIni", "PlanAfterLoad", "PlanError", "CanLaunch", "RulesTabLabel", "RuleChangeCount", "HasNoPresets",
             "ActiveMutatorCount", "LaunchRuleset", "CustomIniMode", "CustomIniText", "ExtraUrlOptions", "GameModeOverride", "AfterLoadCommands",
-            "EnableCheatsAfterLoad", "SelectedProfile", "PresetFilter", "PlayTab", "Page", "SelectedMutatorPreset"
+            "EnableCheatsAfterLoad", "SelectedProfile", "PresetFilter", "PlayTab", "Page", "SelectedMutatorPreset",
+            "ServerName", "ServerJoinPassword", "ServerMaxPlayersText", "ServerPortText", "ServerQueryPortText", "ServerRconPortText",
+            "ServerRconFromNetwork", "ServerShowLog", "ServerCheats", "ServerGslt", "ServerGameStats", "ServerExtraArgs", "ServerAdmins",
+            "ServerModsEnabled", "ServerModIds", "ServerUseMapCycle", "ServerRemote", "ServerLocal", "ServerRemoteHost", "ServerRemotePortText",
+            "ServerCommandLine", "ServerPlanError", "ServerMatchSummary", "ServerMatchMods", "MapCycleFile", "MapCycleIsDefault", "MapCycleCount",
+            "ServerRconAddress", "CanStartServer"
         };
 
-        private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120) };
+        private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120), "Settings" };   // (a name that is also a text of the launcher)
         private static readonly string[] Texts = { "", "5", "-5", "1e99", "abc", "a b", "?x=1", "0.5", "True", "999999", "NaN", " 7 " };
+
+        /// <summary>
+        /// The texts written in the pages themselves (not bound values): text blocks, their pieces, and captions.
+        /// With <paramref name="all"/>, every text shown, bound values from the view model too.
+        /// </summary>
+        private static IEnumerable<(string text, string where)> PageLiterals(DependencyObject root, bool all = false)
+        {
+            bool Literal(DependencyObject d, DependencyProperty p)
+            {
+                if (all) return true;
+                var src = DependencyPropertyHelper.GetValueSource(d, p);
+                return !src.IsExpression && (src.BaseValueSource == BaseValueSource.Local || src.BaseValueSource == BaseValueSource.ParentTemplate);
+            }
+            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+            for (int i = 0; i < n; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+                if (child is UIElement ui && ui.Visibility != Visibility.Visible) continue;   // hidden: not shown now
+                if (child is TextBlock tb && (all || !(tb.TemplatedParent is ContentPresenter cp && cp.Content is string && cp.ContentTemplate == null && cp.ContentTemplateSelector == null)))
+                {
+                    if (tb.Inlines.Count > 1) { foreach (var run in tb.Inlines.OfType<System.Windows.Documents.Run>()) if (Literal(run, System.Windows.Documents.Run.TextProperty) && !string.IsNullOrWhiteSpace(run.Text)) yield return (run.Text, Where(tb)); }
+                    else if (Literal(tb, TextBlock.TextProperty) && !string.IsNullOrWhiteSpace(tb.Text)) yield return (tb.Text, Where(tb));
+                }
+                else if (child is ContentControl cc && cc.Content is string s && Literal(cc, ContentControl.ContentProperty) && s.Trim().Length > 0) yield return (s, Where(cc));
+                foreach (var t in PageLiterals(child, all)) yield return t;
+            }
+        }
+
+        /// <summary>Where an element is: its type, the template it comes from and the item it shows.</summary>
+        private static string Where(FrameworkElement e) =>
+            e.GetType().Name + (e.TemplatedParent != null ? " in " + e.TemplatedParent.GetType().Name : "") + (e.DataContext != null ? " for " + e.DataContext.GetType().Name : "");
 
         public static async Task<int> Run(int steps, int seed, Action<string> print)
         {
@@ -134,6 +171,10 @@ namespace SandstormModLauncher.Services
 
             Layout();
             await vm.InitializeAsync();
+            // The map cycle of this test lives in its data folder, never in the real server's.
+            TortureCycle = Path.Combine(AppPaths.DataDir, "torture-MapCycle.txt");
+            if (File.Exists(TortureCycle)) File.Delete(TortureCycle);
+            vm.UseMapCycleFile(TortureCycle);
             for (int k = 0; k < 600 && vm.Loading; k++) await Task.Delay(100);
             if (vm.DialogOpen) vm.DialogCommand.Execute(vm.DialogPrimary);
             await Pump();
@@ -153,7 +194,7 @@ namespace SandstormModLauncher.Services
 
             for (int i = 1; i <= steps; i++)
             {
-                int op = rnd.Next(26);
+                int op = rnd.Next(29);
                 string name = "op" + op;
                 try
                 {
@@ -334,6 +375,82 @@ namespace SandstormModLauncher.Services
                             break;
                         }
                         case 23: name = "random mission"; await Do(vm.RandomMissionCommand, null); break;
+                        case 28:
+                        {
+                            // Another language while everything else goes on: every text written in the pages follows it.
+                            var lang = Pick(vm.Languages.ToList());
+                            name = "language " + (lang.Id.Length == 0 ? "English" : lang.Id);
+                            // Every page is shown before and after the switch: lists made before it must follow too.
+                            string[] tour = { "Play Map", "Play Squad", "Play Rules", "Play Live", "Play Mods Mutators", "Play Mods Installed", "Play Advanced", "Server", "Settings" };
+                            string keepPage = vm.Page, keepTab = vm.PlayTab, keepMods = vm.ModsTab;
+                            async Task Show(string where)
+                            {
+                                var parts = where.Split(' ');
+                                vm.Page = parts[0];
+                                if (parts.Length > 1) vm.PlayTab = parts[1];
+                                if (parts.Length > 2) vm.ModsTab = parts[2];
+                                await Pump();
+                                Layout();
+                                Views.LocHook.ApplyTree(host);   // off screen nothing is "loaded"; a window does this as the page appears
+                                Layout();
+                            }
+                            foreach (var t in tour) await Show(t);
+                            vm.SelectedLanguage = lang;
+                            if (!string.Equals(Loc.CurrentId, lang.Id, StringComparison.OrdinalIgnoreCase)) Fail(name + ": language in use is " + Loc.CurrentId);
+                            foreach (var t in tour)
+                            {
+                                await Show(t);
+                                foreach (var (text, where) in PageLiterals(host, Loc.IsEnglish))
+                                {
+                                    string key = Loc.Key(text);
+                                    // (back in English, no text at all, bound ones too, may keep the » « marks of the test language made from the template)
+                                    if (Loc.IsEnglish ? text.IndexOf('»') >= 0 : Loc.T(key) != key && text.Trim() == key)
+                                        Fail(name + ", " + t + ": \"" + text.Trim() + "\" is not in the language picked (" + where + ")");
+                                }
+                            }
+                            vm.Page = keepPage; vm.PlayTab = keepTab; vm.ModsTab = keepMods;
+                            // A value shown as it is (a profile called "Settings") is not translated as if it were a text of the page.
+                            var probe = new ContentControl();
+                            probe.SetBinding(ContentControl.ContentProperty, new System.Windows.Data.Binding { Source = "Settings" });
+                            var probeHost = new Border { Child = probe };
+                            probeHost.Measure(new Size(400, 100)); probeHost.Arrange(new Rect(0, 0, 400, 100)); probeHost.UpdateLayout();
+                            Views.LocHook.ApplyTree(probeHost);
+                            probeHost.UpdateLayout();
+                            CheckLanguage(vm, probeHost, m => Fail(name + ": " + m));
+                            break;
+                        }
+                        case 26:
+                        case 27:
+                        {
+                            // The Server page: settings typed in (good and bad), switches, and the map cycle (its file stays in the
+                            // test data folder; nothing is ever started and the real server's files are not touched).
+                            if (rnd.Next(3) == 0) vm.Page = "Server";
+                            int what = rnd.Next(12);
+                            string[] ids = { "76561198000000001", "76561198000000002\n76561198000000003", "notanid", "", "7656119\n123", "76561198000000004, 76561198000000005" };
+                            switch (what)
+                            {
+                                case 0: name = "server name"; vm.ServerName = Pick(Names); break;
+                                case 1: name = "server numbers"; vm.ServerMaxPlayersText = Pick(Texts); vm.ServerPortText = Pick(Texts); vm.ServerQueryPortText = Pick(new[] { "27131", "27102", "abc", "70000" }); vm.ServerRconPortText = Pick(new[] { "27015", "80", "65535", "x" }); break;
+                                case 2: name = "server password"; vm.ServerJoinPassword = Pick(new[] { "", "secret1", "a b", "p?w", "\u017e" }); break;
+                                case 3: name = "server switches"; vm.ServerShowLog = !vm.ServerShowLog; vm.ServerCheats = rnd.Next(2) == 0; vm.ServerGameStats = rnd.Next(2) == 0; vm.ServerRconFromNetwork = rnd.Next(2) == 0; break;
+                                case 4: name = "server token"; vm.ServerGslt = Pick(new[] { "", "ABCDEF0123456789", "bad token!" }); vm.ServerExtraArgs = Pick(new[] { "", "-nosteam", "-MOTD=Hi" }); break;
+                                case 5: name = "server admins"; vm.ServerAdmins = Pick(ids); break;
+                                case 6: name = "server mods"; vm.ServerModsEnabled = rnd.Next(2) == 0; vm.ServerModIds = Pick(new[] { "", "1457355", "12\nabc", "98685, 4858240" }); if (rnd.Next(2) == 0) await Do(vm.AddMatchModsCommand, null); break;
+                                case 7: name = "server remote"; vm.ServerRemote = !vm.ServerRemote; vm.ServerRemoteHost = Pick(new[] { "", "203.0.113.5", "server.example" }); vm.ServerRemotePortText = Pick(new[] { "27015", "0", "abc" }); break;
+                                case 8: name = "map cycle switch"; vm.ServerUseMapCycle = !vm.ServerUseMapCycle; break;
+                                case 9: name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break;
+                                default:
+                                {
+                                    if (vm.MapCycleItems.Count == 0) { name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break; }
+                                    var item = Pick(vm.MapCycleItems.ToList());
+                                    int how = rnd.Next(4);
+                                    name = "map cycle " + new[] { "remove", "up", "down", "lighting" }[how];
+                                    await Do(new[] { vm.RemoveCycleItemCommand, vm.MoveCycleItemUpCommand, vm.MoveCycleItemDownCommand, vm.ToggleCycleLightingCommand }[how], item);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
                         case 24:
                         {
                             if (rnd.Next(2) == 0) { name = "save mutator preset"; await Do(vm.SaveMutatorPresetCommand, null, null, Pick(Names)); }
@@ -364,6 +481,8 @@ namespace SandstormModLauncher.Services
                     Layout();
                     await Pump();
                     Check(vm, state, Fail);
+                    CheckServer(vm, state, Fail);
+                    CheckLanguage(vm, host, Fail);
                     WatchItems();
                     foreach (var x in shadow.Stale(vm, "screen").Take(4)) Fail(x);
                     foreach (var r in vm.RuleItems) foreach (var x in shadow.Stale(r, "rule " + r.Key).Take(2)) Fail(x);
@@ -384,6 +503,72 @@ namespace SandstormModLauncher.Services
             print(failures.Count == 0 ? "ALL CHECKS PASSED" : failures.Count + " FAILURES");
             return failures.Count == 0 ? 0 : 1;
         }
+
+        /// <summary>
+        /// Texts from the view model are in the language in use, not left over from the one before (a leftover of the
+        /// test language keeps its » « marks), and text the window shows for a plain value (a profile name) is that value.
+        /// </summary>
+        private static void CheckLanguage(MainViewModel vm, DependencyObject root, Action<string> fail)
+        {
+            bool Stale(string s)
+            {
+                if (string.IsNullOrEmpty(s)) return false;
+                if (Loc.IsEnglish) return s.IndexOf('»') >= 0;
+                string key = Loc.Key(s);
+                return Loc.T(key) != key && s.Trim() == key;
+            }
+            void Test(string what, string s) { if (Stale(s)) fail("\"" + s + "\" (" + what + ") is not in the language in use"); }
+            Test("toast", vm.Toast);
+            foreach (var m in vm.ModItems) { Test("mod counts", m.Counts); Test("mod author", m.Author); Test("mod date", m.Updated); Test("mod state", m.StateLabel); Test("mod warnings", m.WarningText); }
+            foreach (var r in vm.LiveRules) Test("live rule", r.Label);
+            foreach (var b in vm.KeyBindingBackups) Test("key backup", b.Label);
+            foreach (var r in vm.RuleItems) { Test("rule", r.Label); Test("rule value", r.DisplayValue); }
+            void Walk(DependencyObject d)
+            {
+                int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                for (int i = 0; i < n; i++)
+                {
+                    var child = System.Windows.Media.VisualTreeHelper.GetChild(d, i);
+                    if (child is UIElement ui && ui.Visibility != Visibility.Visible) continue;
+                    if (child is TextBlock tb && tb.ActualWidth > 0 && tb.TemplatedParent is ContentPresenter cp && cp.Content is string s && cp.ContentTemplate == null && cp.ContentTemplateSelector == null && tb.Text != s)
+                        fail("the window shows \"" + tb.Text + "\" for the value \"" + s + "\"");
+                    Walk(child);
+                }
+            }
+            Walk(root);
+        }
+
+        /// <summary>The Server page: what it shows is what a start would run, and the map cycle file is what the list shows.</summary>
+        private static void CheckServer(MainViewModel vm, AppState state, Action<string> fail)
+        {
+            var s = state.Settings;
+            if (!string.Equals(s.ServerMapCycleFile, TortureCycle, StringComparison.OrdinalIgnoreCase)) fail("the map cycle file moved to " + s.ServerMapCycleFile);
+            var fresh = vm.CurrentPlan == null ? null : ServerPlanner.Build(vm.CurrentPlan, s, vm.ServerInstall, state.Rules, "");
+            string want = fresh?.IsValid == true ? "InsurgencyServer.exe " + fresh.ShownCommandLine : "";
+            if (vm.ServerCommandLine != want) fail("server command line on screen is stale:\n  shown " + vm.ServerCommandLine + "\n  fresh " + want);
+            if (fresh?.IsValid == true)
+            {
+                if (fresh.Url.Contains("bSoloGame")) fail("the server URL has bSoloGame: " + fresh.Url);
+                if (!fresh.Url.Contains("?MaxPlayers=" + Math.Max(1, Math.Min(100, s.ServerMaxPlayers)))) fail("the server URL does not have the server's player count: " + fresh.Url);
+                if ((s.ServerPassword ?? "").Length > 0 != fresh.Url.Contains("?Password=")) fail("the join password and the URL disagree: " + fresh.Url);
+                if (fresh.ShownCommandLine.IndexOf("?Password=" + (s.ServerPassword ?? "").Trim(), StringComparison.Ordinal) >= 0 && (s.ServerPassword ?? "").Trim().Length > 0)
+                    fail("the command line on screen shows the join password");
+                if (fresh.Args.Contains("-log") != s.ServerShowLog) fail("-log does not follow the switch");
+                if (fresh.Args.Contains("-EnableCheats") != s.ServerCheats) fail("-EnableCheats does not follow the switch");
+                bool admins = ServerPlanner.SteamIds(s.ServerAdmins, null).Count > 0;
+                if (fresh.Args.Contains("-AdminList=Admins") != admins) fail("-AdminList does not follow the admins list");
+                if (fresh.Args.Contains("-Mods") != s.ServerModsEnabled) fail("-Mods does not follow the switch");
+                if (fresh.Args.Any(a => a.StartsWith("-MapCycle=", StringComparison.Ordinal)) != s.ServerUseMapCycle) fail("-MapCycle does not follow the switch");
+                if (!fresh.GameIni.Contains("Password=" + s.ServerRconPassword) || !fresh.GameIni.Contains("ListenPort=" + s.ServerRconPort)) fail("the server's Game.ini has no RCON section with its port and password");
+            }
+            // The list on screen is the file.
+            var onDisk = File.Exists(TortureCycle) ? MapCycle.Parse(File.ReadAllText(TortureCycle)) : new List<MapCycleEntry>();
+            string disk = string.Join(" | ", onDisk.Select(e => e.Line)), shown = string.Join(" | ", vm.MapCycleItems.Select(i => i.Entry.Line));
+            if (disk != shown) fail("map cycle on screen differs from the file:\n  file   " + disk + "\n  screen " + shown);
+            if (vm.MapCycleCount != onDisk.Count(e => e.IsEntry)) fail("map cycle count " + vm.MapCycleCount + " but the file has " + onDisk.Count(e => e.IsEntry));
+        }
+
+        private static string TortureCycle;
 
         /// <summary>What the screen shows, what is stored and what would be launched agree.</summary>
         private static void Check(MainViewModel vm, AppState state, Action<string> fail)
@@ -442,7 +627,7 @@ namespace SandstormModLauncher.Services
             var known = p.Mutators.Where(id => vm.MutatorItems.Any(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase))).OrderBy(x => x, StringComparer.OrdinalIgnoreCase);
             if (!ticked.SequenceEqual(known, StringComparer.OrdinalIgnoreCase)) fail("ticked mutators " + string.Join(",", ticked) + " differ from stored " + string.Join(",", known));
             if (vm.ActivePresetName != SetupEngine.PresetLabel(p)) fail("preset name shown " + vm.ActivePresetName + ", stored " + p.RulesPresetName);
-            if (p.RulesPresetName != null && p.PresetCheck != null && !vm.ActivePresetName.EndsWith("(changed)") && SetupEngine.PresetCheck(p, p.PresetCheck.StartsWith("S|")) != p.PresetCheck)
+            if (p.RulesPresetName != null && p.PresetCheck != null && vm.ActivePresetName != Core.Loc.F("{0} (changed)", Core.Loc.T(p.RulesPresetName)) && SetupEngine.PresetCheck(p, p.PresetCheck.StartsWith("S|")) != p.PresetCheck)
                 fail("setup changed after " + p.RulesPresetName + " but the summary does not say so");
             if (vm.PresetFilter == "Saved" && vm.RulePresets.Count != state.Settings.RulesPresets.Count) fail("Saved tab shows " + vm.RulePresets.Count + " of " + state.Settings.RulesPresets.Count + " saved setups");
             if (vm.MutatorsEnabled != p.MutatorsEnabled || vm.Night != (p.Lighting == "Night") || vm.MaxPlayers != p.MaxPlayers) fail("conditions on screen differ from the profile");

@@ -35,6 +35,7 @@ namespace SandstormModLauncher.Services
     ///   ui-console &lt;command | command&gt;                           the Live tab's console box
     ///   ui-read / ui-count                                         the Live tab's "Read current values" / "Count bots"
     ///   ui-apply Key=Value ...                                     the Live tab's rule boxes and "Apply now"
+    ///   ui-server start|stop|players|say text|travel|round|rcon cmd   the Server page's buttons (the dedicated server on this PC)
     ///   quit                                                       close the game (over RCON)
     /// launch takes "console" to allow typing into the game console; without it the launch must work over RCON alone.
     /// </summary>
@@ -80,7 +81,7 @@ namespace SandstormModLauncher.Services
                     string cmd = sp < 0 ? line : line.Substring(0, sp), arg = sp < 0 ? "" : line.Substring(sp + 1).Trim();
                     Out("> " + line);
                     monitor.Poll();
-                    if (new[] { "launch", "start", "rcon", "console", "key", "ui-live", "ui-console", "ui-apply", "ui-read", "ui-count" }.Contains(cmd.ToLowerInvariant())) lock (seen) mark = seen.Count;
+                    if (new[] { "launch", "start", "rcon", "console", "key", "ui-live", "ui-console", "ui-apply", "ui-read", "ui-count", "ui-server" }.Contains(cmd.ToLowerInvariant())) lock (seen) mark = seen.Count;
                     try
                     {
                         switch (cmd.ToLowerInvariant())
@@ -226,6 +227,41 @@ namespace SandstormModLauncher.Services
                                 foreach (var r in vm.LiveRules.Where(r => !string.IsNullOrWhiteSpace(r.Value)))
                                     Out("  " + r.Key + ": set " + r.Value + ", game has " + r.Current + (SameNumber(r.Value, r.Current) ? "  (as expected)" : "  FAIL"));
                                 foreach (var r in vm.LiveRules) r.Value = "";
+                                break;
+                            }
+                            case "ui-server":
+                            {
+                                // ui-server start | stop | players | say <text> | travel | round | rcon <command>: the Server page's buttons
+                                var vm = await Ui(Out);
+                                int sp3 = arg.IndexOf(' ');
+                                string act = sp3 < 0 ? arg : arg.Substring(0, sp3), rest = sp3 < 0 ? "" : arg.Substring(sp3 + 1);
+                                async Task Click(System.Windows.Input.ICommand cmd, object param, Func<bool> done, int seconds)
+                                {
+                                    var until2 = DateTime.UtcNow.AddSeconds(seconds);
+                                    while (DateTime.UtcNow < until2 && !cmd.CanExecute(param)) await Task.Delay(250);
+                                    if (!cmd.CanExecute(param)) { Out("  FAIL the button could not be used (" + vm.ServerStatus + ")"); return; }
+                                    cmd.Execute(param);
+                                    await Task.Delay(500);
+                                    while (DateTime.UtcNow < until2 && (vm.ServerBusy || !done()))
+                                    {
+                                        if (vm.DialogOpen) { Out("  dialog: " + vm.DialogTitle + ": " + vm.DialogMessage); vm.DialogCommand.Execute(vm.DialogPrimary); }
+                                        await Task.Delay(250);
+                                    }
+                                }
+                                vm.ServerOutput = "";
+                                switch (act)
+                                {
+                                    case "start": await Click(vm.StartServerCommand, null, () => vm.ServerStatusKind == "Match", 180); break;
+                                    case "stop": await Click(vm.StopServerCommand, null, () => !vm.ServerRunningHere, 90); break;
+                                    case "players": await Click(vm.RefreshPlayersCommand, null, () => vm.ServerOutput.Length > 0, 20); break;
+                                    case "say": vm.SayText = rest; await Click(vm.SayCommand, null, () => vm.ServerOutput.Length > 0, 20); break;
+                                    case "travel": await Click(vm.TravelServerCommand, null, () => vm.ServerOutput.Length > 0, 30); break;
+                                    case "round": await Click(vm.RestartServerRoundCommand, "0", () => vm.ServerOutput.Length > 0, 20); break;
+                                    case "rcon": vm.ServerCommand = rest; await Click(vm.SendServerCommandCommand, null, () => vm.ServerOutput.Length > 0, 20); break;
+                                    default: Out("  unknown ui-server action"); break;
+                                }
+                                Out("  status: " + vm.ServerStatus);
+                                foreach (var l in vm.ServerOutput.Replace("\r", "").Split('\n').Where(l => l.Trim().Length > 0).Take(12)) Out("  | " + (LogSanitizer.Clean(l) ?? "<hidden>"));
                                 break;
                             }
                             case "ui-count":

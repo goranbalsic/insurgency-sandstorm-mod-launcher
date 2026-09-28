@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -44,8 +45,8 @@ namespace SandstormModLauncher.Game
 
         public bool IsValid => Error == null && Scenario != null;
 
-        public string Title => Scenario == null ? "No scenario selected"
-            : $"{Map?.DisplayName ?? Scenario.MapKey} · {ModeTitle}{(string.IsNullOrEmpty(Scenario.Side) ? "" : " (" + Scenario.Side + ")")} · {Profile.Lighting}";
+        public string Title => Scenario == null ? T("No scenario selected")
+            : $"{Map?.DisplayName ?? Scenario.MapKey} · {T(ModeTitle)}{(string.IsNullOrEmpty(Scenario.Side) ? "" : " (" + Scenario.Side + ")")} · {T(Profile.Lighting)}";
 
         public string ModeTitle => Hardcore ? "Hardcore Checkpoint" : Scenario?.GameModeName ?? "";
     }
@@ -92,12 +93,12 @@ namespace SandstormModLauncher.Game
                         if (sc != null) { plan.Map = m; break; }
                     }
             }
-            if (sc == null) { plan.Error = "Pick a map and scenario first."; return plan; }
+            if (sc == null) { plan.Error = T("Pick a map and scenario first."); return plan; }
             plan.Scenario = sc;
             plan.Hardcore = p.Hardcore && sc.GameModeClass == "INSCheckpointGameMode";
             plan.Mode = db.ResolveMode(sc.GameModeClass, plan.Hardcore);
             string alias = UrlSafe(p.GameModeOverride, false);
-            if (alias.Length != (p.GameModeOverride ?? "").Trim().Length) plan.Warnings.Add("Game mode override: spaces and ? & = \" | ; were left out.");
+            if (alias.Length != (p.GameModeOverride ?? "").Trim().Length) plan.Warnings.Add(T("Game mode override: spaces and ? & = \" | ; were left out."));
             plan.GameAlias = alias.Length > 0 ? alias : plan.Hardcore ? "CheckpointHardcore" : null;
             plan.Level = sc.Level.StartsWith("/Game/Maps/", StringComparison.OrdinalIgnoreCase)
                 ? sc.Level.Substring(sc.Level.LastIndexOf('/') + 1) : sc.Level;
@@ -112,9 +113,9 @@ namespace SandstormModLauncher.Game
                     plan.Mutators.Add(info?.Id ?? id);
                 }
             if (plan.MissingMutators.Count > 0)
-                plan.Warnings.Add("Not installed: " + string.Join(", ", plan.MissingMutators) + ". Subscribe in the game's mod browser or remove them.");
+                plan.Warnings.Add(F("Not installed: {0}. Subscribe in the game's mod browser or remove them.", string.Join(", ", plan.MissingMutators)));
             foreach (var mi in plan.MutatorInfos.Where(m => m.IsBaseClass))
-                plan.Warnings.Add(mi.DisplayName + " is a base class used by other mutators; it usually does nothing on its own.");
+                plan.Warnings.Add(F("{0} is a base class used by other mutators; it usually does nothing on its own.", mi.DisplayName));
 
             // Rules for the played mode
             string cls = plan.Mode?.Cls;
@@ -141,7 +142,7 @@ namespace SandstormModLauncher.Game
             if (versusBots && plan.Overrides.TryGetValue("BotQuota", out var setQuota) && int.TryParse(setQuota, out int sq) && sq <= 0)
             {
                 plan.Overrides["BotQuota"] = "1";
-                plan.Warnings.Add("Players per team was 0 with bots on; 1 is used (you against one bot).");
+                plan.Warnings.Add(T("Players per team was 0 with bots on; 1 is used (you against one bot)."));
             }
             if (versusBots)
                 foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
@@ -151,7 +152,7 @@ namespace SandstormModLauncher.Game
             if (plan.Mode != null && plan.Mode.Coop
                 && int.TryParse(plan.Overrides.TryGetValue("MinimumEnemies", out var mn) ? mn : db.DefaultValue(cls, "MinimumEnemies"), out int minE)
                 && int.TryParse(plan.Overrides.TryGetValue("MaximumEnemies", out var mx) ? mx : db.DefaultValue(cls, "MaximumEnemies"), out int maxE) && minE > maxE)
-                plan.Warnings.Add("Minimum enemies (" + minE + ") is above maximum enemies (" + maxE + "); the game then uses the maximum.");
+                plan.Warnings.Add(F("Minimum enemies ({0}) is above maximum enemies ({1}); the game then uses the maximum.", minE, maxE));
 
             // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
             if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
@@ -183,14 +184,14 @@ namespace SandstormModLauncher.Game
             // The player's extra URL options (Advanced): each key once (the last one written), and they replace the
             // launcher's value for the same key; the scenario always stays the launcher's.
             string extraText = UrlSafe(p.ExtraUrlOptions, true);
-            if (extraText.Length != (p.ExtraUrlOptions ?? "").Trim().Length) plan.Warnings.Add("Extra URL options: spaces, quotes, | and ; were left out (they would break the open command).");
+            if (extraText.Length != (p.ExtraUrlOptions ?? "").Trim().Length) plan.Warnings.Add(T("Extra URL options: spaces, quotes, | and ; were left out (they would break the open command)."));
             var extra = new List<KeyValuePair<string, string>>();
             foreach (var part in extraText.Split(new[] { '?' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 int eq = part.IndexOf('=');
                 string key = eq < 0 ? part : part.Substring(0, eq);
                 if (key.Length == 0) continue;
-                if (key.Equals("Scenario", StringComparison.OrdinalIgnoreCase)) { plan.Warnings.Add("Extra URL options: Scenario is set by the map picked, so it was left out."); continue; }
+                if (key.Equals("Scenario", StringComparison.OrdinalIgnoreCase)) { plan.Warnings.Add(T("Extra URL options: Scenario is set by the map picked, so it was left out.")); continue; }
                 int at = extra.FindIndex(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
                 var kv = new KeyValuePair<string, string>(key, eq < 0 ? null : part.Substring(eq + 1));
                 if (at >= 0) extra[at] = kv; else extra.Add(kv);
@@ -198,7 +199,7 @@ namespace SandstormModLauncher.Game
             plan.ExtraOptionKeys = new HashSet<string>(extra.Select(x => x.Key), StringComparer.OrdinalIgnoreCase);
             void Option(string key, string value)
             {
-                if (plan.ExtraOptionKeys.Contains(key)) { plan.Warnings.Add("Extra URL options: " + key + " replaces the launcher's value (" + value + ")."); return; }
+                if (plan.ExtraOptionKeys.Contains(key)) { plan.Warnings.Add(F("Extra URL options: {0} replaces the launcher's value ({1}).", key, value)); return; }
                 url.Append('?').Append(key).Append('=').Append(value);
             }
             Option("MaxPlayers", plan.PlayerSlots.ToString(CultureInfo.InvariantCulture));
@@ -246,7 +247,7 @@ namespace SandstormModLauncher.Game
             }
             foreach (var c in plan.ConsoleOnly) plan.AfterLoad.Add("console: " + c);
             if (plan.Overrides.Count > 0 && cls == null)
-                plan.Warnings.Add("This scenario's game mode is not in the rules database, so rule changes are skipped.");
+                plan.Warnings.Add(T("This scenario's game mode is not in the rules database, so rule changes are skipped."));
             return plan;
         }
 

@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -68,26 +69,49 @@ namespace SandstormModLauncher.Game
             return sb.ToString();
         }
 
-        /// <summary>The [Rcon] section the launcher keeps in Game.ini.</summary>
-        public static UeIni.Section IniSection(AppSettings s) => new UeIni.Section(Section)
+        /// <summary>The [Rcon] section the launcher keeps in the game's Game.ini.</summary>
+        public static UeIni.Section IniSection(AppSettings s) => IniSection(s.RconPort, s.RconPassword, false);
+
+        /// <summary>
+        /// An [Rcon] section: on 127.0.0.1 only, or on every network card when other PCs may connect (then a few wrong
+        /// passwords lock an address out for half an hour).
+        /// </summary>
+        public static UeIni.Section IniSection(int port, string password, bool network) => new UeIni.Section(Section)
         {
             Values = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("bEnabled", "True"),
-                new KeyValuePair<string, string>("Password", s.RconPassword ?? ""),
-                new KeyValuePair<string, string>("ListenPort", s.RconPort.ToString()),
-                new KeyValuePair<string, string>("bUseBroadcastAddress", "False"),
-                new KeyValuePair<string, string>("ListenAddressOverride", Address),
+                new KeyValuePair<string, string>("Password", password ?? ""),
+                new KeyValuePair<string, string>("ListenPort", port.ToString()),
+                new KeyValuePair<string, string>("bUseBroadcastAddress", network ? "True" : "False"),
+                new KeyValuePair<string, string>("ListenAddressOverride", network ? "0.0.0.0" : Address),
                 new KeyValuePair<string, string>("bAllowConsoleCommands", "True"),
                 new KeyValuePair<string, string>("bAllowOnListenServer", "True"),
-                new KeyValuePair<string, string>("MaxPasswordAttempts", "10"),
-                new KeyValuePair<string, string>("IncorrectPasswordBanTime", "0"),
+                new KeyValuePair<string, string>("MaxPasswordAttempts", network ? "5" : "10"),
+                new KeyValuePair<string, string>("IncorrectPasswordBanTime", network ? "30" : "0"),
             }
         };
 
         /// <summary>Game.ini text with the launcher's [Rcon] values (other lines of the file, and of the section, stay).</summary>
-        public static string Apply(string gameIni, AppSettings s) =>
-            UeIni.MergeSections(gameIni ?? "", new[] { IniSection(s) }, (sec, key) => false);
+        public static string Apply(string gameIni, AppSettings s) => Apply(gameIni, IniSection(s));
+
+        public static string Apply(string gameIni, UeIni.Section section) =>
+            UeIni.MergeSections(gameIni ?? "", new[] { section }, (sec, key) => false);
+
+        /// <summary>The dedicated server's RCON password, chosen once (letters and digits only, so it is safe in any file).</summary>
+        public static bool EnsureServerSettings(AppSettings s)
+        {
+            bool changed = false;
+            if (string.IsNullOrEmpty(s.ServerRconPassword) || s.ServerRconPassword.Length < 16 || !s.ServerRconPassword.All(char.IsLetterOrDigit))
+            {
+                s.ServerRconPassword = RandomPassword(24);
+                changed = true;
+            }
+            if (s.ServerRconPort < 1024 || s.ServerRconPort > 65535) { s.ServerRconPort = 27015; changed = true; }
+            return changed;
+        }
+
+        public static string NewPassword() => RandomPassword(24);
 
         /// <summary>Command line switches for a game the launcher starts (the same values as in Game.ini).</summary>
         public static string CommandLine(AppSettings s) =>
@@ -142,18 +166,29 @@ namespace SandstormModLauncher.Game
     /// </summary>
     public sealed class GameRcon
     {
-        private readonly Func<AppSettings> settings;
+        private readonly Func<string> hostSource;
+        private readonly Func<int> portSource;
+        private readonly Func<string> passwordSource;
         private readonly object gate = new object();
         public int ConnectTimeoutMs = 1500;
         public int ReplyTimeoutMs = 8000;
-        public string Host = RconSetup.Address;
         public int? PortOverride;
         public string PasswordOverride;
 
-        public GameRcon(Func<AppSettings> settings) { this.settings = settings; }
+        /// <summary>The game on this PC, with the launcher's RCON port and password.</summary>
+        public GameRcon(Func<AppSettings> settings) : this(() => RconSetup.Address, () => settings().RconPort, () => settings().RconPassword) { }
 
-        private int Port => PortOverride ?? settings().RconPort;
-        private string Password => PasswordOverride ?? settings().RconPassword;
+        /// <summary>Any RCON server (a dedicated server here or on another PC); the values are read at every call.</summary>
+        public GameRcon(Func<string> host, Func<int> port, Func<string> password)
+        {
+            hostSource = host;
+            portSource = port;
+            passwordSource = password;
+        }
+
+        public string Host => hostSource();
+        private int Port => PortOverride ?? portSource();
+        private string Password => PasswordOverride ?? passwordSource();
 
         /// <summary>Runs commands on one connection, in order. Throws RconException when the game cannot be reached.</summary>
         public List<string> Run(params string[] commands)
@@ -184,8 +219,8 @@ namespace SandstormModLauncher.Game
             catch (RconException ex)
             {
                 busy = ex.Kind == RconError.Timeout;
-                return ex.Kind == RconError.AuthFailed ? "the game did not accept the launcher's RCON password"
-                     : busy ? "the game is busy and did not answer yet" : ex.Message;
+                return ex.Kind == RconError.AuthFailed ? T("the game did not accept the launcher's RCON password")
+                     : busy ? T("the game is busy and did not answer yet") : ex.Message;
             }
         }
 
@@ -222,7 +257,7 @@ namespace SandstormModLauncher.Game
             {
                 r.Text = Run("travel " + url)[0].Trim();
                 r.Ok = r.Text.StartsWith("Travelling to", StringComparison.OrdinalIgnoreCase);
-                if (!r.Ok) r.Error = r.Text.Length > 0 ? r.Text : "the game gave no answer to travel";
+                if (!r.Ok) r.Error = r.Text.Length > 0 ? r.Text : T("the game gave no answer to travel");
             }
             catch (RconException ex) { r.Error = ex.Message; r.Delivered = ex.Delivered; }
             return r;
@@ -244,8 +279,8 @@ namespace SandstormModLauncher.Game
             {
                 string reply = replies[i].Trim();
                 var m = SetReply.Match(reply);
-                if (!m.Success || !m.Groups["k"].Value.Equals(list[i].Key, StringComparison.OrdinalIgnoreCase)) failed[list[i].Key] = reply.Length > 0 ? reply : "no answer";
-                else if (!SameValue(m.Groups["v"].Value, list[i].Value)) failed[list[i].Key] = "the game kept " + m.Groups["v"].Value;
+                if (!m.Success || !m.Groups["k"].Value.Equals(list[i].Key, StringComparison.OrdinalIgnoreCase)) failed[list[i].Key] = reply.Length > 0 ? reply : T("no answer");
+                else if (!SameValue(m.Groups["v"].Value, list[i].Value)) failed[list[i].Key] = F("the game kept {0}", m.Groups["v"].Value);
             }
             return failed;
         }

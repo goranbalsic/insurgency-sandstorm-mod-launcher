@@ -12,6 +12,7 @@ using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
 using SandstormModLauncher.Services;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -26,7 +27,7 @@ namespace SandstormModLauncher.ViewModels
         private readonly DispatcherTimer saveTimer, toastTimer, watchTimer;
         private FileSystemWatcher modWatcher;
         private bool loading = true, suppressProfileSave;
-        private string loadingText = "Starting up...";
+        private string loadingText = T("Starting up...");
         private string page = "Play";
 
         public MainViewModel()
@@ -52,6 +53,8 @@ namespace SandstormModLauncher.ViewModels
             InitSettingsCommands();
             InitLaunchCommands();
             InitUpdateCommands();
+            InitServerCommands();
+            InitLanguageCommands();
         }
 
         // ------------------------------------------------------------------ startup
@@ -79,7 +82,7 @@ namespace SandstormModLauncher.ViewModels
                     ShowToast("Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.");
                 }));
 
-                LoadingText = "Reading the game and your mods...";
+                LoadingText = T("Reading the game and your mods...");
                 await Task.Run(() =>
                 {
                     KeyBindings.Backup("launcher started");
@@ -96,10 +99,12 @@ namespace SandstormModLauncher.ViewModels
                 RefreshConsoleKeyStatus();
                 RefreshKeyBackups();
                 StartModWatcher();
+                InitServer();
                 lastPhase = Monitor.Phase;
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
-                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
+                BuildLanguages();
+                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 _ = RefreshRconStatus();
@@ -112,7 +117,7 @@ namespace SandstormModLauncher.ViewModels
             catch (Exception ex)
             {
                 AppLog.Error("Startup failed", ex);
-                LoadingText = "Startup failed: " + ex.Message;
+                LoadingText = T("Startup failed: ") + ex.Message;
             }
         }
 
@@ -122,6 +127,8 @@ namespace SandstormModLauncher.ViewModels
             SaveNow();
             Monitor?.Dispose();
             modWatcher?.Dispose();
+            serverTimer?.Stop();
+            Server?.Monitor?.Dispose();
         }
 
         private void StartModWatcher()
@@ -148,7 +155,7 @@ namespace SandstormModLauncher.ViewModels
             if (Loading) return;
             try
             {
-                if (!quiet) { Loading = true; LoadingText = "Rescanning mods..."; }
+                if (!quiet) { Loading = true; LoadingText = T("Rescanning mods..."); }
                 await Task.Run(() =>
                 {
                     State.Mods = ModScanner.Scan(State.Install, State.Settings.ExtraModFolders, AppPaths.CacheDir, null);
@@ -156,7 +163,7 @@ namespace SandstormModLauncher.ViewModels
                 });
                 BuildMods();
                 RefreshCatalogUi();
-                ShowToast($"Found {State.Mods.Count} mods and {State.AllMutators.Count} mutators");
+                ShowToast(F("Found {0} mods and {1} mutators", State.Mods.Count, State.AllMutators.Count));
             }
             finally { Loading = false; }
         }
@@ -199,7 +206,7 @@ namespace SandstormModLauncher.ViewModels
         public string LoadingText { get => loadingText; set => Set(ref loadingText, value); }
         public string AppVersion => "v" + typeof(MainViewModel).Assembly.GetName().Version.ToString(3);
 
-        private string gameStatus = "Checking the game...";
+        private string gameStatus = T("Checking the game...");
         private string gameStatusKind = "Off";
         public string GameStatus { get => gameStatus; set => Set(ref gameStatus, value); }
         public string GameStatusKind { get => gameStatusKind; set => Set(ref gameStatusKind, value); }
@@ -247,9 +254,10 @@ namespace SandstormModLauncher.ViewModels
         private string toast;
         public string Toast { get => toast; set => Set(ref toast, value); }
 
+        /// <summary>A short message at the bottom (in the player's language: a text built with F() is shown as it is).</summary>
         public void ShowToast(string text)
         {
-            Toast = text;
+            Toast = Loc.T(text);
             toastTimer.Stop();
             toastTimer.Start();
         }
@@ -267,12 +275,25 @@ namespace SandstormModLauncher.ViewModels
         public string DialogTertiary { get => dialogTertiary; set => Set(ref dialogTertiary, value); }
         public ICommand DialogCommand { get; }
 
+        // The buttons show translated captions, but the caller always gets the English one back to compare.
+        private readonly Dictionary<string, string> dialogButtons = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private string Button(string english)
+        {
+            if (english == null) return null;
+            string shown = Loc.T(english);
+            dialogButtons[shown] = english;
+            return shown;
+        }
+
+        /// <summary>An in-app question. Title, message and buttons are shown in the player's language; the English caption of the pressed button comes back.</summary>
         public Task<string> Ask(string title, string message, string primary, string secondary = "Cancel", string tertiary = null)
         {
             dialogTcs?.TrySetResult(null);
             dialogTcs = new TaskCompletionSource<string>();
-            DialogTitle = title; DialogMessage = message; DialogHasInput = false;
-            DialogPrimary = primary; DialogSecondary = secondary; DialogTertiary = tertiary;
+            dialogButtons.Clear();
+            DialogTitle = Loc.T(title); DialogMessage = Loc.T(message); DialogHasInput = false;
+            DialogPrimary = Button(primary); DialogSecondary = Button(secondary); DialogTertiary = Button(tertiary);
             DialogOpen = true;
             return dialogTcs.Task;
         }
@@ -281,8 +302,9 @@ namespace SandstormModLauncher.ViewModels
         {
             dialogTcs?.TrySetResult(null);
             dialogTcs = new TaskCompletionSource<string>();
-            DialogTitle = title; DialogMessage = message; DialogInput = initial ?? ""; DialogHasInput = true;
-            DialogPrimary = primary; DialogSecondary = "Cancel"; DialogTertiary = null;
+            dialogButtons.Clear();
+            DialogTitle = Loc.T(title); DialogMessage = Loc.T(message); DialogInput = initial ?? ""; DialogHasInput = true;
+            DialogPrimary = Button(primary); DialogSecondary = Button("Cancel"); DialogTertiary = null;
             DialogOpen = true;
             string r = await dialogTcs.Task;
             return r == primary ? (DialogInput ?? "").Trim() : null;
@@ -295,7 +317,7 @@ namespace SandstormModLauncher.ViewModels
             DialogOpen = false;
             var t = dialogTcs;
             dialogTcs = null;
-            t?.TrySetResult(result);
+            t?.TrySetResult(result != null && dialogButtons.TryGetValue(result, out var english) ? english : result);
         }
 
         // ------------------------------------------------------------------ profiles
@@ -322,7 +344,7 @@ namespace SandstormModLauncher.ViewModels
                 SaveSettingsSoon();
                 Raise();
                 ApplyProfileToUi();
-                ShowToast("Profile \"" + value + "\" loaded");
+                ShowToast(F("Profile \"{0}\" loaded", value));
             }
         }
 
@@ -351,7 +373,7 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task NewProfile()
         {
-            string name = await Prompt("New profile", "Name for the new profile:", "My setup", "Create");
+            string name = await Prompt("New profile", "Name for the new profile:", T("My setup"), "Create");
             if (string.IsNullOrWhiteSpace(name)) return;
             name = UniqueProfileName(name);
             var p = new Profile { Name = name, MapKey = Profile.MapKey, ScenarioId = Profile.ScenarioId, Lighting = Profile.Lighting };
@@ -363,7 +385,7 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task DuplicateProfile()
         {
-            string name = await Prompt("Duplicate profile", "Name for the copy:", Profile.Name + " copy", "Duplicate");
+            string name = await Prompt("Duplicate profile", "Name for the copy:", Profile.Name + T(" copy"), "Duplicate");
             if (string.IsNullOrWhiteSpace(name)) return;
             name = UniqueProfileName(name);
             var p = Profile.Clone(name);
@@ -386,7 +408,7 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task DeleteProfile()
         {
-            if (await Ask("Delete profile", "Delete \"" + Profile.Name + "\"? This cannot be undone.", "Delete") != "Delete") return;
+            if (await Ask("Delete profile", F("Delete \"{0}\"? This cannot be undone.", Profile.Name), "Delete") != "Delete") return;
             State.Store.DeleteProfile(Profile);
             State.Settings.ActiveProfile = State.Store.Profiles[0].Name;
             SaveSettingsSoon();

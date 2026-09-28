@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using SandstormModLauncher.Core;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -29,6 +30,14 @@ namespace SandstormModLauncher.Game
         private static readonly Regex LoadMap = new Regex(@"LogLoad: LoadMap: (\S+)", RegexOptions.Compiled);
         private static readonly Regex LoadDone = new Regex(@"Took [\d\.]+ seconds to LoadMap\(([^\)]+)\)", RegexOptions.Compiled);
         private static readonly Regex MatchState = new Regex(@"LogGameMode: Display: State: (\w+) -> (\w+)", RegexOptions.Compiled);
+        // A dedicated server changes maps without a full load: "ProcessServerTravel: <url>", then "SeamlessTravel to:" and "finished".
+        private static readonly Regex ServerTravel = new Regex(@"LogGameMode: ProcessServerTravel: (\S+)", RegexOptions.Compiled);
+        private static readonly Regex SeamlessTo = new Regex(@"LogWorld: SeamlessTravel to: (\S+)", RegexOptions.Compiled);
+        private static readonly Regex Listening = new Regex(@"GameNetDriver .* listening on port (\d+)", RegexOptions.Compiled);
+        private readonly string processName;
+        private readonly Func<string> logPath;
+        private readonly string processRoot;
+        private string travelLevel;
 
         public event Action StateChanged;
         public event Action<string> LineReceived;
@@ -50,15 +59,25 @@ namespace SandstormModLauncher.Game
         public IntPtr Window { get; private set; }
         public bool IsRunning => ProcessId != 0;
 
-        public GameMonitor() : this(true) { }
+        /// <summary>The game on this PC.</summary>
+        public GameMonitor() : this(GameInstall.ClientProcess, () => GameInstall.LogPath, null, true) { }
 
-        private GameMonitor(bool watch)
+        /// <summary>Another Sandstorm process with its own log, e.g. a dedicated server (only the one under <paramref name="processRoot"/>).</summary>
+        public GameMonitor(string processName, Func<string> logPath, string processRoot) : this(processName, logPath, processRoot, true) { }
+
+        private GameMonitor(string processName, Func<string> logPath, string processRoot, bool watch)
         {
+            this.processName = processName;
+            this.logPath = logPath;
+            this.processRoot = processRoot == null ? null : processRoot.TrimEnd('\\') + "\\";
             if (watch) timer = new Timer(_ => Poll(), null, 0, 400);
         }
 
+        /// <summary>The game port a dedicated server listens on (from its log), 0 until then.</summary>
+        public int ListeningPort { get; private set; }
+
         /// <summary>For tests: a monitor that does not watch the game or its log; lines are given to <see cref="Feed"/>.</summary>
-        public static GameMonitor Detached() => new GameMonitor(false);
+        public static GameMonitor Detached() => new GameMonitor(GameInstall.ClientProcess, () => null, null, false);
 
         /// <summary>For tests: reads one game log line as if it had just been written.</summary>
         public void Feed(string line)
@@ -85,14 +104,22 @@ namespace SandstormModLauncher.Game
             if (changed) { try { StateChanged?.Invoke(); } catch { } }
         }
 
+        /// <summary>A process of the watched install (any, when no folder is given).</summary>
+        private bool Ours(Process p)
+        {
+            if (processRoot == null) return true;
+            try { return p.MainModule?.FileName?.StartsWith(processRoot, StringComparison.OrdinalIgnoreCase) == true; }
+            catch { return false; }
+        }
+
         private bool CheckProcess()
         {
             Process p = null;
-            try { p = Process.GetProcessesByName(GameInstall.ClientProcess).FirstOrDefault(); } catch { }
+            try { p = Process.GetProcessesByName(processName).FirstOrDefault(Ours); } catch { }
             if (p == null)
             {
                 if (ProcessId == 0) return false;
-                ProcessId = 0; ProcessStartUtc = null; Window = IntPtr.Zero; LoadingScreenUp = false;
+                ProcessId = 0; ProcessStartUtc = null; Window = IntPtr.Zero; LoadingScreenUp = false; ListeningPort = 0;
                 Phase = GamePhase.NotRunning; CurrentLevel = null; RoundState = null; mapLoaded = false; InstanceState = null;
                 return true;
             }
@@ -132,8 +159,8 @@ namespace SandstormModLauncher.Game
 
         private bool TailLog()
         {
-            string path = GameInstall.LogPath;
-            if (!File.Exists(path)) return false;
+            string path = logPath();
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
             var fi = new FileInfo(path);
             bool changed = false;
             if (fi.CreationTimeUtc != logCreated || fi.Length < position)
@@ -178,7 +205,22 @@ namespace SandstormModLauncher.Game
 
         private bool Parse(string line)
         {
-            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; LoadingScreenUp = false; InstanceState = null; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
+            if (line.StartsWith("Log file open")) { ModsMounted = 0; mapLoaded = false; LoadingScreenUp = false; InstanceState = null; ListeningPort = 0; travelLevel = null; Phase = ProcessId != 0 ? GamePhase.Starting : GamePhase.NotRunning; return true; }
+            var sv = ServerTravel.Match(line);
+            if (sv.Success) { CurrentUrl = sv.Groups[1].Value; Phase = GamePhase.Loading; mapLoaded = false; RoundState = null; travelLevel = null; return true; }
+            var st = SeamlessTo.Match(line);
+            if (st.Success) { travelLevel = st.Groups[1].Value; return true; }
+            if (line.Contains("----SeamlessTravel finished"))
+            {
+                // The game's own menu travels this way too (to /Game/Maps/Utility/MainMenu_Hold): that is no match.
+                if (travelLevel != null && travelLevel.IndexOf("/Utility/", StringComparison.OrdinalIgnoreCase) >= 0) { travelLevel = null; return true; }
+                if (travelLevel != null) CurrentLevel = travelLevel;
+                mapLoaded = true;
+                Phase = GamePhase.InMatch;
+                return true;
+            }
+            var lp = Listening.Match(line);
+            if (lp.Success) { ListeningPort = int.Parse(lp.Groups[1].Value); return true; }
             if (line.Contains("LoadingScreen: EndLoadingScreen")) { LoadingScreenUp = false; return true; }
             if (line.Contains("LogLoad: BeginLoadingScreen") || line.Contains("Restoring loading screen widget")) { LoadingScreenUp = true; return true; }
             // The game logs "-> Playing" just after a map finishes loading, so it only means
@@ -233,13 +275,13 @@ namespace SandstormModLauncher.Game
         {
             switch (Phase)
             {
-                case GamePhase.NotRunning: return "Game not running";
-                case GamePhase.Starting: return "Game starting...";
-                case GamePhase.Menu: return ModsMounted > 0 ? $"At main menu · {ModsMounted} mods mounted" : "At main menu";
-                case GamePhase.Loading: return "Loading a map...";
+                case GamePhase.NotRunning: return T("Game not running");
+                case GamePhase.Starting: return T("Game starting...");
+                case GamePhase.Menu: return ModsMounted > 0 ? F("At main menu · {0} mods mounted", ModsMounted) : T("At main menu");
+                case GamePhase.Loading: return T("Loading a map...");
                 case GamePhase.InMatch:
                     string lvl = CurrentLevel == null ? "" : CurrentLevel.Substring(CurrentLevel.LastIndexOf('/') + 1);
-                    return "In match" + (lvl.Length > 0 ? " · " + lvl : "") + (RoundState != null ? " · " + PrettyRound(RoundState) : "");
+                    return T("In match") + (lvl.Length > 0 ? " · " + lvl : "") + (RoundState != null ? " · " + PrettyRound(RoundState) : "");
             }
             return "";
         }
@@ -248,11 +290,11 @@ namespace SandstormModLauncher.Game
         {
             switch (s)
             {
-                case "WaitingToStart": return "choosing class";
-                case "PreRound": return "pre-round";
-                case "RoundActive": return "round active";
-                case "PostRound": return "round over";
-                case "GameOver": return "match over";
+                case "WaitingToStart": return T("choosing class");
+                case "PreRound": return T("pre-round");
+                case "RoundActive": return T("round active");
+                case "PostRound": return T("round over");
+                case "GameOver": return T("match over");
                 default: return UnrealText.Humanize(s).ToLowerInvariant();
             }
         }

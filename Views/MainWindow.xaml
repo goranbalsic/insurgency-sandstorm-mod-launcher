@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:SandstormModLauncher.Views.Pages"
+        xmlns:v="clr-namespace:SandstormModLauncher.Views"
         Title="Sandstorm Mod Launcher" Width="1360" Height="860" MinWidth="1120" MinHeight="700"
         Background="{StaticResource Bg1}" Foreground="{StaticResource Text}" FontFamily="{StaticResource Body}" FontSize="13"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
@@ -127,6 +128,7 @@
                         </StackPanel>
                         <StackPanel Margin="0,10,0,0">
                             <RadioButton Style="{StaticResource NavButton}" Content="Play" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, mods and live control of the match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="Server" Tag="&#xE774;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Server}" ToolTip="Run a dedicated server with your match, or control one on another PC" />
                             <RadioButton Style="{StaticResource NavButton}" Content="Settings" Tag="&#xE713;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Settings}" ToolTip="Game folder, console key, launch options" />
                         </StackPanel>
                     </DockPanel>
@@ -137,6 +139,7 @@
                     <Grid MinWidth="860" MinHeight="440"
                           Width="{Binding ViewportWidth, ElementName=pageScroll}" Height="{Binding ViewportHeight, ElementName=pageScroll}">
                         <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
+                        <p:ServerPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Server}" />
                         <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
                     </Grid>
                 </ScrollViewer>
@@ -194,14 +197,14 @@
                         <TextBlock>
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource Kicker}">
-                                    <Setter Property="Text" Value="LAUNCHING" />
+                                    <Setter Property="Text" Value="{v:Tr 'LAUNCHING'}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding LaunchSucceeded}" Value="True">
-                                            <Setter Property="Text" Value="READY" />
+                                            <Setter Property="Text" Value="{v:Tr 'READY'}" />
                                             <Setter Property="Foreground" Value="{StaticResource Good}" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding LaunchFailed}" Value="True">
-                                            <Setter Property="Text" Value="LAUNCH STOPPED" />
+                                            <Setter Property="Text" Value="{v:Tr 'LAUNCH STOPPED'}" />
                                             <Setter Property="Foreground" Value="{StaticResource Bad}" />
                                         </DataTrigger>
                                     </Style.Triggers>

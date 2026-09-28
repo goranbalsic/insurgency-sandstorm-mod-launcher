@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -49,7 +50,7 @@ namespace SandstormModLauncher.Game
             }
             catch (Exception ex) { AppLog.Warn("Official cache unreadable: " + ex.Message); }
 
-            progress?.Invoke("Reading the game's maps, scenarios and mutators...");
+            progress?.Invoke(T("Reading the game's maps, scenarios and mutators..."));
             var data = Scan(install, paks, cacheDir);
             data.CacheKey = key;
             data.SchemaVersion = Schema;

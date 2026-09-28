@@ -23,7 +23,7 @@ namespace SandstormModLauncher.Core
         /// ?Password= makes one of them private.
         /// </summary>
         private static readonly Regex GameFlow = new Regex(
-            @"^(\[[^\]]*\]\[[^\]]*\])?(LogNet: Browse: |LogLoad: LoadMap: |LogLoad: Took |LogGameState: |LogGameMode: Display: State: |LogINSGameInstance: State transition: |LogAI: Display: AI difficulty set to |LogStreaming: Error: )",
+            @"^(\[[^\]]*\]\[[^\]]*\])?(LogNet: Browse: |LogLoad: LoadMap: |LogLoad: Took |LogGameState: |LogGameMode: Display: State: |LogGameMode: ProcessServerTravel: |LogWorld: SeamlessTravel to: |LogINSGameInstance: State transition: |LogAI: Display: AI difficulty set to |LogStreaming: Error: )",
             RegexOptions.Compiled);
         private static readonly Regex UrlSecret = new Regex(@"[?&](password|pwd|token|ticket|auth\w*|signature|session_?id)=", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
