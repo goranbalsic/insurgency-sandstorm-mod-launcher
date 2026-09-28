@@ -56,6 +56,7 @@ namespace SandstormModLauncher.Models
     public sealed class ModInfo
     {
         public long Id { get; set; }
+        public long StateCode { get; set; } = -1;   // mod.io state (5 = uninstall pending)
         public string Name { get; set; }
         public string Summary { get; set; }
         public string Description { get; set; }
@@ -109,6 +110,25 @@ namespace SandstormModLauncher.Models
         public bool Hardcore { get; set; }
         public int MaxPlayers { get; set; }
         public bool MutatorsEnabled { get; set; } = true;
+
+        /// <summary>Since 1.8.0: the whole setup (Advanced options too). Loading it replaces everything.</summary>
+        public Profile Setup { get; set; }
+    }
+
+    /// <summary>
+    /// Changes a match preset made outside its own rules: mutators it added, day or night, hardcore, and squad values.
+    /// The next preset puts back each one that is still as the preset left it (a value changed by hand since stays).
+    /// </summary>
+    public sealed class PresetChanges
+    {
+        public List<string> AddedMutators { get; set; } = new List<string>();
+        public string LightingBefore { get; set; }
+        public string LightingAfter { get; set; }
+        public bool? HardcoreBefore { get; set; }
+        public bool? HardcoreAfter { get; set; }
+        /// <summary>"mode|key" to the value before (null = none) and after the preset.</summary>
+        public Dictionary<string, string> RulesBefore { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> RulesAfter { get; set; } = new Dictionary<string, string>();
     }
 
     public sealed class Profile
@@ -129,6 +149,11 @@ namespace SandstormModLauncher.Models
         public List<string> PresetKeys { get; set; } = new List<string>();
         /// <summary>The setup as the last preset left it (SetupEngine.PresetCheck), to show when it was changed since.</summary>
         public string PresetCheck { get; set; }
+        /// <summary>What the last match preset changed besides its rules, so the next preset can take it back out.</summary>
+        public PresetChanges PresetChanges { get; set; }
+        /// <summary>The saved setup this one was loaded from or saved as (null = not saved), and how it was then.</summary>
+        public string SetupName { get; set; }
+        public string SetupCheck { get; set; }
         public string LaunchRuleset { get; set; }            // official ruleset applied with -ruleset= at game start
         public string CustomIniMode { get; set; } = "Off";     // Off / Append / Replace
         public string CustomIniText { get; set; } = "";
@@ -182,7 +207,9 @@ namespace SandstormModLauncher.Models
         public DateTime LastUpdateCheckUtc { get; set; }
         public string SkippedUpdateTag { get; set; }             // a release that cannot be installed (its exe is not newer)
         public string StartWith { get; set; } = "Store";        // how the game is started: Store (Steam or Epic), Exe (its own exe), Command
-        public string StartCommand { get; set; } = "";           // the player's own start command ({options} = where the launcher's options go)
+        public string StartCommand { get; set; } = "";
+        public string PlayTarget { get; set; } = "Local";
+        public bool SetupsMigrated { get; set; }                  // profiles and mutator presets became saved setups (1.8.0, once)        // the big button: Local (the game on this PC) or Server (the dedicated server)           // the player's own start command ({options} = where the launcher's options go)
         public string Language { get; set; } = "";               // translation in use ("" = English)
 
         // Dedicated server (Server page)

@@ -66,7 +66,7 @@ namespace SandstormModLauncher.ViewModels
             RebuildLiveGroups();
         }
 
-        /// <summary>The Live tab's buttons (again after a language change).</summary>
+        /// <summary>The Live page's buttons (again after a language change).</summary>
         private void RebuildLiveGroups()
         {
             LiveGroups.Clear();

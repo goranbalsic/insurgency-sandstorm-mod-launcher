@@ -304,6 +304,15 @@ namespace SandstormModLauncher.Services
         /// <summary>The player's own start command: program and arguments, and where the launcher's options go.</summary>
         private static void StartCommandChecks(Action<string> fail)
         {
+            // The updater takes release files from this project under its current and its new name (a renamed repository
+            // hands out the new address), and nothing from anywhere else.
+            foreach (var (owner, ok) in new[] { (Updater.Repo, true), (Updater.NewRepo, true), ("someone/else", false), ("goranbalsic/insurgency-sandstorm-mod-launcher-evil", false) })
+            {
+                string json = "{\"tag_name\":\"v9.0.0\",\"html_url\":\"x\",\"assets\":[{\"name\":\"SandstormModLauncher-v9.0.0.zip\",\"browser_download_url\":\"https://github.com/" + owner
+                              + "/releases/download/v9.0.0/SandstormModLauncher-v9.0.0.zip\"},{\"name\":\"SHA256SUMS.txt\",\"browser_download_url\":\"https://github.com/" + owner + "/releases/download/v9.0.0/SHA256SUMS.txt\"}]}";
+                var info = Updater.Parse(json);
+                if ((info.ZipUrl != null) != ok || (info.SumsUrl != null) != ok) fail("updater: release files from " + owner + (ok ? " were not taken" : " were taken"));
+            }
             // Chat text and reasons stay one command: a | in them would make the game run what follows it.
             string said = ServerService.Reason("hi | exit\n\"x\"");
             if (said.Contains("|") || said.Contains("\n") || said.Contains("\"")) fail("chat text reaches the server as " + said);

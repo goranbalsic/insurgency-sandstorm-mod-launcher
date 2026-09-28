@@ -258,6 +258,14 @@ namespace SandstormModLauncher.Services
                                     case "travel": await Click(vm.TravelServerCommand, null, () => vm.ServerOutput.Length > 0, 30); break;
                                     case "round": await Click(vm.RestartServerRoundCommand, "0", () => vm.ServerOutput.Length > 0, 20); break;
                                     case "rcon": vm.ServerCommand = rest; await Click(vm.SendServerCommandCommand, null, () => vm.ServerOutput.Length > 0, 20); break;
+                                    case "main":
+                                        // The big button set to "Start the server": starts it, or loads the match when it runs.
+                                        vm.SetPlayTargetCommand.Execute("Server");
+                                        Out("  button: " + vm.MainActionTitle);
+                                        bool wasRunning = vm.ServerStatusKind == "Match";
+                                        await Click(vm.MainActionCommand, null, () => wasRunning ? vm.ServerOutput.Length > 0 : vm.ServerStatusKind == "Match", 180);
+                                        Out("  button now: " + vm.MainActionTitle);
+                                        break;
                                     default: Out("  unknown ui-server action"); break;
                                 }
                                 Out("  status: " + vm.ServerStatus);

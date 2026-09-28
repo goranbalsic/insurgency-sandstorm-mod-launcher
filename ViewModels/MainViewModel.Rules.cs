@@ -19,8 +19,6 @@ namespace SandstormModLauncher.ViewModels
         public ObservableCollection<PresetItem> RulePresets { get; } = new ObservableCollection<PresetItem>();
         public ICollectionView RuleItemsView { get; private set; }
         public ICommand ApplyPresetCommand { get; private set; }
-        public ICommand SaveRulesPresetCommand { get; private set; }
-        public ICommand DeleteRulesPresetCommand { get; private set; }
         public ICommand ResetModeCommand { get; private set; }
         public ICommand ResetAllRulesCommand { get; private set; }
         public ICommand InsertSectionCommand { get; private set; }
@@ -43,8 +41,6 @@ namespace SandstormModLauncher.ViewModels
         private void InitRulesCommands()
         {
             ApplyPresetCommand = new RelayCommand(p => ApplyPreset(p as PresetItem));
-            SaveRulesPresetCommand = new AsyncCommand(SaveRulesPreset);
-            DeleteRulesPresetCommand = new AsyncCommand(p => DeleteRulesPreset(p as PresetItem));
             ResetModeCommand = new AsyncCommand(ResetMode, () => rulesMode != null && Profile.Rules.ContainsKey(rulesMode.Cls));
             ResetAllRulesCommand = new AsyncCommand(ResetAllRules, () => Profile.Rules.Count > 0);
             InsertSectionCommand = new RelayCommand(p => InsertMutatorSection(p as string));
@@ -60,9 +56,10 @@ namespace SandstormModLauncher.ViewModels
             {
                 // Playlists are presets in the Rules tab since 1.4.0 (older links and settings still say "Playlists").
                 if (value == "Playlists") { PresetFilter = "Playlists"; value = "Rules"; }
+                // Live is its own page since 1.8.0.
+                if (value == "Live") { Page = "Live"; return; }
                 if (!Set(ref playTab, string.IsNullOrEmpty(value) ? "Map" : value)) return;
                 SyncRulesModeToScenario();
-                if (playTab == "Live") RefreshLive();
             }
         }
 
@@ -76,9 +73,10 @@ namespace SandstormModLauncher.ViewModels
         /// <summary>The rules always belong to the game mode of the scenario picked on the map.</summary>
         private void SyncRulesModeToScenario()
         {
+            // The preset lists follow co-op or versus even for a scenario without known rules (a custom map entry).
+            PresetsFollowScenario();
             var m = CurrentMode;
             if (m == null) return;
-            PresetsFollowScenario();
             if (m == rulesMode) return;
             rulesMode = m;
             BuildRuleItems();
@@ -178,12 +176,27 @@ namespace SandstormModLauncher.ViewModels
         public ObservableCollection<PresetItem> SquadPresets { get; } = new ObservableCollection<PresetItem>();
         private string presetKind;
 
-        /// <summary>Styles, Official, Playlists or Saved: the preset lists of the Rules tab.</summary>
+        /// <summary>Styles, Official or Playlists: the preset lists of the Rules tab (saved setups are in the bar at the top).</summary>
         public string PresetFilter
         {
             get => presetFilter;
-            set { if (Set(ref presetFilter, value == "Mine" ? "Saved" : value)) BuildPresets(); }
+            set
+            {
+                string v = value == "Official" || value == "Playlists" ? value : "Styles";
+                if (Set(ref presetFilter, v)) BuildPresets();
+            }
         }
+
+        private string presetSearch = "";
+
+        /// <summary>Filters the preset list by name, description, mutators or mode.</summary>
+        public string PresetSearch
+        {
+            get => presetSearch;
+            set { if (Set(ref presetSearch, value ?? "")) BuildPresets(); }
+        }
+
+        public string PresetCountText { get; private set; } = "";
 
         private bool CurrentIsCoop => CurrentMode == null || CurrentMode.Coop;
         public string SquadKindLabel => CurrentIsCoop ? T("For every co-op mode. Applying one replaces the bot values it is about; fine-tune them on the right.")
@@ -200,11 +213,18 @@ namespace SandstormModLauncher.ViewModels
             RulePresets.Clear();
             IEnumerable<Preset> list = presetFilter == "Official" ? SetupEngine.OfficialPresets(State.Rules)
                                      : presetFilter == "Playlists" ? SetupEngine.PlaylistPresets(State, coop)
-                                     : presetFilter == "Saved" ? SetupEngine.SavedPresets(State)
                                      : SetupEngine.StylePresets(State.Rules);
-            foreach (var p in list) RulePresets.Add(Item(p));
+            var all = list.Select(Item).ToList();
+            string q = (presetSearch ?? "").Trim();
+            foreach (var item in all)
+                if (q.Length == 0 || (item.Name + " " + item.Description + " " + item.Note + " " + ((Preset)item.Source).Name).IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0)
+                    RulePresets.Add(item);
+            PresetCountText = q.Length == 0 ? (all.Count == 1 ? T("1 preset") : F("{0} presets", all.Count)) : F("{0} of {1} presets", RulePresets.Count, all.Count);
+            Raise(nameof(PresetCountText));
+            MarkActivePresets();
             SquadPresets.Clear();
             foreach (var p in SetupEngine.SquadPresets(State.Rules, coop)) SquadPresets.Add(Item(p));
+            MarkActivePresets();
             presetKind = coop ? "Co-op" : "Versus";
             Raise(nameof(HasNoPresets));
         }
@@ -215,6 +235,13 @@ namespace SandstormModLauncher.ViewModels
         private void PresetsFollowScenario()
         {
             if (presetKind != (CurrentIsCoop ? "Co-op" : "Versus")) BuildPresets();
+        }
+
+        /// <summary>The preset in use stands out in the lists.</summary>
+        private void MarkActivePresets()
+        {
+            foreach (var item in RulePresets.Concat(SquadPresets))
+                item.IsActive = item.Source is Preset pr && pr.Kind == PresetKind.Match && string.Equals(pr.Name, Profile.RulesPresetName, StringComparison.Ordinal);
         }
 
         private void ApplyPreset(PresetItem item)
@@ -238,46 +265,15 @@ namespace SandstormModLauncher.ViewModels
                 if (mapChanged) SyncMapSelection();
                 BuildMutatorList();
                 BuildActiveMutators();
-                BuildMutatorPresets();
                 rulesMode = null;
                 SyncRulesModeToScenario();
                 RefreshRuleItems();
                 RaiseProfileFields();
+                MarkActivePresets();
                 RaiseMany(nameof(IsCoopMode), nameof(IsVersusMode), nameof(CurrentModeName), nameof(CanHardcore));
             }
             finally { suppressProfileSave = false; }
             ProfileChanged();
-        }
-
-        /// <summary>Saves the whole setup (map, scenario, conditions, bots, rules, mutators) as a preset.</summary>
-        private async Task SaveRulesPreset()
-        {
-            string suggestion = Profile.RulesPresetName ?? (SelectedMapTitle + " " + CurrentModeName).Trim();
-            string name = await Prompt("Save setup", "Saves the map, scenario, day or night, bots and enemies, every rule and the mutators. Name:", suggestion, "Save");
-            if (string.IsNullOrWhiteSpace(name)) return;
-            name = name.Trim();
-            var existing = State.Settings.RulesPresets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-                if (await Ask("Replace preset?", F("A preset called \"{0}\" already exists. Replace it?", existing.Name), "Replace") != "Replace") return;
-                State.Settings.RulesPresets.Remove(existing);
-            }
-            State.Settings.RulesPresets.Add(SetupEngine.Capture(Profile, name));
-            SetupEngine.MarkPreset(Profile, name, true);
-            Raise(nameof(ActivePresetName));
-            SaveNow();
-            if (PresetFilter == "Saved") BuildPresets(); else PresetFilter = "Saved";
-            ShowToast(F("Setup saved as \"{0}\"", name));
-        }
-
-        private async Task DeleteRulesPreset(PresetItem item)
-        {
-            if (!(item?.Source is Preset p) || p.Saved == null || !State.Settings.RulesPresets.Contains(p.Saved)) return;
-            if (await Ask("Delete preset", F("Delete \"{0}\"?", p.Name), "Delete") != "Delete") return;
-            State.Settings.RulesPresets.Remove(p.Saved);
-            if (string.Equals(Profile.RulesPresetName, p.Saved.Name, StringComparison.OrdinalIgnoreCase)) { Profile.RulesPresetName = null; Raise(nameof(ActivePresetName)); }
-            SaveNow();
-            BuildPresets();
         }
 
         private async Task ResetMode()
@@ -305,6 +301,7 @@ namespace SandstormModLauncher.ViewModels
             Profile.RulesPresetName = null;
             Profile.PresetCheck = null;
             Profile.PresetKeys = new List<string>();
+            Profile.PresetChanges = null;
             RefreshFromProfile(false);
         }
 

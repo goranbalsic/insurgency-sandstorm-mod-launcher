@@ -87,12 +87,12 @@ namespace SandstormModLauncher.Services
             "CurrentModeName", "RulesModeTitle", "SelectedScenarioId", "SelectedMapTitle", "SquadSummary", "MutatorSummary", "RulesSummary", "MapSummary",
             "ModeSummary", "PlanCommand", "PlanIni", "PlanAfterLoad", "PlanError", "CanLaunch", "RulesTabLabel", "RuleChangeCount", "HasNoPresets",
             "ActiveMutatorCount", "LaunchRuleset", "CustomIniMode", "CustomIniText", "ExtraUrlOptions", "GameModeOverride", "AfterLoadCommands",
-            "EnableCheatsAfterLoad", "SelectedProfile", "PresetFilter", "PlayTab", "Page", "SelectedMutatorPreset",
+            "EnableCheatsAfterLoad", "SelectedSetup", "SetupState", "SetupChanged", "PresetFilter", "PresetSearch", "PresetCountText", "PlayTab", "Page",
             "ServerName", "ServerJoinPassword", "ServerMaxPlayersText", "ServerPortText", "ServerQueryPortText", "ServerRconPortText",
             "ServerRconFromNetwork", "ServerShowLog", "ServerCheats", "ServerGslt", "ServerGameStats", "ServerExtraArgs", "ServerAdmins",
             "ServerModsEnabled", "ServerModIds", "ServerUseMapCycle", "ServerRemote", "ServerLocal", "ServerRemoteHost", "ServerRemotePortText",
             "ServerCommandLine", "ServerPlanError", "ServerMatchSummary", "ServerMatchMods", "MapCycleFile", "MapCycleIsDefault", "MapCycleCount",
-            "ServerRconAddress", "CanStartServer"
+            "ServerRconAddress", "CanStartServer", "PlayTarget", "PlaysOnServer", "MainActionTitle", "MainActionTip", "CanMainAction"
         };
 
         private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120), "Settings" };   // (a name that is also a text of the launcher)
@@ -160,12 +160,22 @@ namespace SandstormModLauncher.Services
             {
                 if (cmd == null || !cmd.CanExecute(param)) return;
                 cmd.Execute(param);
+                await Answer(answer, input);
+            }
+            // Answers the dialogs a step opened (answer = the button pressed, input = typed text); the first dialog gets
+            // the answer, a dialog after it (a name to save under) its primary button.
+            async Task Answer(string answer, string input)
+            {
                 for (int k = 0; k < 6; k++)
                 {
                     await Pump();
                     if (!vm.DialogOpen) break;
                     if (input != null && vm.DialogHasInput) vm.DialogInput = input;
-                    vm.DialogCommand.Execute(answer ?? vm.DialogPrimary);
+                    // The caption as shown (translated) when the answer is one of this dialog's buttons.
+                    string shown = answer == null ? vm.DialogPrimary : Loc.T(answer);
+                    if (answer != null && shown != vm.DialogPrimary && shown != vm.DialogSecondary && shown != vm.DialogTertiary) shown = vm.DialogPrimary;
+                    vm.DialogCommand.Execute(shown);
+                    answer = null;
                 }
             }
 
@@ -194,7 +204,7 @@ namespace SandstormModLauncher.Services
 
             for (int i = 1; i <= steps; i++)
             {
-                int op = rnd.Next(29);
+                int op = rnd.Next(30);
                 string name = "op" + op;
                 try
                 {
@@ -259,7 +269,8 @@ namespace SandstormModLauncher.Services
                         }
                         case 10:
                         {
-                            vm.PresetFilter = Pick(new[] { "Styles", "Official", "Playlists", "Saved", "Mine" });
+                            vm.PresetFilter = Pick(new[] { "Styles", "Official", "Playlists", "Playlists", "Saved", "Mine" });
+                            vm.PresetSearch = Pick(new[] { "", "", "", "", "chad", "hard", "frenzy", "zzz", "night" });
                             await Pump();
                             if (vm.RulePresets.Count == 0) { name = "rules presets " + vm.PresetFilter + " (none)"; break; }
                             var pr = Pick(vm.RulePresets);
@@ -307,18 +318,26 @@ namespace SandstormModLauncher.Services
                         case 16:
                         {
                             string n = Pick(Names);
-                            name = "save setup '" + n + "'";
-                            await Do(vm.SaveRulesPresetCommand, null, rnd.Next(5) == 0 ? "Cancel" : null, n);
+                            bool asNew = rnd.Next(2) == 0;
+                            name = (asNew ? "save setup as '" : "save setup '") + n + "'";
+                            string saveAnswer = rnd.Next(5) == 0 ? "Cancel" : null;
+                            string before = vm.SelectedSetup;
+                            int countBefore = state.Settings.RulesPresets.Count;
+                            await Do(asNew ? vm.SaveSetupAsCommand : vm.SaveSetupCommand, null, saveAnswer, n);
+                            bool saved = saveAnswer == null && (before != null && !asNew || n.Trim().Length > 0);
+                            if (saved)
+                            {
+                                string expect = !asNew && before != null ? before : state.Settings.RulesPresets.FirstOrDefault(r => r.Name.Equals(n.Trim().Length > 60 ? n.Trim().Substring(0, 60).TrimEnd() : n.Trim(), StringComparison.OrdinalIgnoreCase))?.Name;
+                                if (expect == null) Fail(name + ": nothing was saved");
+                                else if (vm.SelectedSetup != expect) Fail(name + ": saved, but the bar shows " + (vm.SelectedSetup ?? "nothing") + " instead of " + expect);
+                                else if (vm.SetupChanged) Fail(name + ": just saved, but shown as changed");
+                            }
                             break;
                         }
                         case 17:
                         {
-                            vm.PresetFilter = "Saved";
-                            await Pump();
-                            if (vm.RulePresets.Count == 0) break;
-                            var pr = Pick(vm.RulePresets);
-                            name = "delete saved " + pr.Name;
-                            await Do(vm.DeleteRulesPresetCommand, pr);
+                            name = "delete setup " + (vm.SelectedSetup ?? "(none)");
+                            await Do(vm.DeleteSetupCommand, null, rnd.Next(4) == 0 ? "Cancel" : null);
                             break;
                         }
                         case 18:
@@ -331,7 +350,7 @@ namespace SandstormModLauncher.Services
                         case 19:
                         {
                             name = "navigate";
-                            vm.Page = Pick(new[] { "Play", "Settings", "Mods", "Playlists" });
+                            vm.Page = Pick(new[] { "Play", "Settings", "Mods", "Playlists", "Server", "Live" });
                             vm.PlayTab = Pick(new[] { "Map", "Squad", "Rules", "Mods", "Live", "Advanced", "Playlists", "" });
                             if (vm.RuleCategories.Count > 0) vm.RuleCategory = Pick(vm.RuleCategories);
                             vm.RuleSearch = Pick(new[] { "", "", "bot", "zzz", "?" });
@@ -342,14 +361,30 @@ namespace SandstormModLauncher.Services
                         }
                         case 20:
                         {
-                            int k = rnd.Next(5);
+                            int k = rnd.Next(4);
                             string n = Pick(Names);
-                            name = new[] { "new profile ", "duplicate profile ", "rename profile ", "delete profile", "switch profile" }[k] + (k < 3 ? n : "");
-                            if (k == 0) await Do(vm.NewProfileCommand, null, null, n);
-                            else if (k == 1) await Do(vm.DuplicateProfileCommand, null, null, n);
-                            else if (k == 2) await Do(vm.RenameProfileCommand, null, null, n);
-                            else if (k == 3) { if (vm.ProfileNames.Count > 3) await Do(vm.DeleteProfileCommand, null); }
-                            else vm.SelectedProfile = Pick(vm.ProfileNames);
+                            name = new[] { "rename setup ", "new setup", "save setup as ", "undo setup changes" }[k] + (k == 0 || k == 2 ? n : "");
+                            if (k == 0) await Do(vm.RenameSetupCommand, null, null, n);
+                            else if (k == 1) await Do(vm.NewSetupCommand, null, rnd.Next(4) == 0 ? "Cancel" : null);
+                            else if (k == 2) await Do(vm.SaveSetupAsCommand, null, null, n);
+                            else
+                            {
+                                var loadedSetup = state.Settings.RulesPresets.FirstOrDefault(r => r.Name == vm.SelectedSetup);
+                                bool could = vm.RevertSetupCommand.CanExecute(null);
+                                string undoAnswer = rnd.Next(4) == 0 ? "Cancel" : null;
+                                string beforeUndo = SetupEngine.Fingerprint(vm.Profile);
+                                await Do(vm.RevertSetupCommand, null, undoAnswer);
+                                if (could && undoAnswer == null && loadedSetup?.Setup != null)
+                                {
+                                    var want = new Models.Profile();
+                                    SetupEngine.CopySetup(loadedSetup.Setup, want);
+                                    want.Mutators = want.Mutators.Where(id => state.FindMutator(id) != null).ToList();
+                                    SetupEngine.CleanRules(want.Rules, db);
+                                    if (SetupEngine.Fingerprint(vm.Profile) != SetupEngine.Fingerprint(want)) Fail(name + ": the changes were not undone\n" + FirstDifference(SetupEngine.Fingerprint(vm.Profile), SetupEngine.Fingerprint(want)));
+                                    if (vm.SetupChanged) Fail(name + ": undone, but still shown as changed");
+                                }
+                                else if (SetupEngine.Fingerprint(vm.Profile) != beforeUndo) Fail(name + ": nothing to undo or cancelled, but the setup changed");
+                            }
                             break;
                         }
                         case 21:
@@ -375,6 +410,33 @@ namespace SandstormModLauncher.Services
                             break;
                         }
                         case 23: name = "random mission"; await Do(vm.RandomMissionCommand, null); break;
+                        case 29:
+                        {
+                            // The big button: this PC or the server. Only "set up the server" is pressed here (it opens a page);
+                            // starting the game or the real server is never done by this test.
+                            vm.SetPlayTargetCommand.Execute(Pick(new[] { "Local", "Server", "Server", "bogus" }));
+                            await Pump();
+                            name = "play target " + vm.PlayTarget + " (" + vm.MainActionTitle + ")";
+                            if (vm.PlayTarget == "Local")
+                            {
+                                if (vm.MainActionTitle != vm.LaunchTitle) Fail(name + ": the button says " + vm.MainActionTitle + " instead of " + vm.LaunchTitle);
+                                if (vm.MainActionCommand.CanExecute(null) != vm.CanLaunch) Fail(name + ": the button can" + (vm.CanLaunch ? "not" : "") + " be pressed but launching can" + (vm.CanLaunch ? "" : "not"));
+                                break;
+                            }
+                            var plan = vm.CurrentPlan == null ? null : ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, state.Rules, "");
+                            bool planOk = plan?.IsValid == true;
+                            bool setUp = vm.ServerRemote ? string.IsNullOrWhiteSpace(state.Settings.ServerRemoteHost) || !planOk : !vm.ServerFound || !planOk;
+                            string want = setUp ? Loc.T("Set up the server") : vm.ServerRemote ? Loc.T("Load on the server") : Loc.T("Start the server");
+                            if (vm.MainActionTitle != want) Fail(name + ": the button says " + vm.MainActionTitle + " instead of " + want);
+                            if (setUp && vm.MainActionCommand.CanExecute(null))
+                            {
+                                vm.Page = "Play";
+                                vm.MainActionCommand.Execute(null);
+                                await Pump();
+                                if (vm.Page != "Server") Fail(name + ": pressed, but the Server page did not open");
+                            }
+                            break;
+                        }
                         case 28:
                         {
                             // Another language while everything else goes on: every text written in the pages follows it.
@@ -453,22 +515,60 @@ namespace SandstormModLauncher.Services
                         }
                         case 24:
                         {
-                            if (rnd.Next(2) == 0) { name = "save mutator preset"; await Do(vm.SaveMutatorPresetCommand, null, null, Pick(Names)); }
-                            else if (vm.MutatorPresetNames.Count > 0) { name = "load mutator preset"; vm.SelectedMutatorPreset = Pick(vm.MutatorPresetNames); }
+                            // Playlists one after another: nothing a playlist added may stay once the next one is applied.
+                            vm.PresetFilter = "Playlists";
+                            vm.PresetSearch = "";
+                            await Pump();
+                            if (vm.RulePresets.Count == 0) break;
+                            var before = vm.Profile.Clone("before");
+                            var a = Pick(vm.RulePresets);
+                            var b = Pick(vm.RulePresets);
+                            name = "playlists " + a.Name + " then " + b.Name;
+                            await Do(vm.ApplyPresetCommand, a);
+                            await Do(vm.ApplyPresetCommand, b);
+                            var direct = before.Clone("direct");
+                            SetupEngine.Apply(direct, state, (Preset)b.Source);
+                            string got = SetupEngine.Fingerprint(vm.Profile), want = SetupEngine.Fingerprint(direct);
+                            if (got != want) Fail(name + ": the setup is not the same as with " + b.Name + " alone\n" + FirstDifference(got, want));
                             break;
                         }
                         default:
                         {
-                            // A saved setup is loaded back exactly.
-                            vm.PresetFilter = "Saved";
-                            await Pump();
-                            var saved = vm.RulePresets.ToList();
-                            if (saved.Count == 0) break;
-                            var pr = Pick(saved);
-                            name = "load saved " + pr.Name;
-                            var rp = ((Preset)pr.Source).Saved;
-                            await Do(vm.ApplyPresetCommand, pr);
+                            // A saved setup is loaded back exactly (picked in the bar at the top).
+                            if (vm.SavedSetupNames.Count == 0) break;
+                            string pick = Pick(vm.SavedSetupNames);
+                            var rp = state.Settings.RulesPresets.First(r => r.Name == pick);
+                            string answer = Pick(new[] { "Load", "Load", "Load", "Cancel", "Save first" });
+                            name = "load setup " + pick + " (" + answer + ")";
+                            var beforeLoad = SetupEngine.Fingerprint(vm.Profile);
+                            string shownBefore = vm.SelectedSetup;
+                            bool wasChanged = vm.SetupChanged && shownBefore != pick;
+                            vm.SelectedSetup = pick;
+                            await Answer(answer, Pick(Names));
                             var p = vm.Profile;
+                            if (pick == shownBefore)
+                            {
+                                // The one already selected: picking it again changes nothing (the list does not reload it).
+                                if (SetupEngine.Fingerprint(p) != beforeLoad) Fail(name + ": the setup already selected was picked again and the setup on screen changed");
+                                break;
+                            }
+                            if (wasChanged && answer == "Cancel")
+                            {
+                                // Unsaved changes and Cancel: nothing is loaded.
+                                if (SetupEngine.Fingerprint(p) != beforeLoad) Fail(name + ": cancelled, but the setup on screen changed");
+                                if (vm.SelectedSetup != shownBefore) Fail(name + ": cancelled, but the bar shows " + (vm.SelectedSetup ?? "nothing") + " instead of " + (shownBefore ?? "nothing"));
+                                break;
+                            }
+                            if (vm.SelectedSetup != pick) { if (!(wasChanged && answer != "Load")) Fail(name + ": the bar shows " + (vm.SelectedSetup ?? "nothing")); break; }
+                            if (rp.Setup != null)
+                            {
+                                var want = new Models.Profile();
+                                SetupEngine.CopySetup(rp.Setup, want);
+                                want.Mutators = want.Mutators.Where(id => state.FindMutator(id) != null).ToList();
+                                SetupEngine.CleanRules(want.Rules, db);
+                                if (SetupEngine.Fingerprint(p) != SetupEngine.Fingerprint(want)) Fail(name + ": not loaded exactly\n" + FirstDifference(SetupEngine.Fingerprint(p), SetupEngine.Fingerprint(want)));
+                                if (vm.SetupChanged) Fail(name + ": just loaded, but shown as changed");
+                            }
                             if (Canon(p.Rules) != Canon(Cleaned(rp.Rules, db))) Fail(name + ": rules differ from the saved setup\n  saved " + Canon(rp.Rules) + "\n  now   " + Canon(p.Rules));
                             if (rp.ScenarioId != null && !string.Equals(p.ScenarioId, rp.ScenarioId, StringComparison.OrdinalIgnoreCase) && state.AllScenarios.Any(s => s.Id == rp.ScenarioId))
                                 Fail(name + ": scenario " + p.ScenarioId + " instead of " + rp.ScenarioId);
@@ -629,12 +729,33 @@ namespace SandstormModLauncher.Services
             if (vm.ActivePresetName != SetupEngine.PresetLabel(p)) fail("preset name shown " + vm.ActivePresetName + ", stored " + p.RulesPresetName);
             if (p.RulesPresetName != null && p.PresetCheck != null && vm.ActivePresetName != Core.Loc.F("{0} (changed)", Core.Loc.T(p.RulesPresetName)) && SetupEngine.PresetCheck(p, p.PresetCheck.StartsWith("S|")) != p.PresetCheck)
                 fail("setup changed after " + p.RulesPresetName + " but the summary does not say so");
-            if (vm.PresetFilter == "Saved" && vm.RulePresets.Count != state.Settings.RulesPresets.Count) fail("Saved tab shows " + vm.RulePresets.Count + " of " + state.Settings.RulesPresets.Count + " saved setups");
+            // Saved setups: the bar lists them all, shows the loaded one, and says "Changed" exactly when it differs from it.
+            if (!vm.SavedSetupNames.OrderBy(x => x).SequenceEqual(state.Settings.RulesPresets.Select(r => r.Name).OrderBy(x => x))) fail("setup list differs from the saved setups");
+            var loaded = state.Settings.RulesPresets.FirstOrDefault(r => string.Equals(r.Name, p.SetupName, StringComparison.OrdinalIgnoreCase));
+            if (vm.SelectedSetup != loaded?.Name) fail("the bar shows " + (vm.SelectedSetup ?? "nothing") + " but the setup came from " + (loaded?.Name ?? "nothing"));
+            if (loaded != null && (vm.SetupState == "") != (SetupEngine.Fingerprint(p) == p.SetupCheck)) fail("the bar says \"" + vm.SetupState + "\" but the setup " + (SetupEngine.Fingerprint(p) == p.SetupCheck ? "is" : "is not") + " as saved");
+            if (state.Settings.RulesPresets.Select(r => r.Name.ToLowerInvariant()).Distinct().Count() != state.Settings.RulesPresets.Count) fail("two saved setups have the same name");
+            if (state.Settings.MutatorPresets.Count > 0) fail("mutator presets came back");
+            if (p.SetupName != null && loaded == null) fail("the setup still points at the deleted saved setup " + p.SetupName);
+            // The preset list is exactly the presets of its tab that match the search.
+            {
+                bool coop = SetupEngine.CurrentMode(p, state)?.Coop ?? true;
+                var list = vm.PresetFilter == "Official" ? SetupEngine.OfficialPresets(state.Rules) : vm.PresetFilter == "Playlists" ? SetupEngine.PlaylistPresets(state, coop) : SetupEngine.StylePresets(state.Rules);
+                string q = (vm.PresetSearch ?? "").Trim();
+                var wantNames = list.Select(x => Loc.T(x.Name)).Where((x, i) => q.Length == 0 || (x + " " + Loc.T(list[i].Description) + " " + Loc.T(list[i].Note) + " " + list[i].Name).IndexOf(q, StringComparison.CurrentCultureIgnoreCase) >= 0).ToList();
+                var shownNames = vm.RulePresets.Select(x => x.Name).ToList();
+                if (!wantNames.SequenceEqual(shownNames))
+                {
+                    int at = 0; while (at < Math.Min(wantNames.Count, shownNames.Count) && wantNames[at] == shownNames[at]) at++;
+                    fail("preset list (" + vm.PresetFilter + ", search '" + q + "', " + (coop ? "co-op" : "versus") + ") shows " + shownNames.Count + " of " + wantNames.Count
+                         + "; first difference at " + at + ": " + (at < shownNames.Count ? shownNames[at] : "-") + " / " + (at < wantNames.Count ? wantNames[at] : "-"));
+                }
+            }
+            if (state.Store.Profiles.Count != 1) fail(state.Store.Profiles.Count + " profiles; there is only the setup on screen now");
+            if (vm.PresetFilter != "Styles" && vm.PresetFilter != "Official" && vm.PresetFilter != "Playlists") fail("preset list " + vm.PresetFilter);
             if (vm.MutatorsEnabled != p.MutatorsEnabled || vm.Night != (p.Lighting == "Night") || vm.MaxPlayers != p.MaxPlayers) fail("conditions on screen differ from the profile");
 
-            // Profiles: the list matches the store, every profile has its own file, and the files hold what is in memory.
-            if (!vm.ProfileNames.OrderBy(x => x).SequenceEqual(state.Store.Profiles.Select(x => x.Name).OrderBy(x => x))) fail("profile list differs from the stored profiles");
-            if (vm.SelectedProfile != p.Name) fail("selected profile " + vm.SelectedProfile + " but the active one is " + p.Name);
+            // The setup on screen has its file, and the file holds what is in memory.
             var files = state.Store.Profiles.Select(x => Store.ProfilePath(x.Name)).ToList();
             if (files.Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count) fail("two profiles share a file");
             vm.SaveNow();
@@ -655,6 +776,19 @@ namespace SandstormModLauncher.Services
             var copy = rules.ToDictionary(k => k.Key, k => new Dictionary<string, string>(k.Value, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
             SetupEngine.CleanRules(copy, db);
             return copy;
+        }
+
+        /// <summary>The first line where two fingerprints differ, for a readable failure.</summary>
+        private static string FirstDifference(string got, string want)
+        {
+            var a = got.Split('\n');
+            var b = want.Split('\n');
+            for (int i = 0; i < Math.Max(a.Length, b.Length); i++)
+            {
+                string x = i < a.Length ? a[i] : "", y = i < b.Length ? b[i] : "";
+                if (x != y) return "  got  " + x + "\n  want " + y;
+            }
+            return "  (same)";
         }
 
         private static string Canon(Dictionary<string, Dictionary<string, string>> rules) =>

@@ -40,10 +40,8 @@ namespace SandstormModLauncher.ViewModels
             watchTimer.Tick += async (s, e) => { watchTimer.Stop(); await RescanMods(true); };
 
             NavigateCommand = new RelayCommand(p => Page = p as string ?? "Play");
-            NewProfileCommand = new AsyncCommand(NewProfile, () => CanSwitchProfile);
-            DuplicateProfileCommand = new AsyncCommand(DuplicateProfile, () => CanSwitchProfile);
-            RenameProfileCommand = new AsyncCommand(RenameProfile, () => CanSwitchProfile);
-            DeleteProfileCommand = new AsyncCommand(DeleteProfile, () => State.Store.Profiles.Count > 1 && CanSwitchProfile);
+            InitSetupCommands();
+            InitPlayTargetCommands();
             DialogCommand = new RelayCommand(p => CloseDialog(p as string));
             InitPlayCommands();
             InitMutatorCommands();
@@ -66,6 +64,7 @@ namespace SandstormModLauncher.ViewModels
                 if (!State.Store.IsLoaded) State.Store.Load();
                 State.Rules = RulesDb.LoadEmbedded();
                 SetupEngine.CleanStored(State);
+                SetupEngine.MigrateToSetups(State);
                 State.Install = GameInstall.Detect(State.Settings.GameDirOverride);
                 AppLog.Info($"Game: {State.Install.GameDir ?? "not found"} ({State.Install.Store})");
                 Monitor = new GameMonitor();
@@ -92,10 +91,9 @@ namespace SandstormModLauncher.ViewModels
                     State.Rebuild();
                 });
 
-                RebuildProfilesList();
+                RebuildSetupList();
                 ApplyProfileToUi();
                 BuildMods();
-                BuildMutatorPresets();
                 RefreshConsoleKeyStatus();
                 RefreshKeyBackups();
                 StartModWatcher();
@@ -104,7 +102,7 @@ namespace SandstormModLauncher.ViewModels
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
                 BuildLanguages();
-                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
+                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" || State.Settings.LastPage == "Live" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 _ = RefreshRconStatus();
@@ -199,10 +197,11 @@ namespace SandstormModLauncher.ViewModels
                 if (!Set(ref page, value)) return;
                 State.Settings.LastPage = value;
                 SaveSettingsSoon();
+                if (page == "Live") RefreshLive();
             }
         }
 
-        public bool Loading { get => loading; set { if (Set(ref loading, value)) Raise(nameof(CanSwitchProfile)); } }
+        public bool Loading { get => loading; set { if (Set(ref loading, value)) Raise(nameof(CanChangeSetup)); } }
         public string LoadingText { get => loadingText; set => Set(ref loadingText, value); }
         public string AppVersion => "v" + typeof(MainViewModel).Assembly.GetName().Version.ToString(3);
 
@@ -320,40 +319,10 @@ namespace SandstormModLauncher.ViewModels
             t?.TrySetResult(result != null && dialogButtons.TryGetValue(result, out var english) ? english : result);
         }
 
-        // ------------------------------------------------------------------ profiles
+        // ------------------------------------------------------------------ the setup on screen (saved setups: MainViewModel.Setups)
 
-        public ObservableCollection<string> ProfileNames { get; } = new ObservableCollection<string>();
-        public ICommand NewProfileCommand { get; }
-        public ICommand DuplicateProfileCommand { get; }
-        public ICommand RenameProfileCommand { get; }
-        public ICommand DeleteProfileCommand { get; }
-
+        /// <summary>The setup being worked on. It is kept on its own between runs; saved setups are copies of it.</summary>
         public Profile Profile => State.Store.Active;
-
-        /// <summary>Profiles cannot change while the catalog is being read or a launch is running.</summary>
-        public bool CanSwitchProfile => !loading && !launchRunning;
-
-        public string SelectedProfile
-        {
-            get => State.Settings.ActiveProfile;
-            set
-            {
-                if (value == null || value == State.Settings.ActiveProfile) return;
-                SaveNow();
-                State.Settings.ActiveProfile = value;
-                SaveSettingsSoon();
-                Raise();
-                ApplyProfileToUi();
-                ShowToast(F("Profile \"{0}\" loaded", value));
-            }
-        }
-
-        private void RebuildProfilesList()
-        {
-            ProfileNames.Clear();
-            foreach (var p in State.Store.Profiles.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)) ProfileNames.Add(p.Name);
-            Raise(nameof(SelectedProfile));
-        }
 
         private void ApplyProfileToUi()
         {
@@ -371,60 +340,13 @@ namespace SandstormModLauncher.ViewModels
             UpdatePlan();
         }
 
-        private async Task NewProfile()
-        {
-            string name = await Prompt("New profile", "Name for the new profile:", T("My setup"), "Create");
-            if (string.IsNullOrWhiteSpace(name)) return;
-            name = UniqueProfileName(name);
-            var p = new Profile { Name = name, MapKey = Profile.MapKey, ScenarioId = Profile.ScenarioId, Lighting = Profile.Lighting };
-            State.Store.Profiles.Add(p);
-            State.Store.SaveProfile(p);
-            RebuildProfilesList();
-            SelectedProfile = name;
-        }
-
-        private async Task DuplicateProfile()
-        {
-            string name = await Prompt("Duplicate profile", "Name for the copy:", Profile.Name + T(" copy"), "Duplicate");
-            if (string.IsNullOrWhiteSpace(name)) return;
-            name = UniqueProfileName(name);
-            var p = Profile.Clone(name);
-            State.Store.Profiles.Add(p);
-            State.Store.SaveProfile(p);
-            RebuildProfilesList();
-            SelectedProfile = name;
-        }
-
-        private async Task RenameProfile()
-        {
-            string name = await Prompt("Rename profile", "New name:", Profile.Name, "Rename");
-            if (string.IsNullOrWhiteSpace(name) || name == Profile.Name) return;
-            name = UniqueProfileName(name, Profile);
-            State.Store.RenameProfile(Profile, name);
-            State.Settings.ActiveProfile = name;
-            SaveSettingsSoon();
-            RebuildProfilesList();
-        }
-
-        private async Task DeleteProfile()
-        {
-            if (await Ask("Delete profile", F("Delete \"{0}\"? This cannot be undone.", Profile.Name), "Delete") != "Delete") return;
-            State.Store.DeleteProfile(Profile);
-            State.Settings.ActiveProfile = State.Store.Profiles[0].Name;
-            SaveSettingsSoon();
-            RebuildProfilesList();
-            ApplyProfileToUi();
-        }
-
-        /// <summary>The name, with a number added when another profile already has it (renaming ignores the profile itself).</summary>
-        private string UniqueProfileName(string name, Profile self = null) => State.Store.UniqueName(name, self);
-
         public void ProfileChanged()
         {
             if (suppressProfileSave) return;
             saveTimer.Stop();
             saveTimer.Start();
             UpdatePlan();
+            RaiseSetup();
         }
 
         private void SaveSettingsSoon()

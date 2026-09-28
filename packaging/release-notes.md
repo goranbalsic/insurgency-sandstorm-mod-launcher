@@ -1,4 +1,14 @@
-Launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline, and the same setup on the dedicated server.
+Local play, the dedicated server, mods, match rules and live control for Insurgency: Sandstorm, in one app.
+
+**Changes in 1.8.0**
+
+- New name: Sandstorm Local, Server & Mod Manager (formerly Sandstorm Mod Launcher). Your settings, saved setups and updates carry on as before.
+- Presets now replace each other cleanly: a rules preset or playlist takes the previous one's rules and mutators back out, and turns off the night and hardcore it turned on, before it puts in its own. Before, a mutator such as Hardcore stayed when you switched to a preset without mutators. Mutators, night and bot values you changed by hand stay.
+- One way to keep a match: saved setups. The Setup bar at the top saves everything (map, scenario, day or night, bots, every rule, mutators and the Advanced options), loads a saved setup back exactly and shows when the setup on screen has unsaved changes. Profiles and mutator presets are gone; the ones you had are now saved setups with the same names, so nothing is lost.
+- The launch button has a second choice: "Start the server" runs the match on your dedicated server (the Server page opens first when the server is not set up yet).
+- Live is its own page, between Server and Settings.
+- Installed mods only lists mods that are on your PC; mods you deleted or unsubscribed from no longer show up anywhere.
+- Presets can be searched, the one in use is marked, and three night playlists that were missing (Night Maps Normal, Night Battle, Vampire TDM) are listed.
 
 **Changes in 1.7.0**
 

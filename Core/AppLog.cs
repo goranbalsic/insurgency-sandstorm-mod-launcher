@@ -32,7 +32,7 @@ namespace SandstormModLauncher.Core
                 sessionPath = Path.Combine(sessions, DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".log");
                 foreach (var old in Directory.GetFiles(sessions, "*.log").OrderByDescending(f => f).Skip(40)) File.Delete(old);
                 var v = typeof(AppLog).Assembly.GetName().Version;
-                Write("----", $"Sandstorm Mod Launcher {v.ToString(3)} started {DateTime.Now:yyyy-MM-dd HH:mm:ss} | {Environment.OSVersion.VersionString} | session {Path.GetFileName(sessionPath)}", true);
+                Write("----", $"Sandstorm Local, Server & Mod Manager {v.ToString(3)} started {DateTime.Now:yyyy-MM-dd HH:mm:ss} | {Environment.OSVersion.VersionString} | session {Path.GetFileName(sessionPath)}", true);
             }
             catch { filePath = null; }
         }

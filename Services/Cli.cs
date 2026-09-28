@@ -269,6 +269,19 @@ namespace SandstormModLauncher.Services
                         // translation-template [repo folder] [out.csv]: every English text of the launcher, from its source
                         save = false;
                         return TranslationTemplate.Write(A(1) ?? ".", A(2) ?? Path.Combine(A(1) ?? ".", "Resources", "Languages", "template.csv"), print);
+                    case "assets":
+                    {
+                        // assets <text>: game assets whose path or class contains the text (to check the rules database against a game update)
+                        save = false;
+                        string filter = A(1) ?? "";
+                        var paks = Directory.GetFiles(state.Install.PaksDir, "*.pak").Select(PakFile.Open).ToList();
+                        byte[] ar = null;
+                        foreach (var pk in paks) if (pk.TryRead("Insurgency/AssetRegistry.bin", out ar)) break;
+                        if (ar == null) { print("No asset registry found"); return 1; }
+                        foreach (var a in AssetRegistry.Parse(ar).Where(a => (a.ObjectPath + " " + a.AssetClass).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).OrderBy(a => a.ObjectPath))
+                            print(a.AssetClass + "  " + a.ObjectPath + (a.Tags.Count > 0 ? "  [" + string.Join("; ", a.Tags.Select(t => t.Key + "=" + (t.Value.Length > 80 ? t.Value.Substring(0, 80) + "..." : t.Value))) + "]" : ""));
+                        return 0;
+                    }
                     case "translation-check":
                     {
                         // translation-check [repo folder]: fails when texts were changed without making the table again
@@ -318,6 +331,7 @@ namespace SandstormModLauncher.Services
             state.Store.Load();
             state.Rules = RulesDb.LoadEmbedded();
             SetupEngine.CleanStored(state);
+            SetupEngine.MigrateToSetups(state);
             state.Install = GameInstall.Detect(state.Settings.GameDirOverride);
             string cache = GameInstall.DemoCacheDir ?? AppPaths.CacheDir;
             state.Official = GameCatalog.Load(state.Install, cache, m => { });

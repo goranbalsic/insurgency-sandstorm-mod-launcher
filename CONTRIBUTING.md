@@ -11,7 +11,7 @@ Forks and pull requests are welcome. New features, fixes and support for more ma
 ## Before you open a pull request
 
 - Run the tests that fit your change. Each one prints `ALL CHECKS PASSED` when it is happy:
-  - `--data <copy of a data folder> --cli torture 3000 1`: the setup logic (maps, rules, presets, mutators, profiles)
+  - `--data <copy of a data folder> --cli torture 3000 1`: the setup logic (maps, rules, presets, mutators, saved setups)
   - `--data <copy of a data folder> --ui-torture out.txt 1000 1`: the window, driven at random
   - `--data <copy of a data folder> --cli rcon-torture 400 1`: the RCON code, against a fake game that misbehaves
   - `--cli translation-check <repo folder>`: the translation table is up to date (after changing texts, make it again with `--cli translation-template <repo folder>`)

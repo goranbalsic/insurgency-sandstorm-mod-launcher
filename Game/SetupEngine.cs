@@ -194,6 +194,7 @@ namespace SandstormModLauncher.Game
             p.RulesPresetName = null;
             p.PresetKeys = new List<string>();
             p.PresetCheck = null;
+            p.PresetChanges = null;
         }
 
         /// <summary>
@@ -245,22 +246,58 @@ namespace SandstormModLauncher.Game
                 }
                 case PresetKind.Match:
                 {
-                    var previous = new HashSet<string>(p.PresetKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
-                    ClearRules(p, (cls, key) => cls != "*" && (!IsSquadKey(key) || previous.Contains(cls + "|" + key)));
+                    // First the previous preset comes back out: its rules, its mutators, and the day/night, hardcore and
+                    // squad values it changed (each only while it is still as the preset left it).
+                    UndoPreset(p, s);
+                    ClearRules(p, (cls, key) => cls != "*" && !IsSquadKey(key));
+                    var changes = new PresetChanges();
                     var set = new List<string>();
                     foreach (var mode in preset.Rules)
                         foreach (var kv in mode.Value)
                         {
                             if (!MatchPresetSets(db, mode.Key, kv.Key, kv.Value)) continue;
+                            string before = GetRule(p, mode.Key, kv.Key);
                             SetRule(p, db, mode.Key, kv.Key, kv.Value);
-                            if (GetRule(p, mode.Key, kv.Key) != null) set.Add(mode.Key + "|" + kv.Key);
+                            string after = GetRule(p, mode.Key, kv.Key);
+                            if (after != null) set.Add(mode.Key + "|" + kv.Key);
+                            // Squad values survive a match preset's clean-up, so the preset remembers the value it replaced.
+                            if (IsSquadKey(kv.Key) && before != after && !changes.RulesBefore.ContainsKey(mode.Key + "|" + kv.Key))
+                            {
+                                changes.RulesBefore[mode.Key + "|" + kv.Key] = before;
+                                changes.RulesAfter[mode.Key + "|" + kv.Key] = after;
+                            }
                         }
                     p.PresetKeys = set;
-                    if (preset.Mutators != null) SetMutators(p, s, preset.Mutators, missing);
+                    if (preset.Mutators != null)
+                    {
+                        // The preset's mutators join the ones picked by hand; the next preset takes out only the preset's.
+                        var list = new List<string>(p.Mutators);
+                        foreach (var id in preset.Mutators)
+                        {
+                            var info = s.FindMutator(id);
+                            if (info == null) { if (!missing.Contains(id, StringComparer.OrdinalIgnoreCase)) missing.Add(id); continue; }
+                            if (list.Contains(info.Id, StringComparer.OrdinalIgnoreCase)) continue;
+                            list.Add(info.Id);
+                            changes.AddedMutators.Add(info.Id);
+                        }
+                        p.Mutators = list;
+                        p.MutatorPreset = null;
+                    }
                     var current = CurrentMode(p, s);
                     bool fits = current == null || preset.ForModes.Count == 0 || preset.ForModes.Contains(current.Cls, StringComparer.OrdinalIgnoreCase);
-                    if (fits && preset.Night) p.Lighting = "Night";
-                    if (fits && preset.HardcoreCheckpoint && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode") p.Hardcore = true;
+                    if (fits && preset.Night && p.Lighting != "Night")
+                    {
+                        changes.LightingBefore = p.Lighting;
+                        p.Lighting = "Night";
+                        changes.LightingAfter = p.Lighting;
+                    }
+                    if (fits && preset.HardcoreCheckpoint && !p.Hardcore && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode")
+                    {
+                        changes.HardcoreBefore = p.Hardcore;
+                        p.Hardcore = true;
+                        changes.HardcoreAfter = true;
+                    }
+                    p.PresetChanges = changes;
                     MarkPreset(p, preset.Name, false);
                     string text = preset.Mutators == null ? F("{0} applied", T(preset.Name))
                                  : p.Mutators.Count == 0 ? F("{0} applied with no mutators", T(preset.Name))
@@ -274,32 +311,123 @@ namespace SandstormModLauncher.Game
                 {
                     var saved = preset.Saved;
                     ResetAll(p);
-                    foreach (var mode in saved.Rules) foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
-                    SetMutators(p, s, saved.Mutators, missing);
-                    if (saved.FullSetup)
+                    if (saved.Setup != null)
                     {
-                        p.MapKey = saved.MapKey;
-                        p.ScenarioId = saved.ScenarioId;
-                        p.CustomMapId = saved.CustomMapId;
-                        p.Lighting = saved.Lighting == "Night" ? "Night" : "Day";
-                        p.Hardcore = saved.Hardcore;
-                        if (saved.MaxPlayers > 0) p.MaxPlayers = saved.MaxPlayers;
-                        p.MutatorsEnabled = saved.MutatorsEnabled;
+                        // 1.8.0+: the whole setup, Advanced options included.
+                        CopySetup(saved.Setup, p);
+                        p.Rules = new Dictionary<string, Dictionary<string, string>>();
+                        foreach (var mode in saved.Setup.Rules ?? new Dictionary<string, Dictionary<string, string>>())
+                            foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
+                        SetMutators(p, s, saved.Setup.Mutators, missing);
+                        if (p.CustomMapId != null && !s.Settings.CustomMaps.Any(c => c.Id == p.CustomMapId)) p.CustomMapId = null;
+                        if (p.MaxPlayers < 1 || p.MaxPlayers > 64) p.MaxPlayers = 8;
+                        p.Lighting = p.Lighting == "Night" ? "Night" : "Day";
                     }
-                    MarkPreset(p, saved.Name, true);
+                    else
+                    {
+                        foreach (var mode in saved.Rules) foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
+                        SetMutators(p, s, saved.Mutators, missing);
+                        if (saved.FullSetup)
+                        {
+                            p.MapKey = saved.MapKey;
+                            p.ScenarioId = saved.ScenarioId;
+                            p.CustomMapId = saved.CustomMapId;
+                            p.Lighting = saved.Lighting == "Night" ? "Night" : "Day";
+                            p.Hardcore = saved.Hardcore;
+                            if (saved.MaxPlayers > 0 && saved.MaxPlayers <= 64) p.MaxPlayers = saved.MaxPlayers;
+                            p.MutatorsEnabled = saved.MutatorsEnabled;
+                        }
+                    }
+                    MarkSetup(p, saved.Name);
                     return F("{0} loaded", saved.Name) + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
                 }
             }
         }
 
-        /// <summary>The whole setup as a saved preset (map, scenario, conditions, every rule, mutators).</summary>
+        /// <summary>
+        /// Takes the last match preset back out of the setup: the mutators it added, and the day/night, hardcore and
+        /// squad values it changed, each only while it is still as the preset left it (the player's own changes stay).
+        /// </summary>
+        public static void UndoPreset(Profile p, AppState s)
+        {
+            var c = p.PresetChanges;
+            if (c == null)
+            {
+                // A setup from before 1.8.0: the preset's squad values simply go (as they did then).
+                var old = new HashSet<string>(p.PresetKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+                if (old.Count > 0) ClearRules(p, (cls, key) => IsSquadKey(key) && old.Contains(cls + "|" + key));
+                return;
+            }
+            foreach (var kv in c.RulesAfter ?? new Dictionary<string, string>())
+            {
+                int bar = kv.Key.IndexOf('|');
+                if (bar <= 0) continue;
+                string cls = kv.Key.Substring(0, bar), key = kv.Key.Substring(bar + 1);
+                if (GetRule(p, cls, key) != kv.Value) continue;   // changed by hand since
+                c.RulesBefore.TryGetValue(kv.Key, out var before);
+                SetRule(p, s.Rules, cls, key, before);
+            }
+            if (c.AddedMutators != null && c.AddedMutators.Count > 0)
+                p.Mutators = p.Mutators.Where(m => !c.AddedMutators.Contains(m, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (c.LightingAfter != null && p.Lighting == c.LightingAfter) p.Lighting = c.LightingBefore == "Night" ? "Night" : "Day";
+            if (c.HardcoreAfter.HasValue && p.Hardcore == c.HardcoreAfter.Value) p.Hardcore = c.HardcoreBefore ?? false;
+            p.PresetChanges = null;
+            p.PresetKeys = new List<string>();
+        }
+
+        private static readonly HashSet<string> TrackingFields = new HashSet<string>
+            { nameof(Profile.Name), nameof(Profile.RulesPresetName), nameof(Profile.PresetKeys), nameof(Profile.PresetCheck),
+              nameof(Profile.PresetChanges), nameof(Profile.SetupName), nameof(Profile.SetupCheck), nameof(Profile.MutatorPreset) };
+
+        /// <summary>Every setting of the setup from one profile to another (not its name or what tracks presets and saves).</summary>
+        public static void CopySetup(Profile from, Profile to)
+        {
+            var copy = Json.Deserialize<Profile>(Json.Serialize(from));
+            foreach (var prop in typeof(Profile).GetProperties())
+                if (prop.CanRead && prop.CanWrite && !TrackingFields.Contains(prop.Name)) prop.SetValue(to, prop.GetValue(copy));
+            to.Mutators = to.Mutators ?? new List<string>();
+            to.Rules = to.Rules ?? new Dictionary<string, Dictionary<string, string>>();
+        }
+
+        /// <summary>The setup as text, without what tracks presets and saves: equal text = the same match.</summary>
+        public static string Fingerprint(Profile p)
+        {
+            var copy = new Profile();
+            CopySetup(p, copy);
+            copy.Name = "";
+            var sb = new System.Text.StringBuilder();
+            foreach (var prop in typeof(Profile).GetProperties().Where(x => x.CanRead && !TrackingFields.Contains(x.Name)).OrderBy(x => x.Name))
+            {
+                object v = prop.GetValue(copy);
+                if (v is Dictionary<string, Dictionary<string, string>> rules)
+                    v = string.Join(";", rules.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase).SelectMany(m => m.Value.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase).Select(kv => m.Key + "." + kv.Key + "=" + kv.Value)));
+                else if (v is List<string> list) v = string.Join(",", list);
+                sb.Append(prop.Name).Append('=').Append(v).Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Remembers that the setup is (now) the saved setup of that name.</summary>
+        public static void MarkSetup(Profile p, string name)
+        {
+            p.SetupName = name;
+            p.SetupCheck = Fingerprint(p);
+        }
+
+        /// <summary>True when the setup differs from the saved setup it was loaded from or saved as.</summary>
+        public static bool SetupChanged(Profile p) => p.SetupName != null && p.SetupCheck != Fingerprint(p);
+
+        /// <summary>The whole setup as a saved setup: map, scenario, conditions, bots, every rule, mutators and the Advanced options.</summary>
         public static RulesPreset Capture(Profile p, string name)
         {
+            var setup = new Profile();
+            CopySetup(p, setup);
+            setup.Name = name;
             var r = new RulesPreset
             {
                 Name = name, FullSetup = true, MapKey = p.MapKey, ScenarioId = p.ScenarioId, CustomMapId = p.CustomMapId,
                 Lighting = p.Lighting, Hardcore = p.Hardcore, MaxPlayers = p.MaxPlayers, MutatorsEnabled = p.MutatorsEnabled,
-                Mutators = new List<string>(p.Mutators),
+                Mutators = new List<string>(p.Mutators), Setup = setup,
             };
             foreach (var kv in p.Rules) r.Rules[kv.Key] = new Dictionary<string, string>(kv.Value, StringComparer.OrdinalIgnoreCase);
             return r;
@@ -408,7 +536,8 @@ namespace SandstormModLauncher.Game
         public static List<Preset> PlaylistPresets(AppState s, bool coopFirst)
         {
             var db = s.Rules;
-            return db.Playlists.Where(pl => pl.Mutators.Count > 0 || pl.CoopRules.Count > 0 || !string.IsNullOrEmpty(pl.Ruleset))
+            return db.Playlists.Where(pl => pl.Mutators.Count > 0 || pl.CoopRules.Count > 0 || !string.IsNullOrEmpty(pl.Ruleset) || pl.Lighting == "Night"
+                                            || pl.GameAlias == "CheckpointHardcore")
                 .OrderBy(pl => pl.IsCoop == coopFirst ? 0 : 1).ThenBy(pl => pl.Title, StringComparer.OrdinalIgnoreCase)
                 .Select(pl =>
                 {
@@ -485,6 +614,74 @@ namespace SandstormModLauncher.Game
                 if (map.Count == 0) rules.Remove(cls);
             }
             return changed;
+        }
+
+        /// <summary>A name no saved setup has yet ("Name", "Name 2", ...).</summary>
+        public static string UniqueSetupName(AppState s, string name)
+        {
+            string baseName = string.IsNullOrWhiteSpace(name) ? "My setup" : name.Trim();
+            if (baseName.Length > 60) baseName = baseName.Substring(0, 60).TrimEnd();
+            string n = baseName;
+            for (int i = 2; s.Settings.RulesPresets.Any(r => string.Equals(r.Name, n, StringComparison.OrdinalIgnoreCase)); i++) n = baseName + " " + i;
+            return n;
+        }
+
+        /// <summary>
+        /// 1.8.0 has one way to keep a setup: saved setups. Profiles other than the one in use (and every profile with a
+        /// name of its own) and mutator presets from older versions become saved setups, so nothing is lost.
+        /// Returns how many were converted.
+        /// </summary>
+        public static int MigrateToSetups(AppState s, bool force = false)
+        {
+            // Once only: afterwards the setup on screen keeps its old profile name, which must not be converted again.
+            if (s.Settings.SetupsMigrated && !force) return 0;
+            s.Settings.SetupsMigrated = true;
+            var store = s.Store;
+            var active = store.Active;
+            int converted = 0;
+            if (store.Profiles.Count > 1 || s.Settings.MutatorPresets.Count > 0 || !string.Equals(active.Name, "Default", StringComparison.OrdinalIgnoreCase))
+            {
+                // A copy of the old profile files first, just in case.
+                try
+                {
+                    string dir = System.IO.Path.Combine(AppPaths.DataDir, "backups", "profiles-before-1.8");
+                    System.IO.Directory.CreateDirectory(dir);
+                    foreach (var f in System.IO.Directory.GetFiles(AppPaths.ProfilesDir, "*.json"))
+                        System.IO.File.Copy(f, System.IO.Path.Combine(dir, System.IO.Path.GetFileName(f)), true);
+                    if (System.IO.File.Exists(AppPaths.SettingsFile)) System.IO.File.Copy(AppPaths.SettingsFile, System.IO.Path.Combine(dir, "settings.json"), true);
+                }
+                catch (Exception ex) { AppLog.Warn("Profile backup before converting: " + ex.Message); }
+            }
+            foreach (var p in store.Profiles.ToList())
+            {
+                bool named = !string.Equals(p.Name, "Default", StringComparison.OrdinalIgnoreCase);
+                if (p == active && !named) continue;
+                if (named || p != active)
+                {
+                    string name = UniqueSetupName(s, p.Name);
+                    s.Settings.RulesPresets.Add(Capture(p, name));
+                    if (p == active) MarkSetup(p, name);
+                    converted++;
+                    AppLog.Info("Profile " + p.Name + " kept as the saved setup " + name);
+                }
+                if (p != active) store.DeleteProfile(p);
+            }
+            foreach (var mp in s.Settings.MutatorPresets.Where(x => x != null && !string.IsNullOrWhiteSpace(x.Name)).ToList())
+            {
+                var setup = active.Clone(active.Name);
+                setup.Mutators = new List<string>(mp.Mutators ?? new List<string>());
+                setup.MutatorsEnabled = true;
+                string name = UniqueSetupName(s, mp.Name);
+                s.Settings.RulesPresets.Add(Capture(setup, name));
+                converted++;
+                AppLog.Info("Mutator preset " + mp.Name + " kept as the saved setup " + name);
+            }
+            if (s.Settings.MutatorPresets.Count > 0) { s.Settings.MutatorPresets.Clear(); converted = Math.Max(converted, 1); }
+            if (active.MutatorPreset != null) active.MutatorPreset = null;
+            s.Settings.ActiveProfile = active.Name;
+            store.SaveProfile(active);
+            store.SaveSettings();
+            return converted;
         }
 
         /// <summary>Cleans every profile and saved setup of the store (run once after loading).</summary>

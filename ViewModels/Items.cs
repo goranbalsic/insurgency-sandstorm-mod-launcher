@@ -236,8 +236,11 @@ namespace SandstormModLauncher.ViewModels
         public int Changes { get => changes; set => Set(ref changes, value); }
     }
 
-    public sealed class PresetItem
+    public sealed class PresetItem : ObservableObject
     {
+        private bool active;
+        /// <summary>The match preset in use (the last one applied).</summary>
+        public bool IsActive { get => active; set => Set(ref active, value); }
         public string Name { get; set; }
         public string Group { get; set; }
         public string Description { get; set; }

@@ -229,6 +229,7 @@
     </Style>
 
     <Style x:Key="LaunchButton" TargetType="Button">
+        <Setter Property="Padding" Value="24,0" />
         <Setter Property="Foreground" Value="{StaticResource AccentText}" />
         <Setter Property="Background" Value="{StaticResource Launch}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -237,7 +238,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="#B86D1F" BorderThickness="1" CornerRadius="2" SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24,0" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="{StaticResource LaunchHover}" /></Trigger>
