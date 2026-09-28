@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -86,12 +87,12 @@ namespace SandstormModLauncher.Game
                 if (mod == null)
                 {
                     if (paks.Length == 0) continue;
-                    mod = new ModInfo { Folder = full, Name = Path.GetFileName(full), State = "Local folder" };
-                    if (long.TryParse(Path.GetFileName(full), out long id)) { mod.Id = id; mod.State = "Not registered by the game yet"; }
+                    mod = new ModInfo { Folder = full, Name = Path.GetFileName(full), State = N("Local folder") };
+                    if (long.TryParse(Path.GetFileName(full), out long id)) { mod.Id = id; mod.State = N("Not registered by the game yet"); }
                     else ReadLegacyJson(full, mod);
                 }
                 mod.LogoFile = LocalLogo(root, mod.Id, full);
-                progress?.Invoke($"Scanning mods ({n}/{folders.Count}): {mod.Name}");
+                progress?.Invoke(F("Scanning mods ({0}/{1}): {2}", n, folders.Count, mod.Name));
                 foreach (var pak in paks)
                 {
                     mod.Paks.Add(Path.GetFileName(pak));
@@ -113,8 +114,8 @@ namespace SandstormModLauncher.Game
                 foreach (var sc in mod.Scenarios) { sc.ModName = mod.Name; sc.ModId = mod.Id; }
                 if (paks.Length == 0)
                     mod.Warnings.Add(Directory.Exists(full)
-                        ? "No .pak files in its folder yet. The game may still be downloading it."
-                        : "Its files are not on this PC. The game downloads them again the next time it starts, as long as you are still subscribed.");
+                        ? N("No .pak files in its folder yet. The game may still be downloading it.")
+                        : N("Its files are not on this PC. The game downloads them again the next time it starts, as long as you are still subscribed."));
                 mods.Add(mod);
             }
 
@@ -193,12 +194,12 @@ namespace SandstormModLauncher.Game
         {
             switch (s) // mod.io SDK ModState
             {
-                case 0: return "Install pending";
+                case 0: return N("Install pending");
                 case 1: return "Installed";
-                case 2: return "Update pending";
+                case 2: return N("Update pending");
                 case 3: return "Downloading";
                 case 4: return "Extracting";
-                case 5: return "Uninstall pending";
+                case 5: return N("Uninstall pending");
                 default: return s < 0 ? "" : "State " + s;
             }
         }
@@ -216,7 +217,7 @@ namespace SandstormModLauncher.Game
                     mod.Summary = j.Get("summary").Str();
                     mod.Author = j.Path("submitted_by", "username").Str() ?? j.Path("submittedBy", "username").Str();
                     foreach (var t in j.Get("tags").Arr()) mod.Tags.Add(t.Get("name").Str());
-                    mod.State = "Legacy mod folder";
+                    mod.State = N("Legacy mod folder");
                     return;
                 }
             }
@@ -356,7 +357,7 @@ namespace SandstormModLauncher.Game
                         }
                     }
                     if (string.IsNullOrWhiteSpace(mi.DisplayName)) mi.DisplayName = UnrealText.Humanize(id);
-                    if (!registered) mi.Warning = "Not in a folder the mod registers for mutators, so the game cannot load it by name.";
+                    if (!registered) mi.Warning = N("Not in a folder the mod registers for mutators, so the game cannot load it by name.");
                     scan.Mutators.Add(mi);
                 }
 
@@ -378,7 +379,7 @@ namespace SandstormModLauncher.Game
                         scan.Mutators.Add(new MutatorInfo
                         {
                             Id = name, DisplayName = UnrealText.Humanize(name), Source = ContentSource.Mod,
-                            Warning = "Detected from the file name only; check the mod page for the exact mutator name."
+                            Warning = N("Detected from the file name only; check the mod page for the exact mutator name.")
                         });
                     }
                 }

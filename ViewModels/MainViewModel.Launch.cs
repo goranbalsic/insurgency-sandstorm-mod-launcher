@@ -10,6 +10,7 @@ using System.Windows.Input;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Services;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -28,7 +29,7 @@ namespace SandstormModLauncher.ViewModels
         private LaunchPlan currentPlan;
         private CancellationTokenSource launchCts;
         private bool launchOverlayOpen, launchRunning, launchSucceeded;
-        private string launchResult, launchTitle = "Launch", launchSubtitle = "", launchHeadline = "";
+        private string launchResult, launchTitle = T("Launch"), launchSubtitle = "", launchHeadline = "";
         private double launchProgress;
 
         private void InitLaunchCommands()
@@ -54,35 +55,35 @@ namespace SandstormModLauncher.ViewModels
             RaiseMany(nameof(PlanCommand), nameof(PlanIni), nameof(PlanAfterLoad), nameof(MapSummary), nameof(ModeSummary), nameof(SquadSummary),
                       nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch), nameof(PlanError), nameof(ActivePresetName));
             UpdateLaunchButton();
+            UpdateServerPlan();
         }
 
         public string PlanError => currentPlan?.Error;
         public string PlanCommand => currentPlan?.OpenCommand ?? "";
-        public string PlanIni => string.IsNullOrWhiteSpace(currentPlan?.GameIniBlock) ? "; No Game.ini changes. The game uses its default rules." : currentPlan.GameIniBlock;
-        public string PlanAfterLoad => currentPlan == null || currentPlan.AfterLoad.Count == 0 ? "Nothing. The match uses the rules above as loaded." : string.Join("\n", currentPlan.AfterLoad);
+        public string PlanIni => string.IsNullOrWhiteSpace(currentPlan?.GameIniBlock) ? T("; No Game.ini changes. The game uses its default rules.") : currentPlan.GameIniBlock;
+        public string PlanAfterLoad => currentPlan == null || currentPlan.AfterLoad.Count == 0 ? T("Nothing. The match uses the rules above as loaded.") : string.Join("\n", currentPlan.AfterLoad);
 
-        public string MapSummary => currentPlan?.Scenario == null ? "No map selected"
-            : (currentPlan.Map?.DisplayName ?? currentPlan.Scenario.MapKey) + " · " + (Profile.Lighting == "Night" ? "Night" : "Day");
+        public string MapSummary => currentPlan?.Scenario == null ? T("No map selected")
+            : (currentPlan.Map?.DisplayName ?? currentPlan.Scenario.MapKey) + " · " + (Profile.Lighting == "Night" ? T("Night") : T("Day"));
 
-        public string ModeSummary => currentPlan?.Scenario == null ? "" : currentPlan.ModeTitle + (string.IsNullOrEmpty(currentPlan.Scenario.Side) ? "" : " · " + currentPlan.Scenario.Side);
+        public string ModeSummary => currentPlan?.Scenario == null ? "" : T(currentPlan.ModeTitle) + (string.IsNullOrEmpty(currentPlan.Scenario.Side) ? "" : " · " + currentPlan.Scenario.Side);
 
         public string SquadSummary
         {
             get
             {
                 var mode = CurrentMode;
-                if (mode == null) return "Game defaults";
+                if (mode == null) return T("Game defaults");
                 string diff = AiDifficulty.ToString("0.00", CultureInfo.InvariantCulture);
                 if (mode.Coop)
                 {
-                    string who = Teammates == 0 ? "Lone wolf" : "You + " + Teammates + " AI";
-                    return who + " vs " + SoloEnemies + " enemies · AI " + diff;
+                    return Teammates == 0 ? F("Lone wolf vs {0} enemies · AI {1}", SoloEnemies, diff) : F("You + {0} AI vs {1} enemies · AI {2}", Teammates, SoloEnemies, diff);
                 }
                 if (mode.Defaults.ContainsKey("bBots"))
-                    return !BotsEnabled ? "No bots · players only"
-                         : BotQuota <= 1 ? "You vs 1 bot · AI " + diff
-                         : "You + " + (BotQuota - 1) + " AI vs " + BotQuota + " bots · AI " + diff;
-                return "Versus · AI " + diff;
+                    return !BotsEnabled ? T("No bots · players only")
+                         : BotQuota <= 1 ? F("You vs 1 bot · AI {0}", diff)
+                         : F("You + {0} AI vs {1} bots · AI {2}", BotQuota - 1, BotQuota, diff);
+                return F("Versus · AI {0}", diff);
             }
         }
 
@@ -90,11 +91,11 @@ namespace SandstormModLauncher.ViewModels
         {
             get
             {
-                if (!Profile.MutatorsEnabled) return Profile.Mutators.Count > 0 ? "Mutators off (" + Profile.Mutators.Count + " saved)" : "No mutators";
+                if (!Profile.MutatorsEnabled) return Profile.Mutators.Count > 0 ? F("Mutators off ({0} saved)", Profile.Mutators.Count) : T("No mutators");
                 int n = Profile.Mutators.Count;
-                if (n == 0) return "No mutators";
+                if (n == 0) return T("No mutators");
                 var names = Profile.Mutators.Select(id => State.FindMutator(id)?.DisplayName ?? id).ToList();
-                return n <= 2 ? string.Join(", ", names) : names[0] + ", " + names[1] + " +" + (n - 2) + " more";
+                return n <= 2 ? string.Join(", ", names) : F("{0}, {1} +{2} more", names[0], names[1], n - 2);
             }
         }
 
@@ -107,27 +108,27 @@ namespace SandstormModLauncher.ViewModels
         private void UpdateLaunchButton()
         {
             Raise(nameof(CanLaunch));
-            if (Monitor == null) { LaunchTitle = "Launch"; LaunchSubtitle = "Getting ready..."; return; }
-            if (launchRunning) { LaunchTitle = "Launching..."; LaunchSubtitle = "Follow the steps in the window"; return; }
-            if (currentPlan != null && !currentPlan.IsValid) { LaunchTitle = "Launch"; LaunchSubtitle = currentPlan.Error; return; }
+            if (Monitor == null) { LaunchTitle = T("Launch"); LaunchSubtitle = T("Getting ready..."); return; }
+            if (launchRunning) { LaunchTitle = T("Launching..."); LaunchSubtitle = T("Follow the steps in the window"); return; }
+            if (currentPlan != null && !currentPlan.IsValid) { LaunchTitle = T("Launch"); LaunchSubtitle = currentPlan.Error; return; }
             bool restart = currentPlan != null && Launcher != null && Launcher.NeedsRestart(currentPlan);
             switch (Monitor.Phase)
             {
                 case GamePhase.NotRunning:
-                    LaunchTitle = State.Settings.AutoStartGame ? "Start and launch" : "Launch";
-                    LaunchSubtitle = State.Settings.AutoStartGame ? "Starts the game, then loads your match" : "Start the game first, then press Launch";
+                    LaunchTitle = State.Settings.AutoStartGame ? T("Start and launch") : T("Launch");
+                    LaunchSubtitle = State.Settings.AutoStartGame ? T("Starts the game, then loads your match") : T("Start the game first, then press Launch");
                     break;
                 case GamePhase.InMatch:
-                    LaunchTitle = "Launch";
-                    LaunchSubtitle = restart ? "Restarts the game so the AI teammate count applies" : "Switches the running match to this setup";
+                    LaunchTitle = T("Launch");
+                    LaunchSubtitle = restart ? T("Restarts the game so the AI teammate count applies") : T("Switches the running match to this setup");
                     break;
                 case GamePhase.Menu:
-                    LaunchTitle = "Launch";
-                    LaunchSubtitle = restart ? "Restarts the game so the AI teammate count applies" : "Game is ready at the main menu";
+                    LaunchTitle = T("Launch");
+                    LaunchSubtitle = restart ? T("Restarts the game so the AI teammate count applies") : T("Game is ready at the main menu");
                     break;
                 default:
-                    LaunchTitle = "Launch";
-                    LaunchSubtitle = "Waits for the game to finish loading";
+                    LaunchTitle = T("Launch");
+                    LaunchSubtitle = T("Waits for the game to finish loading");
                     break;
             }
         }
@@ -169,9 +170,9 @@ namespace SandstormModLauncher.ViewModels
                 {
                     AppLog.Info("RCON not reachable before launch: " + problem);
                     string answer = await Ask("Restart the game?",
-                        "The launcher cannot reach the running game directly (RCON), probably because the game was started before the launcher set it up. " +
-                        "Restarting the game once fixes that for good; after that, maps load without the launcher typing anything." +
-                        (options.AllowConsole ? "\n\nOr type the command into the game console this time (the older way, needs the game in front)." : ""),
+                        T("The launcher cannot reach the running game directly (RCON), probably because the game was started before the launcher set it up. ") +
+                        T("Restarting the game once fixes that for good; after that, maps load without the launcher typing anything.") +
+                        (options.AllowConsole ? T("\n\nOr type the command into the game console this time (the older way, needs the game in front).") : ""),
                         "Restart and launch", options.AllowConsole ? "Type into the console" : "Cancel", options.AllowConsole ? "Cancel" : null);
                     if (answer == null || answer == "Cancel") return;
                     if (answer == "Restart and launch") { options.ForceRestart = true; forceRestart = true; }
@@ -185,7 +186,7 @@ namespace SandstormModLauncher.ViewModels
                     case "Never": break;
                     default:
                         string answer = await Ask("Restart the game?",
-                            "The game was started with a different number of AI teammates (or a different official ruleset). The game only reads that when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart.",
+                            T("The game was started with a different number of AI teammates (or a different official ruleset). The game only reads that when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart."),
                             "Restart and launch", "Launch without restart", "Cancel");
                         if (answer == null || answer == "Cancel") return;
                         options.RestartIfNeeded = answer == "Restart and launch";
@@ -194,7 +195,7 @@ namespace SandstormModLauncher.ViewModels
             }
 
             LaunchSteps.Clear();
-            foreach (var t in LaunchService.Steps) LaunchSteps.Add(new LaunchStepItem { Title = t, State = StepState.Pending });
+            foreach (var t in LaunchService.Steps) LaunchSteps.Add(new LaunchStepItem { Title = T(t), State = StepState.Pending });
             LaunchWarnings.Clear();
             LaunchResult = null;
             LaunchSucceeded = false;
@@ -223,7 +224,7 @@ namespace SandstormModLauncher.ViewModels
             if (report.Success) LaunchProgress = 1;
             Raise(nameof(LaunchFailed));
             UpdateLaunchButton();
-            if (!report.Success && report.Message != "Launch cancelled.")
+            if (!report.Success && report.Message != T("Launch cancelled."))
                 DebugReport.Auto("launch-failed", report.Message, State, Monitor);
             if (report.Success)
             {

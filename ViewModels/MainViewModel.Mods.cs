@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -39,7 +40,7 @@ namespace SandstormModLauncher.ViewModels
                 if (!string.IsNullOrEmpty(folder)) ShowToast("This mod's folder is not on disk, so its parent folder was opened");
             });
             UseModMutatorsCommand = new RelayCommand(p => UseModMutators(p as ModItem));
-            AddMutatorByIdCommand = new RelayCommand(p => { if (p is MutatorInfo m) { SetMutatorActive(m.Id, true); ShowToast(m.DisplayName + " added"); } });
+            AddMutatorByIdCommand = new RelayCommand(p => { if (p is MutatorInfo m) { SetMutatorActive(m.Id, true); ShowToast(F("{0} added", m.DisplayName)); } });
         }
 
         private void BuildMods()
@@ -60,7 +61,7 @@ namespace SandstormModLauncher.ViewModels
         }
 
         public int ModCount => ModItems.Count;
-        public string ModsSummary => ModItems.Count + " mods installed · " + State.AllMutators.Count(m => m.Source == ContentSource.Mod && m.Registered && !m.IsBaseClass) + " mod mutators";
+        public string ModsSummary => F("{0} mods installed · {1} mod mutators", ModItems.Count, State.AllMutators.Count(m => m.Source == ContentSource.Mod && m.Registered && !m.IsBaseClass));
         public string ModSearch { get => modSearch; set { if (Set(ref modSearch, value ?? "")) ModsView?.Refresh(); } }
 
         public ModItem SelectedMod
@@ -75,8 +76,8 @@ namespace SandstormModLauncher.ViewModels
             var usable = item.Info.Mutators.Where(m => m.Registered && !m.IsBaseClass).ToList();
             if (usable.Count == 0) { ShowToast("This mod has no mutators to add"); return; }
             if (usable.Count == 1) SetMutatorActive(usable[0].Id, true);
-            else { Page = "Play"; PlayTab = "Mods"; ModsTab = "Mutators"; MutatorSearch = item.Name; ShowToast("Pick which of the " + usable.Count + " mutators to use"); return; }
-            ShowToast(usable[0].DisplayName + " added to your mutators");
+            else { Page = "Play"; PlayTab = "Mods"; ModsTab = "Mutators"; MutatorSearch = item.Name; ShowToast(F("Pick which of the {0} mutators to use", usable.Count)); return; }
+            ShowToast(F("{0} added to your mutators", usable[0].DisplayName));
         }
     }
 }

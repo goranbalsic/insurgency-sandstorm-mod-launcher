@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -126,7 +127,7 @@ namespace SandstormModLauncher.ViewModels
             if (user) ProfileChanged();
         }
 
-        public string SelectedMapTitle => selectedMap == null ? "Pick a map" : selectedMap.Name;
+        public string SelectedMapTitle => selectedMap == null ? T("Pick a map") : selectedMap.Name;
 
         /// <summary>Co-op Checkpoint as Security when the map has it: the usual way to start.</summary>
         private ScenarioItem DefaultScenario() =>
@@ -135,7 +136,9 @@ namespace SandstormModLauncher.ViewModels
             ?? Scenarios.FirstOrDefault(s => s.Category == "Co-op")
             ?? Scenarios.FirstOrDefault();
 
-        private static int CategoryRank(string c) => c == "Co-op" ? 0 : c == "Versus" ? 1 : c == "Custom" ? 2 : c == "Training" ? 4 : 3;
+        // Scenario groups in the order they are shown ("" = any other); the names are translated when shown.
+        private static readonly string[] ScenarioGroupOrder = { N("Co-op"), N("Versus"), N("Custom"), "", N("Training") };
+        private static int CategoryRank(string c) { int i = string.IsNullOrEmpty(c) ? -1 : Array.IndexOf(ScenarioGroupOrder, c); return i >= 0 ? i : 3; }
 
         /// <summary>Groups the map's scenarios into mode chips, each with its sides.</summary>
         private void BuildScenarioModes()
@@ -165,7 +168,7 @@ namespace SandstormModLauncher.ViewModels
                 }
             }
             foreach (var g in modes.GroupBy(m => m.Category).OrderBy(g => CategoryRank(g.Key)))
-                ScenarioModeGroups.Add(new ScenarioModeGroup { Name = g.Key, Modes = g.ToList() });
+                ScenarioModeGroups.Add(new ScenarioModeGroup { Name = T(g.Key), Modes = g.ToList() });
         }
 
         private void SyncScenarioModes()
@@ -322,14 +325,14 @@ namespace SandstormModLauncher.ViewModels
         public int MinEnemies { get => EffectiveInt("MinimumEnemies"); set => SetInt("MinimumEnemies", value, 0, 64); }
         public int MaxEnemies { get => EffectiveInt("MaximumEnemies"); set => SetInt("MaximumEnemies", value, 0, 64); }
         public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 1, 32); }
-        public string TeammatesHint => "FriendlyBotQuota · mode default " + DefaultInt("FriendlyBotQuota");
-        public string SoloEnemiesHint => "SoloEnemies · mode default " + DefaultInt("SoloEnemies");
-        public string MinEnemiesHint => "MinimumEnemies · default " + DefaultInt("MinimumEnemies");
-        public string MaxEnemiesHint => "MaximumEnemies · default " + DefaultInt("MaximumEnemies");
+        public string TeammatesHint => F("FriendlyBotQuota · mode default {0}", DefaultInt("FriendlyBotQuota"));
+        public string SoloEnemiesHint => F("SoloEnemies · mode default {0}", DefaultInt("SoloEnemies"));
+        public string MinEnemiesHint => F("MinimumEnemies · default {0}", DefaultInt("MinimumEnemies"));
+        public string MaxEnemiesHint => F("MaximumEnemies · default {0}", DefaultInt("MaximumEnemies"));
         /// <summary>Versus: BotQuota is the size of each team. You take one slot of yours, bots fill the rest and the whole enemy team.</summary>
         public string BotQuotaHint => BotQuota <= 1
-            ? "BotQuota · you vs 1 bot · mode default " + DefaultInt("BotQuota")
-            : "BotQuota · you + " + (BotQuota - 1) + " AI vs " + BotQuota + " bots · mode default " + DefaultInt("BotQuota");
+            ? F("BotQuota · you vs 1 bot · mode default {0}", DefaultInt("BotQuota"))
+            : F("BotQuota · you + {0} AI vs {1} bots · mode default {2}", BotQuota - 1, BotQuota, DefaultInt("BotQuota"));
         public bool TeammatesChanged => RuleGet(CurrentMode?.Cls, "FriendlyBotQuota") != null;
         public bool SoloEnemiesChanged => RuleGet(CurrentMode?.Cls, "SoloEnemies") != null;
         public bool MinEnemiesChanged => RuleGet(CurrentMode?.Cls, "MinimumEnemies") != null;
@@ -382,7 +385,7 @@ namespace SandstormModLauncher.ViewModels
             get
             {
                 double d = AiDifficulty;
-                string name = d < 0.2 ? "Recruit" : d < 0.4 ? "Regular" : d < 0.6 ? "Normal" : d < 0.8 ? "Veteran" : d < 0.95 ? "Elite" : "Nightmare";
+                string name = d < 0.2 ? T("Recruit") : d < 0.4 ? T("Regular") : d < 0.6 ? T("Normal") : d < 0.8 ? T("Veteran") : d < 0.95 ? T("Elite") : T("Nightmare");
                 return d.ToString("0.00", CultureInfo.InvariantCulture) + " · " + name;
             }
         }
@@ -422,7 +425,7 @@ namespace SandstormModLauncher.ViewModels
             var options = Scenarios.Where(s => s.Category == wantCategory).ToList();
             if (options.Count == 0) options = Scenarios.ToList();
             if (options.Count > 0) SelectedScenario = options[rng.Next(options.Count)];
-            ShowToast("Random mission: " + map.Name + " · " + (SelectedScenario?.Mode ?? ""));
+            ShowToast(F("Random mission: {0} · {1}", map.Name, T(SelectedScenario?.Mode ?? "")));
         }
     }
 }

@@ -225,6 +225,9 @@ namespace SandstormModLauncher.Game
             return File.Exists(fallback) ? fallback : null;
         }
 
+        /// <summary>Every Steam library folder on this PC (Steam's own folder first).</summary>
+        public static IEnumerable<string> SteamLibraryFolders() => SteamLibraries(FindSteamExe());
+
         private static IEnumerable<string> SteamLibraries(string steamExe)
         {
             var libs = new List<string>();

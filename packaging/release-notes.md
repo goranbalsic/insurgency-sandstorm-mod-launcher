@@ -1,4 +1,13 @@
-Local play launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline.
+Launcher for Insurgency: Sandstorm: bots, mods, mutators and full match rules offline, and the same setup on the dedicated server.
+
+**Changes in 1.7.0**
+
+- New Server page for server admins: the match you set up in Play runs on the Insurgency: Sandstorm dedicated server, with the same rules and mutators plus the server's own settings (name, ports, player slots, join password, admins, mods, Steam server token, game stats). Start, stop and restart the server from the launcher; it waits until the map is loaded and the server answers.
+- Live server control over RCON: the player list with kick and ban, chat messages, load the Play match, restart the round (with or without swapping teams) and any admin command. It also works for a server on another PC.
+- Map cycle editor: build the server's map cycle from the Play page (order, day or night), or use any MapCycle.txt you already have.
+- The server's command line is shown and can be copied for your own scripts. The Steam server token is never shown in it, and the mod.io token the server needs for mods is saved without being shown or logged.
+- The launcher can be used in other languages. Every text is in one table that players translate with Excel, Google Sheets or LibreOffice (Settings > Language > "Save a translation file..."), and a finished translation can be tried at once and sent in to come with the next release. Translations are welcome.
+- Settings > Launching: the game can start without Steam, from its own exe or with your own command.
 
 **Changes in 1.6.1**
 

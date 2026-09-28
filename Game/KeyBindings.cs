@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using SandstormModLauncher.Core;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -17,7 +18,7 @@ namespace SandstormModLauncher.Game
         public string Profile { get; set; }
         public DateTime Time { get; set; }
         public int Bound { get; set; }
-        public string Label => Time.ToString("ddd d MMM, HH:mm", CultureInfo.InvariantCulture) + "  ·  " + Bound + " keys bound" + (Profile == "SteamProfile" ? "" : "  ·  " + Profile);
+        public string Label => Time.ToString("ddd d MMM, HH:mm", CultureInfo.InvariantCulture) + "  ·  " + F("{0} keys bound", Bound) + (Profile == "SteamProfile" ? "" : "  ·  " + Profile);
     }
 
     /// <summary>
@@ -132,8 +133,8 @@ namespace SandstormModLauncher.Game
         /// <summary>Puts a copy back. The game must be closed, because it rewrites the file while it runs.</summary>
         public static string Restore(KeyBindingsBackup b)
         {
-            if (b == null || !File.Exists(b.Path)) return "That copy no longer exists.";
-            if (Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0) return "Close the game first. It rewrites its key bindings while it runs.";
+            if (b == null || !File.Exists(b.Path)) return T("That copy no longer exists.");
+            if (Process.GetProcessesByName(GameInstall.ClientProcess).Length > 0) return T("Close the game first. It rewrites its key bindings while it runs.");
             string target = System.IO.Path.Combine(SaveGamesDir, b.Profile, "Controls.json");
             try
             {
@@ -152,7 +153,7 @@ namespace SandstormModLauncher.Game
             catch (Exception ex)
             {
                 AppLog.Error("Key bindings restore failed", ex);
-                return "Could not restore: " + ex.Message;
+                return F("Could not restore: {0}", ex.Message);
             }
         }
 

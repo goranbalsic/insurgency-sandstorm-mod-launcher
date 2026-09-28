@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using SandstormModLauncher.Core;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Models
 {
@@ -180,5 +181,34 @@ namespace SandstormModLauncher.Models
         public bool AutoUpdate { get; set; } = true;             // check GitHub releases and install new versions quietly
         public DateTime LastUpdateCheckUtc { get; set; }
         public string SkippedUpdateTag { get; set; }             // a release that cannot be installed (its exe is not newer)
+        public string StartWith { get; set; } = "Store";        // how the game is started: Store (Steam or Epic), Exe (its own exe), Command
+        public string StartCommand { get; set; } = "";           // the player's own start command ({options} = where the launcher's options go)
+        public string Language { get; set; } = "";               // translation in use ("" = English)
+
+        // Dedicated server (Server page)
+        public string ServerDirOverride { get; set; } = "";
+        public bool ServerRemote { get; set; }                    // control a server on another PC (RCON only) instead of one on this PC
+        public string ServerName { get; set; } = "";
+        public int ServerPort { get; set; } = 27102;
+        public int ServerQueryPort { get; set; } = 27131;
+        public int ServerMaxPlayers { get; set; } = 28;
+        public string ServerPassword { get; set; } = "";          // players need it to join
+        public int ServerRconPort { get; set; } = 27015;
+        public string ServerRconPassword { get; set; }            // random, chosen once
+        public bool ServerRconFromNetwork { get; set; }           // RCON on every network card, not only this PC
+        public string ServerRemoteHost { get; set; } = "";
+        public int ServerRemoteRconPort { get; set; } = 27015;
+        public string ServerRemoteRconPassword { get; set; } = "";
+        public bool ServerUseMapCycle { get; set; }
+        public string ServerMapCycleFile { get; set; } = "";      // empty = MapCycle.txt in the server's Insurgency\Config\Server
+        public string ServerAdmins { get; set; } = "";            // SteamID64s, one per line
+        public bool ServerModsEnabled { get; set; }
+        public string ServerMods { get; set; } = "";              // mod.io mod ids, one per line
+        public string ServerGslt { get; set; } = "";              // Steam game server login token
+        public bool ServerGameStats { get; set; }
+        public bool ServerCheats { get; set; }
+        public bool ServerShowLog { get; set; } = true;           // -log: the server's own log window
+        public string ServerExtraArgs { get; set; } = "";
+        public List<string> ServerManagedIniKeys { get; set; } = new List<string>();
     }
 }

@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -66,7 +67,7 @@ namespace SandstormModLauncher.ViewModels
                 if (m.Source == ContentSource.Official)
                 {
                     bool c = coop.Contains(m.Id), v = versus.Contains(m.Id);
-                    item.OfficialGroup = c && v ? "Official · co-op and versus playlists" : c ? "Official · co-op playlists" : v ? "Official · versus playlists" : "Official · other";
+                    item.OfficialGroup = c && v ? T("Official · co-op and versus playlists") : c ? T("Official · co-op playlists") : v ? T("Official · versus playlists") : T("Official · other");
                     item.GroupRank = c && !v ? 0 : v && !c ? 1 : c ? 2 : 3;
                 }
                 else item.GroupRank = m.Source == ContentSource.Mod ? 4 : 5;
@@ -139,7 +140,7 @@ namespace SandstormModLauncher.ViewModels
                 ActiveMutators.Add(new ActiveMutatorItem
                 {
                     Id = id, Name = info?.DisplayName ?? id, Index = i++, Missing = info == null,
-                    Source = info == null ? "not installed" : info.Source == ContentSource.Official ? "Official" : info.ModName
+                    Source = info == null ? T("not installed") : info.Source == ContentSource.Official ? T("Official") : info.ModName
                 });
             }
             RaiseMany(nameof(ActiveMutatorCount), nameof(MutatorSummary), nameof(ActiveMutatorSections));
@@ -172,7 +173,7 @@ namespace SandstormModLauncher.ViewModels
             }
             SetMutatorActive(State.FindMutator(id)?.Id ?? id, true);
             CustomMutatorText = "";
-            ShowToast("Added " + id);
+            ShowToast(F("Added {0}", id));
         }
 
         private void DeleteCustomMutator(MutatorItem item)
@@ -209,18 +210,18 @@ namespace SandstormModLauncher.ViewModels
                 BuildActiveMutators();
                 MutatorsView?.Refresh();
                 ProfileChanged();
-                ShowToast("Loaded preset \"" + value + "\"");
+                ShowToast(F("Loaded preset \"{0}\"", value));
             }
         }
 
         private async Task SaveMutatorPreset()
         {
-            string name = await Prompt("Save mutator preset", "Name for this set of " + Profile.Mutators.Count + " mutators:", selectedMutatorPreset ?? "My mutators", "Save");
+            string name = await Prompt("Save mutator preset", F("Name for this set of {0} mutators:", Profile.Mutators.Count), selectedMutatorPreset ?? T("My mutators"), "Save");
             if (string.IsNullOrWhiteSpace(name)) return;
             var existing = State.Settings.MutatorPresets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
-                if (await Ask("Replace preset?", "A preset called \"" + existing.Name + "\" already exists. Replace it?", "Replace") != "Replace") return;
+                if (await Ask("Replace preset?", F("A preset called \"{0}\" already exists. Replace it?", existing.Name), "Replace") != "Replace") return;
                 existing.Mutators = new List<string>(Profile.Mutators);
                 name = existing.Name;
             }
@@ -228,13 +229,13 @@ namespace SandstormModLauncher.ViewModels
             Profile.MutatorPreset = name;
             SaveSettingsSoon();
             BuildMutatorPresets();
-            ShowToast("Preset \"" + name + "\" saved");
+            ShowToast(F("Preset \"{0}\" saved", name));
         }
 
         private async Task DeleteMutatorPreset()
         {
             if (selectedMutatorPreset == null) return;
-            if (await Ask("Delete preset", "Delete the mutator preset \"" + selectedMutatorPreset + "\"?", "Delete") != "Delete") return;
+            if (await Ask("Delete preset", F("Delete the mutator preset \"{0}\"?", selectedMutatorPreset), "Delete") != "Delete") return;
             State.Settings.MutatorPresets.RemoveAll(p => p.Name == selectedMutatorPreset);
             Profile.MutatorPreset = null;
             SaveSettingsSoon();

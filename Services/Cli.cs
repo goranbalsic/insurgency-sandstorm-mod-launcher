@@ -26,6 +26,14 @@ namespace SandstormModLauncher.Services
     ///   ini-merge in.ini out.ini                 writes the plan into a copy of a Game.ini (read-only files too)
     ///   torture [steps] [seed]                   random stress test of the whole setup logic (checks every step)
     ///   report-send [address]                    sends the cleaned problem report (to the inbox, or to an address for testing)
+    ///   server-status | server-plan | server-start | server-stop    the dedicated server on this PC, with the Play match
+    ///   server-rcon cmd.. | server-travel | server-players          a running server over its RCON
+    ///   server-set key value                     name, port, queryport, maxplayers, password, rconport, rconnetwork, mapcycle,
+    ///                                            mapcyclefile, admins, mods, modids, gslt, gamestats, cheats, log, extra, dir,
+    ///                                            remote, remotehost, remoteport, remotepassword (on/off for switches)
+    ///   mapcycle show | add | remove n | clear   the server's map cycle file (add = the Play match)
+    ///   translation-template [repo] [out.csv]    every English text, read from the source (Resources\Languages\template.csv)
+    ///   translation-check [repo]                 the table the launcher carries has exactly the texts in the source
     /// Exit code 0 = fine, 1 = a check failed or the command was wrong.
     /// </summary>
     public static class Cli
@@ -149,6 +157,131 @@ namespace SandstormModLauncher.Services
                         for (int i = 0; i < replies.Count; i++) { print(">> " + args[i + 1]); print(replies[i].TrimEnd()); }
                         return 0;
                     }
+                    case "server-status":
+                    {
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var svc = new ServerService(() => state.Settings, () => inst);
+                        print("Server folder: " + (inst.Root ?? "not found") + (inst.BuildId.Length > 0 ? " (build " + inst.BuildId + ")" : ""));
+                        print("Running here: " + svc.IsRunning);
+                        string problem = svc.Rcon.Probe();
+                        print("RCON " + svc.Rcon.Host + ": " + (problem == null ? "connected" : "not reachable (" + problem + ")"));
+                        return 0;
+                    }
+                    case "server-plan":
+                    {
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var plan = ServerPlanFor(state, p, inst);
+                        PrintServerPlan(plan, print);
+                        return plan.IsValid ? 0 : 1;
+                    }
+                    case "server-start":
+                    {
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var plan = ServerPlanFor(state, p, inst);
+                        PrintServerPlan(plan, print);
+                        if (!plan.IsValid) return 1;
+                        var svc = new ServerService(() => state.Settings, () => inst);
+                        svc.Watch();
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        string failed = System.Threading.Tasks.Task.Run(() => svc.Start(plan, new Progress<string>(t => print("  " + t)), System.Threading.CancellationToken.None)).GetAwaiter().GetResult();
+                        print(failed == null ? "Server running after " + (int)sw.Elapsed.TotalSeconds + " s" : "NOT STARTED: " + failed);
+                        svc.Monitor?.Dispose();
+                        return failed == null ? 0 : 1;
+                    }
+                    case "server-stop":
+                    {
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var svc = new ServerService(() => state.Settings, () => inst);
+                        bool stopped = System.Threading.Tasks.Task.Run(() => svc.Stop(System.Threading.CancellationToken.None)).GetAwaiter().GetResult();
+                        print(stopped ? "Server stopped" : "The server did not close");
+                        return stopped ? 0 : 1;
+                    }
+                    case "server-rcon":
+                    {
+                        // server-rcon <command> [command ...]: to the dedicated server over its RCON.
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var svc = new ServerService(() => state.Settings, () => inst);
+                        var replies = svc.Rcon.Run(args.Skip(1).ToArray());
+                        for (int i = 0; i < replies.Count; i++) { print(">> " + args[i + 1]); print(replies[i].TrimEnd()); }
+                        return 0;
+                    }
+                    case "server-travel":
+                    {
+                        // Loads the Play match on the running server.
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var plan = ServerPlanFor(state, p, inst);
+                        if (!plan.IsValid) { print(plan.Error); return 1; }
+                        var r = new ServerService(() => state.Settings, () => inst).Travel(plan);
+                        print(r.Ok ? r.Text : "NOT TRAVELLING: " + (r.Error ?? r.Text));
+                        return r.Ok || r.Delivered ? 0 : 1;
+                    }
+                    case "server-players":
+                    {
+                        save = false;
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        var players = new ServerService(() => state.Settings, () => inst).Players();
+                        print(players.Count + " player(s)");
+                        // Names and ids are the players' own: only the count and the columns that are not personal are printed.
+                        foreach (var pl in players) print("  id " + pl.Id + "  score " + pl.Score);
+                        return 0;
+                    }
+                    case "server-set":
+                    {
+                        string key = (A(1) ?? "").ToLowerInvariant(), value = A(2) ?? "";
+                        if (!SetServerOption(state.Settings, key, value)) { print("server-set " + key + ": unknown key or bad value"); save = false; return 1; }
+                        print("Server " + key + " set");
+                        return 0;
+                    }
+                    case "mapcycle":
+                    {
+                        // mapcycle show | add | remove <n> | clear: the server's map cycle file (add = the Play match).
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        string file = ServerPlanner.MapCyclePath(state.Settings, inst);
+                        if (file == null) { print("No map cycle file (set the server folder or server-set mapcyclefile <path>)"); save = false; return 1; }
+                        var entries = File.Exists(file) ? MapCycle.Parse(File.ReadAllText(file)) : new List<MapCycleEntry>();
+                        string sub = (A(1) ?? "show").ToLowerInvariant();
+                        if (sub == "add")
+                        {
+                            var plan = LaunchPlanner.Build(p, state);
+                            if (!plan.IsValid) { print(plan.Error); return 1; }
+                            entries.Add(MapCycle.For(plan));
+                        }
+                        else if (sub == "remove" && int.TryParse(A(2) ?? "", out int at) && at >= 1 && at <= entries.Count) entries.RemoveAt(at - 1);
+                        else if (sub == "clear") entries.Clear();
+                        else if (sub != "show") { print("mapcycle show | add | remove <n> | clear"); save = false; return 1; }
+                        if (sub != "show")
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(file));
+                            if (File.Exists(file)) ConsoleBridge.BackupFile(file, "server-");
+                            File.WriteAllText(file, MapCycle.Render(entries), new UTF8Encoding(false));
+                        }
+                        print(file);
+                        for (int i = 0; i < entries.Count; i++) print("  " + (i + 1) + ". " + entries[i].Line);
+                        save = false;
+                        return 0;
+                    }
+                    case "translation-template":
+                        // translation-template [repo folder] [out.csv]: every English text of the launcher, from its source
+                        save = false;
+                        return TranslationTemplate.Write(A(1) ?? ".", A(2) ?? Path.Combine(A(1) ?? ".", "Resources", "Languages", "template.csv"), print);
+                    case "translation-check":
+                    {
+                        // translation-check [repo folder]: fails when texts were changed without making the table again
+                        save = false;
+                        var source = TranslationTemplate.Scan(A(1) ?? ".").Select(r => r.English).ToList();
+                        var carried = Loc.Template().Select(r => r.English).ToList();
+                        var missing = source.Except(carried).ToList();
+                        var extra = carried.Except(source).ToList();
+                        foreach (var t in missing.Take(20)) print("not in the table: " + t.Replace("\n", "\\n"));
+                        foreach (var t in extra.Take(20)) print("no longer in the source: " + t.Replace("\n", "\\n"));
+                        print(source.Count + " texts in the source, " + carried.Count + " in the table: " + (missing.Count + extra.Count == 0 ? "the same" : missing.Count + " missing, " + extra.Count + " extra"));
+                        return missing.Count + extra.Count == 0 ? 0 : 1;
+                    }
                     case "rcon-status":
                     {
                         save = false;
@@ -234,5 +367,58 @@ namespace SandstormModLauncher.Services
         }
 
         private static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : s.Length <= n ? s : s.Substring(0, n) + "...";
+
+        private static ServerPlan ServerPlanFor(AppState state, Profile p, ServerInstall inst)
+        {
+            string ini = inst.Found && File.Exists(inst.GameIniPath) ? UeIni.ReadText(inst.GameIniPath) : "";
+            return ServerPlanner.Build(LaunchPlanner.Build(p, state), state.Settings, inst, state.Rules, ini);
+        }
+
+        private static void PrintServerPlan(ServerPlan plan, Action<string> print)
+        {
+            if (!plan.IsValid) { print("PROBLEM: " + plan.Error); return; }
+            print("Command line: " + plan.ShownCommandLine);
+            if (plan.MatchModIds.Count > 0) print("Mods the match needs: " + string.Join(", ", plan.MatchModIds));
+            if (plan.AdminsText != null) print("Admins.txt: " + UeIni.Split(plan.AdminsText).Count(l => l.Trim().Length > 0) + " admin(s)");
+            if (plan.ModsText != null) print("Mods.txt: " + plan.ModsText.Replace("\r\n", " ").Trim());
+            if (plan.MapCycleName != null) print("Map cycle: " + plan.MapCycleName + (plan.MapCycleCopyFrom != null ? " (copied from " + plan.MapCycleCopyFrom + ")" : ""));
+            print("Game.ini:");
+            foreach (var l in UeIni.Split(DebugReport.HidePasswords(plan.GameIni))) print("  " + l);
+            foreach (var w in plan.Warnings) print("warning: " + w);
+        }
+
+        /// <summary>server-set: one server setting from the command line (on/off for switches).</summary>
+        private static bool SetServerOption(AppSettings s, string key, string value)
+        {
+            bool? on = value.Equals("on", StringComparison.OrdinalIgnoreCase) || value.Equals("true", StringComparison.OrdinalIgnoreCase) ? true
+                     : value.Equals("off", StringComparison.OrdinalIgnoreCase) || value.Equals("false", StringComparison.OrdinalIgnoreCase) ? false : (bool?)null;
+            bool num = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n);
+            switch (key)
+            {
+                case "name": s.ServerName = value; return true;
+                case "password": s.ServerPassword = value; return true;
+                case "port": if (!num) return false; s.ServerPort = n; return true;
+                case "queryport": if (!num) return false; s.ServerQueryPort = n; return true;
+                case "maxplayers": if (!num) return false; s.ServerMaxPlayers = n; return true;
+                case "rconport": if (!num) return false; s.ServerRconPort = n; return true;
+                case "rconnetwork": if (on == null) return false; s.ServerRconFromNetwork = on.Value; return true;
+                case "mapcycle": if (on == null) return false; s.ServerUseMapCycle = on.Value; return true;
+                case "mapcyclefile": s.ServerMapCycleFile = value; return true;
+                case "admins": s.ServerAdmins = value.Replace(",", "\n"); return true;
+                case "mods": if (on == null) return false; s.ServerModsEnabled = on.Value; return true;
+                case "modids": s.ServerMods = value.Replace(",", "\n"); return true;
+                case "gslt": s.ServerGslt = value; return true;
+                case "gamestats": if (on == null) return false; s.ServerGameStats = on.Value; return true;
+                case "cheats": if (on == null) return false; s.ServerCheats = on.Value; return true;
+                case "log": if (on == null) return false; s.ServerShowLog = on.Value; return true;
+                case "extra": s.ServerExtraArgs = value; return true;
+                case "dir": s.ServerDirOverride = value; return true;
+                case "remote": if (on == null) return false; s.ServerRemote = on.Value; return true;
+                case "remotehost": s.ServerRemoteHost = value; return true;
+                case "remoteport": if (!num) return false; s.ServerRemoteRconPort = n; return true;
+                case "remotepassword": s.ServerRemoteRconPassword = value; return true;
+                default: return false;
+            }
+        }
     }
 }

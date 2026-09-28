@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:SandstormModLauncher.Views.Controls"
-             xmlns:p="clr-namespace:SandstormModLauncher.Views.Pages">
+             xmlns:p="clr-namespace:SandstormModLauncher.Views.Pages"
+             xmlns:v="clr-namespace:SandstormModLauncher.Views">
     <UserControl.Resources>
         <!-- rule value editors, picked by the rule's type -->
         <DataTemplate x:Key="BoolEditor">
@@ -63,17 +64,17 @@
                                     <Style TargetType="Border">
                                         <Setter Property="Background" Value="{StaticResource GoodBg}" />
                                         <Setter Property="BorderBrush" Value="{StaticResource GoodBorder}" />
-                                        <Setter Property="ToolTip" Value="Co-op (PvE): play it solo or with AI teammates" />
+                                        <Setter Property="ToolTip" Value="{v:Tr 'Co-op (PvE): play it solo or with AI teammates'}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsVersus}" Value="True">
                                                 <Setter Property="Background" Value="{StaticResource InfoBg}" />
                                                 <Setter Property="BorderBrush" Value="{StaticResource InfoBorder}" />
-                                                <Setter Property="ToolTip" Value="Versus (PvP): offline you play it against bots" />
+                                                <Setter Property="ToolTip" Value="{v:Tr 'Versus (PvP): offline you play it against bots'}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold">
+                                <TextBlock Text="{Binding TagLabel}" FontSize="11" FontWeight="SemiBold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="{StaticResource GoodFg}" />
@@ -144,13 +145,13 @@
                     <TextBlock FontSize="20" Margin="0,2,0,0">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource H1}">
-                                <Setter Property="Text" Value="Map and scenario" />
+                                <Setter Property="Text" Value="{v:Tr 'Map and scenario'}" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Squad"><Setter Property="Text" Value="Bots and enemies" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="Match rules" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="Live match control" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="Mods and mutators" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Advanced"><Setter Property="Text" Value="Advanced options" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Squad"><Setter Property="Text" Value="{v:Tr 'Bots and enemies'}" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="{v:Tr 'Match rules'}" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="{v:Tr 'Live match control'}" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="{v:Tr 'Mods and mutators'}" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding PlayTab}" Value="Advanced"><Setter Property="Text" Value="{v:Tr 'Advanced options'}" /></DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
@@ -287,7 +288,7 @@
                                     <ControlTemplate TargetType="ListBoxItem">
                                         <Border x:Name="b" Height="28" CornerRadius="2" Padding="11,0" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{StaticResource Line}" Background="Transparent">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock x:Name="t" Text="{Binding Name}" FontSize="12" Foreground="{StaticResource TextDim}" />
+                                                <TextBlock x:Name="t" Text="{Binding Label}" FontSize="12" Foreground="{StaticResource TextDim}" />
                                                 <Border x:Name="n" CornerRadius="2" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
                                                         Visibility="{Binding Changes, Converter={StaticResource Vis}}" ToolTip="Changed settings">
                                                     <TextBlock Text="{Binding Changes}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
@@ -416,7 +417,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <RadioButton Style="{StaticResource Chip}" Margin="0,0,6,6" GroupName="scenarioMode" Content="{Binding Mode}"
+                                                    <RadioButton Style="{StaticResource Chip}" Margin="0,0,6,6" GroupName="scenarioMode" Content="{Binding ModeLabel}"
                                                                  IsChecked="{Binding IsSelected, Mode=OneWay}" ToolTip="{Binding Tip}"
                                                                  Command="{Binding DataContext.SelectScenarioModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                                                 </DataTemplate>
@@ -491,9 +492,7 @@
                         </Grid.RowDefinitions>
                         <StackPanel Margin="16,12,16,10">
                             <TextBlock Text="Presets" Style="{StaticResource H2}" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap">
-                                <Run Text="For every" /> <Run Text="{Binding SquadKindLabel, Mode=OneWay}" /> <Run Text="mode. Applying one replaces the bot values it is about; fine-tune them on the right." />
-                            </TextBlock>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding SquadKindLabel}" />
                         </StackPanel>
                         <ScrollViewer x:Name="squadScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14,0,6,8" Focusable="False">
                             <ItemsControl ItemsSource="{Binding SquadPresets}" ItemTemplate="{StaticResource PresetCard}" Focusable="False">

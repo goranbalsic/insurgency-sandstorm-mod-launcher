@@ -1,9 +1,10 @@
 Sandstorm Mod Launcher
 ======================
 
-Local play launcher for Insurgency: Sandstorm.
+Launcher for Insurgency: Sandstorm.
 Play offline with bots, mods and mutators, and change any match rule
-without typing console commands.
+without typing console commands. Server admins can run the same setup on the
+dedicated server and control it live. Other languages: Settings > Language.
 
 
 Requirements
@@ -19,9 +20,11 @@ How to use
 2. Run SandstormModLauncher.exe. No installer, no admin rights.
 3. On PLAY pick a map and scenario, set your squad and the enemies, and change
    any other rule on the Rules tab. Press LAUNCH (or F5).
-   The launcher starts the game, waits for the main menu and loads the match.
-   Keep your hands off the keyboard for the few seconds it uses the game console.
-4. Something wrong? Settings > "Something went wrong?" saves a report with
+   The launcher starts the game, waits for the main menu and loads the match
+   through the game's own remote console (RCON). Nothing is typed into the game.
+4. Running a dedicated server? The Server page starts it with the Play match,
+   its own settings and map cycle, and shows the players while it runs.
+5. Something wrong? Settings > "Something went wrong?" saves a report with
    everything needed to find the cause.
 
 
@@ -34,9 +37,13 @@ What it does on your PC
   first). The ` key is missing on many keyboard layouts; F10 works on all.
 - Keeps copies of your game key bindings before it sends any key to the game,
   and can put them back (Settings > Game key bindings). It never edits them.
-- Opens the game console and pastes the match command. It checks on screen
-  that the console line is open before it types anything, and only types
-  while the Insurgency: Sandstorm window is in front.
+- Talks to the game over RCON on 127.0.0.1 (this PC only) with a random
+  password. Typing into the game console is only a fallback for a game it
+  cannot reach that way; it checks on screen that the console line is open,
+  and only types while the Insurgency: Sandstorm window is in front.
+- Only when you use the Server page: writes the dedicated server's config files
+  (Game.ini, Engine.ini, Admins.txt, MapCycle.txt, Mods.txt, backed up first)
+  and starts or stops the server.
 - Keeps its settings and logs in %APPDATA%\SandstormModLauncher
 - No telemetry. The only network access is the update check against the
   project's GitHub releases (Settings > About turns it off).
@@ -47,8 +54,8 @@ Windows SmartScreen / antivirus
 -------------------------------
 The exe is not code-signed, so Windows may show "Windows protected your PC".
 Click "More info" > "Run anyway".
-Some antivirus tools are wary of programs that send keystrokes. This one sends
-them only to the game window, to use the console.
+Some antivirus tools are wary of programs that can send keystrokes. This one
+sends them only to the game window, and only as a fallback.
 
 This zip was built by GitHub Actions from the public source code.
 The release page lists the SHA-256 of every file. To check yours, run in PowerShell:
@@ -81,6 +88,7 @@ License
 -------
 Open source for non-commercial use: PolyForm Noncommercial License 1.0.0, see
 LICENSE.txt. Use it, change it, fork it and share it, as long as nothing makes
-money from it. Forks and pull requests are welcome on GitHub (link above).
+money from it. Forks, pull requests and translations are welcome on GitHub
+(link above).
 The Oswald font is under the SIL Open Font License, see OFL-Oswald-font.txt
 Not affiliated with New World Interactive or Focus Entertainment.

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Game
 {
@@ -116,18 +117,21 @@ namespace SandstormModLauncher.Game
         public static bool IsFunctionKey(string k) =>
             k != null && k.Length >= 2 && k.Length <= 3 && (k[0] == 'F' || k[0] == 'f') && int.TryParse(k.Substring(1), out int n) && n >= 1 && n <= 24;
 
-        public static void BackupFile(string path)
+        /// <summary>A dated copy in the launcher's backups folder (the newest 15 per file are kept). The prefix keeps the
+        /// dedicated server's files apart from the game's files of the same name.</summary>
+        public static void BackupFile(string path, string prefix = "")
         {
             try
             {
                 if (!File.Exists(path)) return;
                 string dir = Path.Combine(AppPaths.DataDir, "backups");
                 Directory.CreateDirectory(dir);
-                string target = Path.Combine(dir, Path.GetFileName(path) + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak");
+                string name = prefix + Path.GetFileName(path);
+                string target = Path.Combine(dir, name + "." + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak");
                 if (File.Exists(target)) new FileInfo(target).IsReadOnly = false;
                 File.Copy(path, target, true);
                 new FileInfo(target).IsReadOnly = false;   // a copy of a read-only Game.ini is read-only too; backups must stay removable
-                foreach (var old in Directory.GetFiles(dir, Path.GetFileName(path) + ".*.bak").OrderByDescending(f => f).Skip(15))
+                foreach (var old in Directory.GetFiles(dir, name + ".*.bak").OrderByDescending(f => f).Skip(15))
                 {
                     new FileInfo(old).IsReadOnly = false;
                     File.Delete(old);
@@ -151,7 +155,7 @@ namespace SandstormModLauncher.Game
         public ConsoleKeyPlan PlanKey()
         {
             var plan = new ConsoleKeyPlan();
-            if (monitor.Window == IntPtr.Zero) { plan.Problem = "The game window was not found."; return plan; }
+            if (monitor.Window == IntPtr.Zero) { plan.Problem = T("The game window was not found."); return plan; }
             var input = new GameInput(monitor.Window);
             plan.Layout = LayoutName(input.KeyboardLayout);
             plan.ActiveKeys = ConfiguredKeys(official());
@@ -209,7 +213,7 @@ namespace SandstormModLauncher.Game
                 }
                 if (monitor.LoadingScreenUp)
                 {
-                    result.Detail = "The game is still showing its loading screen, so the console cannot open. Try again once it is gone.";
+                    result.Detail = T("The game is still showing its loading screen, so the console cannot open. Try again once it is gone.");
                     result.NothingTyped = true;
                     AppLog.Warn($"Console #{id} not sent: loading screen still up after 30 s");
                     return result;
@@ -253,8 +257,8 @@ namespace SandstormModLauncher.Game
                             string what = bad.Substring(bad.IndexOf("Command not recognized: ", StringComparison.Ordinal) + 24).Trim();
                             result.NotRecognized = true;
                             bool ours = words.Any(w => w.Length > 0 && what.StartsWith(w, StringComparison.OrdinalIgnoreCase));
-                            result.Detail = "The game did not recognise \"" + what + "\"." +
-                                (ours ? "" : " Keys pressed at the same moment may have mixed into the command.");
+                            result.Detail = F("The game did not recognise \"{0}\".", what) +
+                                (ours ? "" : " " + T("Keys pressed at the same moment may have mixed into the command."));
                             break;
                         }
                         if (success != null && snapshot.Any(success)) { result.Verified = true; break; }
@@ -320,9 +324,9 @@ namespace SandstormModLauncher.Game
         private static string Describe(int vk) => "key " + KeyName(vk) + " (0x" + vk.ToString("X2") + ")";
 
         private static string HeldMessage(string held) =>
-            "Windows reports a keyboard " + held + " as held down, so nothing was typed (it would mix into the command). " +
-            "Let go of the keyboard and try again. If you are not pressing it, a key remapping tool, macro software or a " +
-            "controller mapped to keys may be holding it: tap that key once, or click Launch while the launcher window is in front.";
+            F("Windows reports a keyboard {0} as held down, so nothing was typed (it would mix into the command). " +
+              "Let go of the keyboard and try again. If you are not pressing it, a key remapping tool, macro software or a " +
+              "controller mapped to keys may be holding it: tap that key once, or click Launch while the launcher window is in front.", held);
 
         /// <summary>
         /// Waits for the keyboard to be idle. A non-modifier key still down after the wait while the game is NOT in
@@ -390,12 +394,12 @@ namespace SandstormModLauncher.Game
             bool wasInFront = input.IsForeground;
             string held = WaitForKeysReleased(3000, wasInFront);
             if (held != null) throw new ConsoleSendException(HeldMessage(held), true);
-            if (!input.Focus(4000)) throw new ConsoleSendException("Could not bring the game to the front. Click the game once and try again.", true);
+            if (!input.Focus(4000)) throw new ConsoleSendException(T("Could not bring the game to the front. Click the game once and try again."), true);
             // Coming back from the background, fullscreen needs a moment before the game draws again.
             Thread.Sleep(wasInFront ? 120 : 1000);
             Frame before = WaitSteady(hwnd, 3500);
-            if (before == null) throw new ConsoleSendException("Could not see the game picture (it stayed empty), so no keys were sent. Click the game once and try again.", true);
-            if (!input.IsForeground) throw new ConsoleSendException("The game lost focus before the console could be opened, so no keys were sent.", true);
+            if (before == null) throw new ConsoleSendException(T("Could not see the game picture (it stayed empty), so no keys were sent. Click the game once and try again."), true);
+            if (!input.IsForeground) throw new ConsoleSendException(T("The game lost focus before the console could be opened, so no keys were sent."), true);
             held = WaitForKeysReleased(1500, true);
             if (held != null) throw new ConsoleSendException(HeldMessage(held), true);
             Step("focused" + (stuckKeys.Count > 0 ? " (ignored stuck " + string.Join(", ", stuckKeys.Select(KeyName)) + ")" : ""));
@@ -437,8 +441,8 @@ namespace SandstormModLauncher.Game
             if (bar == null)
             {
                 SaveShots(id, "not-open", before, last);
-                throw new ConsoleSendException("The game's console did not open when " + pressed + " was pressed, so nothing was typed (" + why + "). " +
-                                               "If a menu, message or loading screen is showing in the game, close it and try again.", true);
+                throw new ConsoleSendException(F("The game's console did not open when {0} was pressed, so nothing was typed ({1}). " +
+                                                 "If a menu, message or loading screen is showing in the game, close it and try again.", pressed, why), true);
             }
             Step((pressed.Length > 0 ? "console opened with " + pressed : "console was already open") + " " + bar + " (" + why + ")");
             Thread.Sleep(40);
@@ -454,7 +458,7 @@ namespace SandstormModLauncher.Game
                 if (!ConsoleProbe.BarStillThere(opened, f, bar))
                 {
                     SaveShots(id, "closed-while-clearing", before, opened, f);
-                    throw new ConsoleSendException("The console closed while the launcher was using it, so the command was not sent.", false);
+                    throw new ConsoleSendException(T("The console closed while the launcher was using it, so the command was not sent."), false);
                 }
                 if (i > 0 && ConsoleProbe.LineLooksEmpty(f, bar)) break;
                 input.TapRepeat(VK_BACK, 40);
@@ -464,7 +468,7 @@ namespace SandstormModLauncher.Game
             if (!ConsoleProbe.BarStillThere(opened, empty, bar))
             {
                 SaveShots(id, "closed-after-clearing", before, opened, empty);
-                throw new ConsoleSendException("The console closed while the launcher was using it, so the command was not sent.", false);
+                throw new ConsoleSendException(T("The console closed while the launcher was using it, so the command was not sent."), false);
             }
             Step("line cleared");
 
@@ -539,7 +543,7 @@ namespace SandstormModLauncher.Game
                     input.Tap(VK_ESCAPE);
                     Step("closed the empty console");
                 }
-                throw new ConsoleSendException(check == TextCheck.Gone ? "The console closed before the command could be sent." : "The command could not be put on the console line, so it was not sent.", false);
+                throw new ConsoleSendException(check == TextCheck.Gone ? T("The console closed before the command could be sent.") : T("The command could not be put on the console line, so it was not sent."), false);
             }
 
             // 4. The game's menus can take the keyboard back after the console opened (window activation,
@@ -584,11 +588,11 @@ namespace SandstormModLauncher.Game
                     Thread.Sleep(60);
                     empty = Grab(hwnd);
                     if (!ConsoleProbe.BarStillThere(opened, empty, bar))
-                        throw new ConsoleSendException("The console closed while the launcher was using it, so the command was not sent.", false);
+                        throw new ConsoleSendException(T("The console closed while the launcher was using it, so the command was not sent."), false);
                     if (PutLine(empty, out typed, out textPixels) != TextCheck.Appeared)
                     {
                         SaveShots(id, "no-text-after-reopen", before, opened, empty, Grab(hwnd));
-                        throw new ConsoleSendException("The command could not be put back on the console line, so it was not sent.", false);
+                        throw new ConsoleSendException(T("The command could not be put back on the console line, so it was not sent."), false);
                     }
                 }
             }
@@ -596,14 +600,14 @@ namespace SandstormModLauncher.Game
             {
                 Step("stopped before Enter: " + cycle);
                 SaveShots(id, "reopen-failed", before, opened, typed, Grab(hwnd));
-                throw new ConsoleSendException("The game did not follow the console key presses right before Enter (" + cycle + "), so Enter was not pressed. The command may still be in the game's console: press Enter there.", false);
+                throw new ConsoleSendException(F("The game did not follow the console key presses right before Enter ({0}), so Enter was not pressed. The command may still be in the game's console: press Enter there.", cycle), false);
             }
             var pre = Grab(hwnd);
             double keep = ConsoleProbe.TextRemaining(empty, typed, pre, bar);
             if (keep < 0.8)
             {
                 SaveShots(id, "changed-before-enter", before, opened, typed, pre);
-                throw new ConsoleSendException("The console line changed before Enter, so Enter was not pressed.", false);
+                throw new ConsoleSendException(T("The console line changed before Enter, so Enter was not pressed."), false);
             }
 
             // 5. Enter, then see the line go away.
@@ -646,7 +650,7 @@ namespace SandstormModLauncher.Game
                 if (ConsoleProbe.BarStillThere(opened, cleared, bar) && ConsoleProbe.TextIn(empty, cleared, bar, out _) == TextCheck.None) input.Tap(VK_ESCAPE);
                 Step("enter ignored; line cleared");
             }
-            throw new ConsoleSendException("The game did not take the Enter key. The console line was cleared so nothing is left typed in it.", false);
+            throw new ConsoleSendException(T("The game did not take the Enter key. The console line was cleared so nothing is left typed in it."), false);
         }
 
         /// <summary>True when the one-line console shows at the bottom edge: its rows look as they did with the command on them, or it is recognised on its own.</summary>

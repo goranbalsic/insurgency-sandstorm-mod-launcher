@@ -296,10 +296,15 @@ namespace SandstormModLauncher.Services
         }
 
         private static readonly System.Text.RegularExpressions.Regex PasswordValue =
-            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*Password""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
+            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*(?:Password|Gslt|Token)""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
+        private static readonly System.Text.RegularExpressions.Regex SteamId64 =
+            new System.Text.RegularExpressions.Regex(@"\b7656119\d{10}\b", System.Text.RegularExpressions.RegexOptions.Compiled);
 
-        /// <summary>Any password value (the RCON password in settings.json and Game.ini) replaced by &lt;hidden&gt;.</summary>
-        public static string HidePasswords(string text) => text == null ? null : PasswordValue.Replace(text, "$1<hidden>");
+        /// <summary>
+        /// Any password or token value (RCON passwords in settings.json and Game.ini, the server's Steam token) replaced by
+        /// &lt;hidden&gt;, and Steam IDs (the server's admins) by &lt;id&gt;.
+        /// </summary>
+        public static string HidePasswords(string text) => text == null ? null : SteamId64.Replace(PasswordValue.Replace(text, "$1<hidden>"), "<id>");
 
         private static IEnumerable<string> KeyboardLayouts()
         {

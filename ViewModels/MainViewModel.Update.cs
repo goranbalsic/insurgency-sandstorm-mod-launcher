@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Services;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.ViewModels
 {
@@ -45,10 +46,10 @@ namespace SandstormModLauncher.ViewModels
         /// <summary>A newer version exists but this exe does not install it (built from source, or the folder is read-only).</summary>
         public bool UpdateDownloadOnly => updatePage != null && !updateReady;
         public string UpdateStatus { get => updateStatus; private set => Set(ref updateStatus, value); }
-        public string UpdateReadyTip => readyVersion == null ? "" : "v" + readyVersion.ToString(3) + " is installed and starts the next time you open the launcher. Click to restart now.";
+        public string UpdateReadyTip => readyVersion == null ? "" : F("v{0} is installed and starts the next time you open the launcher. Click to restart now.", readyVersion.ToString(3));
         public string AutoUpdateHint => Updater.CanInstall
-            ? "Looks for a new release every 3 minutes (a tiny request) and puts it in place for the next start. The launcher's only network access."
-            : "Built from source: new releases are only reported. The launcher's only network access.";
+            ? T("Looks for a new release every 3 minutes (a tiny request) and puts it in place for the next start. The launcher's only network access.")
+            : T("Built from source: new releases are only reported. The launcher's only network access.");
 
         /// <summary>Called once the window is up (not for command-line tools or test runs).</summary>
         public void StartUpdateChecks()
@@ -62,8 +63,13 @@ namespace SandstormModLauncher.ViewModels
                 await CheckForUpdates(false);
             };
             updateTimer.Start();
+            ShowLastUpdateCheck();
+        }
+
+        private void ShowLastUpdateCheck()
+        {
             var last = State.Settings.LastUpdateCheckUtc;
-            if (last != default) UpdateStatus = "Last checked " + last.ToLocalTime().ToString("d MMM, HH:mm", CultureInfo.InvariantCulture) + ".";
+            if (last != default) UpdateStatus = F("Last checked {0}.", last.ToLocalTime().ToString("d MMM, HH:mm", CultureInfo.InvariantCulture));
         }
 
         private async Task CheckForUpdates(bool manual)
@@ -72,7 +78,7 @@ namespace SandstormModLauncher.ViewModels
             if (!manual && launchRunning) return;   // never during a launch
             updateBusy = true;
             CommandManager.InvalidateRequerySuggested();
-            if (manual) UpdateStatus = "Checking for updates...";
+            if (manual) UpdateStatus = T("Checking for updates...");
             try
             {
                 var info = await Task.Run(() => Updater.Check());
@@ -90,13 +96,13 @@ namespace SandstormModLauncher.ViewModels
                 }
                 if (info.Version <= have && !rebuilt)
                 {
-                    if (!updateReady) UpdateStatus = "Up to date (v" + have.ToString(3) + "). Checked " + DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture) + ".";
+                    if (!updateReady) UpdateStatus = F("Up to date (v{0}). Checked {1}.", have.ToString(3), DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture));
                     return;
                 }
                 string v = "v" + info.Version.ToString(3);
                 if (!Updater.CanInstall || string.Equals(info.Tag, State.Settings.SkippedUpdateTag, StringComparison.OrdinalIgnoreCase))
                 {
-                    SetDownloadOnly(info, v + " is available.");
+                    SetDownloadOnly(info, F("{0} is available.", v));
                     return;
                 }
                 // A download that failed is not tried again for an hour (it can be up to 50 MB).
@@ -109,19 +115,19 @@ namespace SandstormModLauncher.ViewModels
                     updatePage = null;
                     UpdateReady = true;
                     RaiseMany(nameof(UpdateReadyTip), nameof(UpdateDownloadOnly));
-                    UpdateStatus = v + " is installed and starts the next time you open the launcher.";
-                    ShowToast("Launcher updated to " + v + ". It is used from the next start.");
+                    UpdateStatus = F("{0} is installed and starts the next time you open the launcher.", v);
+                    ShowToast(F("Launcher updated to {0}. It is used from the next start.", v));
                     return;
                 }
                 if (result.SkipRelease) { State.Settings.SkippedUpdateTag = info.Tag; SaveSettingsSoon(); }
-                SetDownloadOnly(info, v + " is available but could not be installed here (" + result.Error + ").");
+                SetDownloadOnly(info, F("{0} is available but could not be installed here ({1}).", v, result.Error));
             }
             catch (Exception ex)
             {
                 // Offline or GitHub unreachable: logged once, then quiet until it works again.
                 if (manual || ex.Message != lastCheckError) AppLog.Warn("Update check failed: " + ex.Message);
                 lastCheckError = ex.Message;
-                if (manual || string.IsNullOrEmpty(updateStatus)) UpdateStatus = "Could not check for updates: " + ex.Message;
+                if (manual || string.IsNullOrEmpty(updateStatus)) UpdateStatus = F("Could not check for updates: {0}", ex.Message);
             }
             finally
             {
