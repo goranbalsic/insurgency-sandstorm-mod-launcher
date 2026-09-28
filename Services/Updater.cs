@@ -33,6 +33,11 @@ namespace SandstormModLauncher.Services
     public static class Updater
     {
         public const string Repo = "goranbalsic/insurgency-sandstorm-mod-launcher";
+        /// <summary>
+        /// The name the repository gets with the program's new name. GitHub redirects the old name to it after the rename;
+        /// releases then come from this name, and the updater accepts them.
+        /// </summary>
+        public const string NewRepo = "goranbalsic/insurgency-sandstorm-local-server-mod-manager";
         private const string ExeName = "SandstormModLauncher.exe";
         private const long MaxZipBytes = 50L * 1024 * 1024;
 
@@ -102,32 +107,42 @@ namespace SandstormModLauncher.Services
         {
             try
             {
-                var req = (HttpWebRequest)WebRequest.Create("https://github.com/" + Repo + "/releases/latest");
-                req.Method = "HEAD";
-                req.AllowAutoRedirect = false;
-                req.UserAgent = "SandstormModLauncher/" + Current.ToString(3);
-                req.Timeout = 10000;
-                using (var resp = (HttpWebResponse)req.GetResponse())
+                string url = "https://github.com/" + Repo + "/releases/latest";
+                // Twice at most: a renamed repository first redirects to its new name, which then redirects to the tag.
+                for (int hop = 0; hop < 2; hop++)
                 {
-                    string location = resp.Headers[HttpResponseHeader.Location] ?? "";
-                    int i = location.LastIndexOf("/tag/", StringComparison.OrdinalIgnoreCase);
-                    return i < 0 ? null : Uri.UnescapeDataString(location.Substring(i + 5)).Trim('/');
+                    var req = (HttpWebRequest)WebRequest.Create(url);
+                    req.Method = "HEAD";
+                    req.AllowAutoRedirect = false;
+                    req.UserAgent = "SandstormModLauncher/" + Current.ToString(3);
+                    req.Timeout = 10000;
+                    using (var resp = (HttpWebResponse)req.GetResponse())
+                    {
+                        string location = resp.Headers[HttpResponseHeader.Location] ?? "";
+                        int i = location.LastIndexOf("/tag/", StringComparison.OrdinalIgnoreCase);
+                        if (i >= 0) return Uri.UnescapeDataString(location.Substring(i + 5)).Trim('/');
+                        // Only a redirect to this project's own (renamed) repository is followed.
+                        if (!location.Equals("https://github.com/" + NewRepo + "/releases/latest", StringComparison.OrdinalIgnoreCase)) return null;
+                        url = location;
+                    }
                 }
+                return null;
             }
             catch { return null; }
         }
 
-        private static UpdateInfo Parse(string json)
+        public static UpdateInfo Parse(string json)
         {
             var root = Json.Parse(json);
             string tag = root.Get("tag_name").Str();
             if (tag == null || !Version.TryParse(tag.TrimStart('v', 'V'), out var version)) throw new InvalidDataException("The latest release has no version tag.");
             var info = new UpdateInfo { Tag = tag, Version = Normalize(version), PageUrl = root.Get("html_url").Str() };
-            string prefix = "https://github.com/" + Repo + "/releases/download/";
+            // Only files of this project's own releases (under its current or its new repository name).
+            var prefixes = new[] { Repo, NewRepo }.Select(r => "https://github.com/" + r + "/releases/download/").ToList();
             foreach (var a in root.Get("assets").Arr())
             {
                 string name = a.Get("name").Str() ?? "", url = a.Get("browser_download_url").Str() ?? "";
-                if (!url.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!prefixes.Any(p => url.StartsWith(p, StringComparison.OrdinalIgnoreCase))) continue;
                 if (name.StartsWith("SandstormModLauncher", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) info.ZipUrl = url;
                 else if (name.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase)) info.SumsUrl = url;
             }

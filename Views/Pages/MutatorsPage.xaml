@@ -177,17 +177,6 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Presets" Style="{StaticResource H2}" />
-                            <ComboBox Margin="0,10,0,0" ItemsSource="{Binding MutatorPresetNames}" SelectedItem="{Binding SelectedMutatorPreset}" ToolTip="Load a saved set of mutators" />
-                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                <Button Content="Save as new" Command="{Binding SaveMutatorPresetCommand}" />
-                                <Button Content="Delete" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding DeleteMutatorPresetCommand}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding SelectedMutator, Converter={StaticResource Vis}}">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedMutator.Name}" Style="{StaticResource H2}" TextWrapping="Wrap" />

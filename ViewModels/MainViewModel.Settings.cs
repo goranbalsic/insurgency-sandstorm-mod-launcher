@@ -72,10 +72,11 @@ namespace SandstormModLauncher.ViewModels
             HelpCommand = new AsyncCommand(() => ShowMessage("How it works",
                 T("1. PLAY > Map: pick a map and scenario, day or night. The right column (Your match) always shows the whole setup; click a line to change it.\n\n") +
                 T("2. PLAY > Squad: presets and the values for your teammates, the enemies and the AI difficulty. A squad preset only changes the bot values.\n\n") +
-                T("3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets, the official Playlists and your Saved setups. A rules preset replaces the rules of the one before it, it never piles up. \"Save setup\" keeps everything (map, scenario, bots, rules, mutators) as one Saved preset.\n\n") +
-                T("4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists what the game has downloaded. PLAY > Advanced shows exactly what will be sent to the game.\n\n") +
-                T("5. Press LAUNCH (or F5). The launcher writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed and the game can stay in the background. Cheats, the versus AI difficulty and your own commands go the same way: the game runs them as if you typed them into its console.\n\n") +
-                T("6. PLAY > Live works during a match: restart rounds, change rules, cheat buttons (clock, bots, god mode) and any console command, all over RCON.\n\n") +
+                T("3. PLAY > Rules: every other match setting of that mode (changed values turn gold), with presets: Styles, the Official rulesets and the official Playlists. A preset takes the previous one's rules and mutators back out before it puts in its own; what you changed by hand stays.\n\n") +
+                T("4. PLAY > Mods: tick the mutators you want, in load order. Installed mods lists the mods on your PC. PLAY > Advanced shows exactly what will be sent to the game.\n\n") +
+                T("5. The Setup bar at the top keeps your match: Save keeps everything (map, scenario, bots, rules, mutators, Advanced) as a saved setup, and picking a saved setup loads it back.\n\n") +
+                T("6. Press the big button (or F5). \"Start and launch\" writes your rules to Game.ini, starts the game if needed, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only); no keys are pressed. The arrow next to it switches to \"Start the server\": the same match on your dedicated server (set it up on the Server page).\n\n") +
+                T("7. LIVE works during a match: restart rounds, change rules, cheat buttons (clock, bots, god mode) and any console command, all over RCON.\n\n") +
                 T("Something wrong? Settings > Something went wrong? You see the whole report first; Send delivers it, or save it on this PC.")));
         }
 
@@ -521,7 +522,7 @@ namespace SandstormModLauncher.ViewModels
             try
             {
                 string exe = Assembly.GetExecutingAssembly().Location;
-                string link = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Sandstorm Mod Launcher.lnk");
+                string link = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Sandstorm Local, Server & Mod Manager.lnk");
                 var shellType = Type.GetTypeFromProgID("WScript.Shell");
                 object shell = Activator.CreateInstance(shellType);
                 object shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { link });

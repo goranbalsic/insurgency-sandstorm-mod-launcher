@@ -1,13 +1,19 @@
 ﻿<UserControl x:Class="SandstormModLauncher.Views.Pages.LivePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
+    <!-- Its own page since 1.8.0 (it was a tab of Play): control of the match that is running, here or on the server. -->
+    <Grid Margin="20,18,20,20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Control the match that is running" Style="{StaticResource Kicker}" />
+            <TextBlock Text="Live" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
+        </StackPanel>
 
-        <Border Margin="0,14,0,0" CornerRadius="2" Padding="14,10" BorderThickness="1"
+        <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="2" Padding="14,10" BorderThickness="1"
                 Background="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=bg}"
                 BorderBrush="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=border}">
             <DockPanel>
@@ -18,7 +24,7 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="0,14,0,0">
+        <Grid Grid.Row="2" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="16" />

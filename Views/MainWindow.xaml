@@ -1,9 +1,9 @@
-﻿<Window x:Class="SandstormModLauncher.Views.MainWindow"
+<Window x:Class="SandstormModLauncher.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:SandstormModLauncher.Views.Pages"
         xmlns:v="clr-namespace:SandstormModLauncher.Views"
-        Title="Sandstorm Mod Launcher" Width="1360" Height="860" MinWidth="1120" MinHeight="700"
+        Title="Sandstorm Local, Server &amp; Mod Manager" Width="1360" Height="860" MinWidth="1120" MinHeight="700"
         Background="{StaticResource Bg1}" Foreground="{StaticResource Text}" FontFamily="{StaticResource Body}" FontSize="13"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display" Icon="/Assets/app.ico">
@@ -11,7 +11,7 @@
         <WindowChrome CaptionHeight="46" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
     <Window.InputBindings>
-        <KeyBinding Key="F5" Command="{Binding LaunchCommand}" />
+        <KeyBinding Key="F5" Command="{Binding MainActionCommand}" />
     </Window.InputBindings>
     <Window.Resources>
         <Style x:Key="SummaryChip" TargetType="Border">
@@ -55,20 +55,35 @@
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
                         <Image Source="/Assets/logo.png" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality" />
                         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="Sandstorm Mod Launcher" FontFamily="{StaticResource Display}" FontSize="14" />
+                            <TextBlock Text="Sandstorm Local, Server &amp; Mod Manager" FontFamily="{StaticResource Display}" FontSize="14" />
                         </StackPanel>
                         <Rectangle Width="1" Height="22" Fill="{StaticResource Line}" Margin="16,0" />
-                        <TextBlock Text="Profile" FontSize="13" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <ComboBox Width="230" ItemsSource="{Binding ProfileNames}" SelectedItem="{Binding SelectedProfile}" WindowChrome.IsHitTestVisibleInChrome="True"
-                                  IsEnabled="{Binding CanSwitchProfile}" ToolTip="A profile keeps a whole setup: map, bots, rules and mutators" />
-                        <Button x:Name="profileMenuButton" Style="{StaticResource IconButton}" Content="&#xE712;" Margin="6,0,0,0" Click="ProfileMenu_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="New, duplicate, rename or delete profiles">
+                        <TextBlock Text="Setup" FontSize="13" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Grid WindowChrome.IsHitTestVisibleInChrome="True">
+                            <ComboBox Width="230" ItemsSource="{Binding SavedSetupNames}" SelectedItem="{Binding SelectedSetup}"
+                                      IsEnabled="{Binding CanChangeSetup}" ToolTip="Saved setups: pick one to load it (map, scenario, bots, rules, mutators, Advanced)" />
+                            <TextBlock Text="Not saved yet" IsHitTestVisible="False" Margin="10,0,30,0" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource TextFaint}"
+                                       Visibility="{Binding SelectedSetup, Converter={StaticResource VisNot}}" />
+                        </Grid>
+                        <TextBlock Text="{Binding SetupState}" FontSize="12" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="8,0,0,0"
+                                   Visibility="{Binding SelectedSetup, Converter={StaticResource Vis}}" />
+                        <!-- Save stands out while there is something to save. -->
+                        <Button Style="{StaticResource GhostButton}" Height="32" Padding="12,0" Margin="8,0,0,0" Content="Save" Command="{Binding SaveSetupCommand}"
+                                WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Save the setup: into the saved setup it came from, or under a new name"
+                                Visibility="{Binding SetupChanged, Converter={StaticResource VisNot}}" />
+                        <Button Style="{StaticResource AccentButton}" Height="32" Padding="12,0" Margin="8,0,0,0" Content="Save" Command="{Binding SaveSetupCommand}"
+                                WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="The setup has changes that are not saved: save it into the saved setup it came from, or under a new name"
+                                Visibility="{Binding SetupChanged, Converter={StaticResource Vis}}" />
+                        <Button x:Name="profileMenuButton" Style="{StaticResource IconButton}" Content="&#xE712;" Margin="6,0,0,0" Click="OpenMenu_Click"
+                                WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Save as new, rename, delete, or start a new setup">
                             <Button.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="New profile..." Command="{Binding NewProfileCommand}" />
-                                    <MenuItem Header="Duplicate this profile..." Command="{Binding DuplicateProfileCommand}" />
-                                    <MenuItem Header="Rename..." Command="{Binding RenameProfileCommand}" />
-                                    <MenuItem Header="Delete this profile" Command="{Binding DeleteProfileCommand}" />
+                                    <MenuItem Header="Save as new..." Command="{Binding SaveSetupAsCommand}" />
+                                    <MenuItem Header="Undo changes (load it again)" Command="{Binding RevertSetupCommand}" />
+                                    <MenuItem Header="Rename..." Command="{Binding RenameSetupCommand}" />
+                                    <MenuItem Header="Delete this saved setup" Command="{Binding DeleteSetupCommand}" />
+                                    <Separator />
+                                    <MenuItem Header="New setup (game defaults)" Command="{Binding NewSetupCommand}" />
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -127,8 +142,9 @@
                             <TextBlock Text="{Binding AppVersion}" FontSize="11" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" />
                         </StackPanel>
                         <StackPanel Margin="0,10,0,0">
-                            <RadioButton Style="{StaticResource NavButton}" Content="Play" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, mods and live control of the match" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="Play" Tag="&#xE768;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Play}" ToolTip="Map, squad, rules, mods and Advanced options of the match" />
                             <RadioButton Style="{StaticResource NavButton}" Content="Server" Tag="&#xE774;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Server}" ToolTip="Run a dedicated server with your match, or control one on another PC" />
+                            <RadioButton Style="{StaticResource NavButton}" Content="Live" Tag="&#xE7C8;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Live}" ToolTip="Control the match that is running: rounds, rules, bots, cheats and console commands" />
                             <RadioButton Style="{StaticResource NavButton}" Content="Settings" Tag="&#xE713;" IsChecked="{Binding Page, Converter={StaticResource Eq}, ConverterParameter=Settings}" ToolTip="Game folder, console key, launch options" />
                         </StackPanel>
                     </DockPanel>
@@ -140,6 +156,7 @@
                           Width="{Binding ViewportWidth, ElementName=pageScroll}" Height="{Binding ViewportHeight, ElementName=pageScroll}">
                         <p:PlayPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Play}" />
                         <p:ServerPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Server}" />
+                        <p:LivePage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Live}" />
                         <p:SettingsPage Visibility="{Binding Page, Converter={StaticResource Vis}, ConverterParameter=Settings}" />
                     </Grid>
                 </ScrollViewer>
@@ -181,12 +198,29 @@
                             <TextBlock Text="Copy command" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2" Style="{StaticResource LaunchButton}" Height="38" MinWidth="200" Command="{Binding LaunchCommand}" ToolTip="{Binding LaunchSubtitle}" AutomationProperties.Name="Launch">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="M 0,0 L 10,6 L 0,12 Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
-                            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding LaunchTitle}" FontFamily="{StaticResource Display}" FontSize="14.5" />
-                        </StackPanel>
-                    </Button>
+                    <!-- The big button: the match on this PC, or on the dedicated server (picked with the arrow next to it). -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{StaticResource LaunchButton}" Height="38" MinWidth="200" Command="{Binding MainActionCommand}" ToolTip="{Binding MainActionTip}"
+                                AutomationProperties.Name="{Binding MainActionTitle}">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="M 0,0 L 10,6 L 0,12 Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center" />
+                                <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding MainActionTitle}" FontFamily="{StaticResource Display}" FontSize="14.5" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource LaunchButton}" Height="38" Width="34" Margin="2,0,0,0" Padding="0" Click="OpenMenu_Click"
+                                ToolTip="Play on this PC or on the dedicated server" AutomationProperties.Name="Where to play">
+                            <Path Data="M 0,0 L 5,5 L 10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Start and launch on this PC" Command="{Binding SetPlayTargetCommand}" CommandParameter="Local"
+                                              IsChecked="{Binding PlayTarget, Converter={StaticResource Eq}, ConverterParameter=Local, Mode=OneWay}" />
+                                    <MenuItem Header="Start the dedicated server with this match" Command="{Binding SetPlayTargetCommand}" CommandParameter="Server"
+                                              IsChecked="{Binding PlayTarget, Converter={StaticResource Eq}, ConverterParameter=Server, Mode=OneWay}" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
 
@@ -351,7 +385,7 @@
             <Grid Grid.Row="1" Grid.RowSpan="2" Background="{StaticResource Bg1}" Visibility="{Binding Loading, Converter={StaticResource Vis}}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="380">
                     <Image Source="/Assets/logo.png" Width="60" Height="60" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="Sandstorm Mod Launcher" FontFamily="{StaticResource Display}" FontSize="22" HorizontalAlignment="Center" Margin="0,16,0,0" />
+                    <TextBlock Text="Sandstorm Local, Server &amp; Mod Manager" FontFamily="{StaticResource Display}" FontSize="22" HorizontalAlignment="Center" Margin="0,16,0,0" />
                     <TextBlock Text="{Binding LoadingText}" Style="{StaticResource Dim}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,18" />
                     <Border Height="4" CornerRadius="2" Background="{StaticResource Bg4}" ClipToBounds="True">
                         <Border Width="110" HorizontalAlignment="Left" CornerRadius="2" Background="{StaticResource Accent}">

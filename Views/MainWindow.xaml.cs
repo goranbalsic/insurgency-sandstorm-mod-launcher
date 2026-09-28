@@ -118,7 +118,7 @@ namespace SandstormModLauncher.Views
             e.Handled = true;
         }
 
-        private void ProfileMenu_Click(object sender, RoutedEventArgs e)
+        private void OpenMenu_Click(object sender, RoutedEventArgs e)
         {
             var button = (Button)sender;
             var menu = button.ContextMenu;

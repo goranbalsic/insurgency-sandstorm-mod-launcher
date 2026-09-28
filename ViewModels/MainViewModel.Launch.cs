@@ -102,12 +102,13 @@ namespace SandstormModLauncher.ViewModels
         // ------------------------------------------------------------------ launch button
 
         public bool CanLaunch => !launchRunning && currentPlan?.IsValid == true && State.Install?.IsValid == true && !Loading;
-        public string LaunchTitle { get => launchTitle; set => Set(ref launchTitle, value); }
-        public string LaunchSubtitle { get => launchSubtitle; set => Set(ref launchSubtitle, value); }
+        public string LaunchTitle { get => launchTitle; set { if (Set(ref launchTitle, value)) RaiseMainAction(); } }
+        public string LaunchSubtitle { get => launchSubtitle; set { if (Set(ref launchSubtitle, value)) RaiseMainAction(); } }
 
         private void UpdateLaunchButton()
         {
             Raise(nameof(CanLaunch));
+            RaiseMainAction();
             if (Monitor == null) { LaunchTitle = T("Launch"); LaunchSubtitle = T("Getting ready..."); return; }
             if (launchRunning) { LaunchTitle = T("Launching..."); LaunchSubtitle = T("Follow the steps in the window"); return; }
             if (currentPlan != null && !currentPlan.IsValid) { LaunchTitle = T("Launch"); LaunchSubtitle = currentPlan.Error; return; }
@@ -139,7 +140,7 @@ namespace SandstormModLauncher.ViewModels
         public bool LaunchRunning
         {
             get => launchRunning;
-            set { if (Set(ref launchRunning, value)) { RaiseMany(nameof(CanLaunch), nameof(CanSwitchProfile)); UpdateLaunchButton(); CommandManager.InvalidateRequerySuggested(); } }
+            set { if (Set(ref launchRunning, value)) { RaiseMany(nameof(CanLaunch), nameof(CanChangeSetup)); UpdateLaunchButton(); CommandManager.InvalidateRequerySuggested(); } }
         }
         public bool LaunchSucceeded { get => launchSucceeded; set => Set(ref launchSucceeded, value); }
         public string LaunchResult { get => launchResult; set => Set(ref launchResult, value); }
@@ -229,8 +230,7 @@ namespace SandstormModLauncher.ViewModels
             if (report.Success)
             {
                 AppLog.Info("Launched " + plan.Title);
-                Page = "Play";
-                PlayTab = "Live";
+                Page = "Live";
                 if (State.Settings.MinimizeOnLaunch && Application.Current?.MainWindow != null) Application.Current.MainWindow.WindowState = WindowState.Minimized;
                 if (LaunchWarnings.Count == 0)
                 {

@@ -1,10 +1,11 @@
-Sandstorm Mod Launcher
-======================
+Sandstorm Local, Server & Mod Manager
+=====================================
 
-Launcher for Insurgency: Sandstorm.
-Play offline with bots, mods and mutators, and change any match rule
-without typing console commands. Server admins can run the same setup on the
-dedicated server and control it live. Other languages: Settings > Language.
+Local play, the dedicated server, mods, match rules and live control for
+Insurgency: Sandstorm, in one app (formerly "Sandstorm Mod Launcher").
+Set up a match once and play it offline on your PC or run it on your
+dedicated server, without typing console commands.
+Other languages: Settings > Language.
 
 
 Requirements

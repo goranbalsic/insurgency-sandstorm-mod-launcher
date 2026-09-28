@@ -1,6 +1,6 @@
-# Sandstorm Mod Launcher
+# Sandstorm Local, Server & Mod Manager
 
-Launcher for **Insurgency: Sandstorm**. Play offline with bots, mods and mutators, set up your squad and the enemy, and change any match rule without typing console commands. Server admins can run the same setup on the dedicated server and control it live. In your language, too: translations are made by players.
+Local play, the dedicated server, mods, match rules and live control for **Insurgency: Sandstorm**, in one app. Set up a match once (map, bots, enemies, every rule, mutators) and play it offline on your PC or run it on your dedicated server, without typing console commands. Formerly "Sandstorm Mod Launcher". In your language, too: translations are made by players.
 
 [![Build](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml/badge.svg)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/goranbalsic/insurgency-sandstorm-mod-launcher)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest)
@@ -11,19 +11,21 @@ Launcher for **Insurgency: Sandstorm**. Play offline with bots, mods and mutator
 ## Features
 
 - All official maps and scenarios plus mod maps, day or night, Hardcore Checkpoint
-- Play page with fixed tabs: Map (map and scenario), Squad (teammates, enemies and AI difficulty, with presets), Rules (every setting of the selected mode, with presets: play styles, official rulesets, the official online playlists and your saved setups), Mods (all mutators, official ones grouped by the playlists that use them, and the installed mods), Live (control of the running match) and Advanced. A "Your match" column shows the whole setup on every tab
-- Presets that behave: a squad preset changes only the bot values, a rules preset replaces the rules of the previous one instead of piling up, and "Save setup" keeps everything (map, scenario, bots, rules, mutators) as one preset you can load again
+- Play page with fixed tabs: Map (map and scenario), Squad (teammates, enemies and AI difficulty, with presets), Rules (every setting of the selected mode, with presets: play styles, official rulesets and the official online playlists, searchable), Mods (all mutators, official ones grouped by the playlists that use them, and the mods installed on your PC) and Advanced. A "Your match" column shows the whole setup on every tab
+- One way to keep a match: saved setups. The Setup bar at the top saves everything (map, scenario, day or night, bots, every rule, the mutators and the Advanced options), loads a saved setup back exactly, and shows when the setup on screen has changes that are not saved
+- Presets that behave: a squad preset changes only the bot values, and each rules preset or playlist takes the previous one's rules, mutators, night and hardcore back out before it puts in its own (what you changed by hand stays)
 - Lone Wolf, a squad of AI teammates, or your own mix of teammates, enemy counts and AI difficulty, starting from each mode's real defaults. Separate squad settings for co-op and versus; versus with bots as 1v1, 5v5, 10v10 or any team size
 - All official and mod mutators, read from the mods the game has installed, with load order and presets
 - Every game mode setting (100+ per mode): rounds, time, waves, objectives, counter-attacks, respawns, supply, friendly fire, HUD
 - The official rulesets and the official online playlists as presets, tagged co-op (PvE, solo or with AI) or versus (against bots offline)
-- Live match control: restart rounds, change rules mid-match, respawn or freeze bots, set the clock, and every console command the game has, searchable
+- Live page: control of the running match. Restart rounds, change rules mid-match, respawn or freeze bots, set the clock, and every console command the game has, searchable
+- One button for both: "Start and launch" plays the match on this PC; switch it to "Start the server" and the same match starts on your dedicated server (the Server page opens first when the server is not set up yet)
 - One click: writes your rules, starts the game, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed, no window has to be in front, and the game confirms the map load and every rule it sets
 - Cheats, the versus AI difficulty and your own console commands go over RCON too: the game runs them as if you had typed them into its console, but nothing is typed
 - Dedicated server: the match you set up in Play runs on the Insurgency: Sandstorm dedicated server with the same rules and mutators, plus the server's own settings (name, ports, player slots, join password, admins, map cycle, mods, Steam server token, game stats). Start, stop and restart it from the launcher, and control it live over RCON: players, kick and ban, chat, change the map, restart the round, any admin command. Works for a server on this PC or, over RCON, on another one
 - Map cycle editor: build the server's map cycle from the Play page, or point it at any MapCycle.txt you already have
 - Any language: every text of the launcher is in one table that players translate with Excel, Google Sheets or LibreOffice (see [Translations](#translations))
-- Profiles, custom map entries, extra Game.ini lines and after-load commands for advanced setups
+- Custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - Adjustable text size (90% to 150%, Ctrl + / Ctrl - or Ctrl + mouse wheel) in a plain, classic Windows look
 - Send a problem report straight from the launcher: you see the cleaned report (no names, IDs or screenshots) first, and it is sent only when you press Send. You can post it on GitHub instead
 - Updates itself quietly from this repository's releases, checked against the published SHA-256 (can be turned off)
@@ -149,7 +151,7 @@ The exe ends up in `bin\Release\net48\`. An exe you build yourself reports new r
 - `--cli rcon "command"` sends commands to the running game over RCON; `rcon-status` checks the connection; `rcon-torture [steps] [seed]` tests the RCON code against a fake game that splits, delays and drops its answers
 - `--cli server-status`, `server-plan`, `server-start`, `server-stop`, `server-players`, `server-travel`, `server-rcon "command"`, `server-set <setting> <value>` and `mapcycle show | add | remove n | clear` run the dedicated server without the window
 - `--cli translation-template [repo] [out.csv]` makes the translation table from the source; `translation-check [repo]` checks that the table the launcher carries is up to date
-- `--ui-torture out.txt [steps] [seed]` drives the real window at random (maps, presets, rules, mutators, profiles, saved setups, text sizes) and checks after every step that the screen, the saved profile and the launch plan agree. Use it with `--data` and a copy of a data folder
+- `--ui-torture out.txt [steps] [seed]` drives the real window at random (maps, presets, rules, mutators, saved setups, the Setup bar, languages, text sizes) and checks after every step that the screen, the saved profile and the launch plan agree. Use it with `--data` and a copy of a data folder
 
 ## Contributing
 

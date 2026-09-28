@@ -163,7 +163,7 @@ namespace SandstormModLauncher.ViewModels
         public string ServerDir => ServerInstall.Root ?? T("Not found");
         public string ServerBuild => ServerInstall.BuildId.Length > 0 ? F("Build {0}", ServerInstall.BuildId) : "";
         public bool ServerRunningHere => !ServerRemote && Server?.Monitor?.IsRunning == true;
-        public bool ServerBusy { get => serverBusy; private set { if (Set(ref serverBusy, value)) { RaiseMany(nameof(CanStartServer), nameof(CanControlServer)); CommandManager.InvalidateRequerySuggested(); } } }
+        public bool ServerBusy { get => serverBusy; private set { if (Set(ref serverBusy, value)) { RaiseMany(nameof(CanStartServer), nameof(CanControlServer)); RaiseMainAction(); } } }
         public string ServerStatus { get => serverStatus; private set => Set(ref serverStatus, value); }
         public string ServerStatusKind { get => serverStatusKind; private set => Set(ref serverStatusKind, value); }
         public string ServerProgress { get => serverProgress; private set => Set(ref serverProgress, value); }
@@ -194,7 +194,7 @@ namespace SandstormModLauncher.ViewModels
             // A server that has been listening is changing maps; otherwise it is still starting.
             else { ServerStatus = m.ListeningPort > 0 ? T("Changing the map...") : T("Starting..."); ServerStatusKind = "Busy"; }
             RaiseMany(nameof(ServerRunningHere), nameof(CanStartServer), nameof(CanControlServer));
-            CommandManager.InvalidateRequerySuggested();
+            RaiseMainAction();
         }
 
         // ------------------------------------------------------------------ settings
@@ -269,7 +269,7 @@ namespace SandstormModLauncher.ViewModels
             ServerWarnings.Clear();
             if (serverPlan != null) foreach (var w in serverPlan.Warnings.Distinct()) ServerWarnings.Add(w);
             RaiseMany(nameof(ServerCommandLine), nameof(ServerPlanError), nameof(ServerMatchSummary), nameof(ServerMatchMods), nameof(CanStartServer));
-            CommandManager.InvalidateRequerySuggested();
+            RaiseMainAction();
         }
 
         public string ServerCommandLine => serverPlan?.IsValid == true ? "InsurgencyServer.exe " + serverPlan.ShownCommandLine : "";

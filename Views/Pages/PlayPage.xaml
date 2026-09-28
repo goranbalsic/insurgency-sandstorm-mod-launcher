@@ -47,14 +47,24 @@
         </Style>
         <!-- One preset (squad preset, rule style, official ruleset, playlist or saved setup). Co-op = PvE, solo or with AI teammates; Versus = against bots offline. -->
         <DataTemplate x:Key="PresetCard">
-            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="11,9" Margin="0,0,8,8">
+            <Border CornerRadius="2" Padding="11,9" Margin="0,0,8,8" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{StaticResource Bg1}" />
+                        <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="Apply" Padding="14,4"
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button Content="Apply" Padding="14,3"
                                 Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                        <Button Style="{StaticResource GhostButton}" Content="Delete" Padding="10,4" Margin="6,0,0,0" ToolTip="Delete this saved setup"
-                                Visibility="{Binding Group, Converter={StaticResource Vis}, ConverterParameter='Saved'}"
-                                Command="{Binding DataContext.DeleteRulesPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                        <TextBlock Text="In use" FontSize="12" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                   Visibility="{Binding IsActive, Converter={StaticResource Vis}}" />
                     </StackPanel>
                     <StackPanel>
                         <DockPanel>
@@ -87,9 +97,11 @@
                             </Border>
                             <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </DockPanel>
-                        <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Note}" Style="{StaticResource Mute}" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0" TextWrapping="Wrap"
-                                   Visibility="{Binding HasNote, Converter={StaticResource Vis}}" />
+                        <!-- Two lines at most; the whole text is in the tooltip, so the list stays easy to scan. -->
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" Margin="0,3,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                   MaxHeight="36" ToolTip="{Binding Description}" />
+                        <TextBlock Text="{Binding Note}" Style="{StaticResource Mute}" Foreground="{StaticResource TextFaint}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding Note}" Visibility="{Binding HasNote, Converter={StaticResource Vis}}" />
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -184,17 +196,6 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xEA86;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0" />
                                 <TextBlock Text="Mods" />
-                            </StackPanel>
-                        </RadioButton>
-                        <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Live}"
-                                     ToolTip="Control the running match: round, clock, bots, cheats and every console command">
-                            <StackPanel Orientation="Horizontal">
-                                <Grid Margin="0,0,8,0">
-                                    <TextBlock Text="&#xE7C8;" Style="{StaticResource Icon}" FontSize="13" />
-                                    <Ellipse Width="7" Height="7" Fill="{StaticResource Good}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-3,0"
-                                             Visibility="{Binding InMatch, Converter={StaticResource Vis}}" />
-                                </Grid>
-                                <TextBlock Text="Live" />
                             </StackPanel>
                         </RadioButton>
                         <RadioButton Style="{StaticResource TabSegment}" IsChecked="{Binding PlayTab, Converter={StaticResource Eq}, ConverterParameter=Advanced}"
@@ -559,7 +560,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
-                    <ColumnDefinition Width="0.5*" MinWidth="250" MaxWidth="320" />
+                    <ColumnDefinition Width="0.75*" MinWidth="280" MaxWidth="440" />
                 </Grid.ColumnDefinitions>
                 <Border Style="{StaticResource Card}" Padding="0">
                     <Grid>
@@ -620,34 +621,34 @@
                         </Grid.RowDefinitions>
                         <StackPanel Margin="14,12,14,8">
                             <TextBlock Text="Presets" Style="{StaticResource H2}" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap" Text="One click sets many rules." />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,10" TextWrapping="Wrap"
+                                       Text="One click sets many rules. The next preset takes the last one's rules and mutators back out." />
                             <Border Style="{StaticResource SegmentHost}">
                                 <UniformGrid Rows="1">
                                     <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Styles" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Styles}" />
                                     <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Official" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Official}" />
                                     <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Playlists" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Playlists}"
                                                  ToolTip="The official online playlists: their mutators and rules, added to the map you picked" />
-                                    <RadioButton Style="{StaticResource Segment}" Padding="6,0" Content="Saved" IsChecked="{Binding PresetFilter, Converter={StaticResource Eq}, ConverterParameter=Saved}" />
                                 </UniformGrid>
                             </Border>
+                            <TextBox Margin="0,8,0,0" Text="{Binding PresetSearch, UpdateSourceTrigger=PropertyChanged}" Tag="Search presets (name, mutator, mode)" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="1,6,0,0" Text="{Binding PresetCountText}" />
                         </StackPanel>
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,0,10,8">
                             <StackPanel>
                                 <ItemsControl ItemsSource="{Binding RulePresets}" ItemTemplate="{StaticResource PresetCard}" Focusable="False" />
                                 <TextBlock Style="{StaticResource Mute}" Visibility="{Binding HasNoPresets, Converter={StaticResource Vis}}" Margin="4,4,4,0" TextWrapping="Wrap"
-                                           Text="Nothing saved yet. &quot;Save setup as a preset&quot; below keeps the whole match: map, scenario, bots, every rule and the mutators." />
+                                           Text="No preset matches the search." />
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="2" Margin="14,4,14,12">
-                            <Button Content="Save setup as a preset..." Command="{Binding SaveRulesPresetCommand}" ToolTip="Saves everything: map, scenario, bots, every rule and the mutators" />
-                            <Button Content="Reset every mode" Style="{StaticResource DangerButton}" Margin="0,8,0,0" Command="{Binding ResetAllRulesCommand}" />
+                            <Button Content="Reset every mode" Style="{StaticResource DangerButton}" Command="{Binding ResetAllRulesCommand}" />
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
 
             <!-- ============================================================ playlists + live -->
-            <p:LivePage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Live}" />
             <p:ModsPage Grid.Row="0" Grid.RowSpan="2" Visibility="{Binding PlayTab, Converter={StaticResource Vis}, ConverterParameter=Mods}" />
 
             <!-- ============================================================ advanced -->
@@ -771,8 +772,8 @@
                         <TextBlock Text="{Binding PlanError}" Style="{StaticResource Mute}" Foreground="{StaticResource Warn}" Margin="2,10,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding PlanError, Converter={StaticResource Vis}}" />
                         <UniformGrid Rows="1" Margin="0,14,0,0">
-                            <Button Content="Save setup..." Margin="0,0,4,0" Command="{Binding SaveRulesPresetCommand}"
-                                    ToolTip="Save everything (map, scenario, bots, rules, mutators) as a preset. Find it under Rules > Presets > Saved." />
+                            <Button Content="Save setup" Margin="0,0,4,0" Command="{Binding SaveSetupCommand}"
+                                    ToolTip="Keep everything (map, scenario, bots, rules, mutators, Advanced) as a saved setup. Pick it again in the bar at the top." />
                             <Button Content="Reset..." Style="{StaticResource GhostButton}" Margin="4,0,0,0" Command="{Binding ResetSetupCommand}"
                                     ToolTip="Bots, enemies, every rule and the mutators back to the game defaults (map stays)" />
                         </UniformGrid>

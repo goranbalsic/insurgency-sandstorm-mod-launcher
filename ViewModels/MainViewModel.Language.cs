@@ -81,7 +81,6 @@ namespace SandstormModLauncher.ViewModels
             if (!Loading)
             {
                 RefreshCatalogUi();
-                BuildMutatorPresets();
                 RebuildLiveGroups();
                 foreach (var r in LiveRules) r.Relabel();
                 if (State.Commands != null) BuildCommandList();

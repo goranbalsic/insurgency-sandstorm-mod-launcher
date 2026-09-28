@@ -102,5 +102,5 @@ jobs:
             gh release edit $version --notes-file notes.md
           }
           else {
-            gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --target "${{ github.sha }}" --title "Sandstorm Mod Launcher $version" --notes-file notes.md
+            gh release create $version "SandstormModLauncher-$version.zip" readme.txt SHA256SUMS.txt --target "${{ github.sha }}" --title "Sandstorm Local, Server & Mod Manager $version" --notes-file notes.md
           }

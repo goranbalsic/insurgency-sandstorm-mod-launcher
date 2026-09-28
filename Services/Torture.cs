@@ -6,6 +6,7 @@ using System.Text;
 using SandstormModLauncher.Core;
 using SandstormModLauncher.Game;
 using SandstormModLauncher.Models;
+using static SandstormModLauncher.Core.Loc;
 
 namespace SandstormModLauncher.Services
 {
@@ -37,6 +38,8 @@ namespace SandstormModLauncher.Services
                 if (failures.Count <= 60) print("FAIL step " + step + ": " + msg);
             }
             T Pick<T>(IList<T> list) => list[rnd.Next(list.Count)];
+            step = "regression checks";
+            RegressionChecks(state, Fail);
 
             for (int i = 1; i <= steps; i++)
             {
@@ -281,9 +284,244 @@ namespace SandstormModLauncher.Services
                     if (!(pr.Rules.TryGetValue(mode.Key, out var map) && map.ContainsKey(key))) fail(pr.Name + ": left over " + mode.Key + "." + key + "=" + mode.Value[key]);
             if (pr.Mutators != null)
             {
+                // The preset's mutators are all there (next to the ones picked by hand).
                 var want = pr.Mutators.Select(id => state.FindMutator(id)?.Id).Where(id => id != null).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                if (string.Join(",", want) != string.Join(",", p.Mutators)) fail(pr.Name + ": mutators are " + string.Join(",", p.Mutators) + ", preset says " + string.Join(",", want));
+                var lost = want.Where(id => !p.Mutators.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList();
+                if (lost.Count > 0) fail(pr.Name + ": its mutators " + string.Join(",", lost) + " are missing (mutators: " + string.Join(",", p.Mutators) + ")");
             }
+        }
+
+        /// <summary>
+        /// Fixed checks for what players reported, run before the random steps (each one failed before its fix):
+        /// presets taking the last preset's mutators, day/night and hardcore back out, every pair of presets giving the
+        /// same setup as the second one alone, saved setups loading back exactly, old profiles and mutator presets
+        /// becoming saved setups, and mods that are not on the PC staying out of the launcher.
+        /// </summary>
+        public static void RegressionChecks(AppState state, Action<string> fail)
+        {
+            var db = state.Rules;
+            var styles = SetupEngine.StylePresets(db);
+            var all = styles.Concat(SetupEngine.OfficialPresets(db)).Concat(SetupEngine.PlaylistPresets(state, true)).ToList();
+            var checkpoint = state.AllScenarios.FirstOrDefault(s => s.GameModeClass == "INSCheckpointGameMode" && s.Id.IndexOf("Security", StringComparison.OrdinalIgnoreCase) >= 0)
+                             ?? state.AllScenarios.First(s => s.GameModeClass == "INSCheckpointGameMode");
+            var versus = state.AllScenarios.FirstOrDefault(s => state.ModeFor(s, false) != null && !state.ModeFor(s, false).Coop);
+            Profile Fresh(ScenarioInfo s) { var x = new Profile { Name = "check" }; Cli.PickScenario(state, x, s); return x; }
+            var realism = styles.First(x => x.Name == "Realism");
+            bool Installed(Preset x) => x.Mutators != null && x.Mutators.Any(id => state.FindMutator(id) != null);
+            string Muts(Profile x) => string.Join(",", x.Mutators);
+
+            // 1. A preset without mutators takes the last preset's mutators back out ("Hardcore stays", 2026-09-28).
+            var withMutators = all.Where(x => Installed(x) && (x.ForModes.Count == 0 || x.ForModes.Contains("INSCheckpointGameMode"))).ToList();
+            if (withMutators.Count == 0) fail("no preset with installed mutators to check with");
+            foreach (var pl in withMutators)
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, pl);
+                SetupEngine.Apply(p, state, realism);
+                if (p.Mutators.Count > 0) fail("after " + pl.Name + " then Realism the mutators are " + Muts(p) + " (should be none)");
+            }
+            // 2. Mutators picked by hand stay; only the preset's go.
+            var own = state.AllMutators.Select(m => m.Id).FirstOrDefault(id => withMutators.All(pl => !pl.Mutators.Contains(id, StringComparer.OrdinalIgnoreCase)));
+            if (own != null && withMutators.Count > 0)
+            {
+                var p = Fresh(checkpoint);
+                p.Mutators.Add(own);
+                SetupEngine.Apply(p, state, withMutators[0]);
+                SetupEngine.Apply(p, state, realism);
+                if (Muts(p) != own) fail("the mutator picked by hand was not kept alone: " + Muts(p) + " (should be " + own + ")");
+            }
+            // 3. Night and hardcore a playlist turned on go back off with the next preset, unless changed by hand since.
+            var night = all.FirstOrDefault(x => x.Night && x.ForModes.Contains("INSCheckpointGameMode"));
+            if (night != null)
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, night);
+                if (p.Lighting != "Night") fail(night.Name + " did not turn night on");
+                SetupEngine.Apply(p, state, realism);
+                if (p.Lighting != "Day") fail("after " + night.Name + " then Realism it is still " + p.Lighting);
+                // Night picked by the player before the playlist is the player's: it stays.
+                var q = Fresh(checkpoint);
+                q.Lighting = "Night";
+                SetupEngine.Apply(q, state, night);
+                SetupEngine.Apply(q, state, realism);
+                if (q.Lighting != "Night") fail("night picked by hand was turned off by the preset after " + night.Name);
+                // Day picked by the player after the playlist stays too.
+                var r = Fresh(checkpoint);
+                SetupEngine.Apply(r, state, night);
+                r.Lighting = "Day";
+                SetupEngine.Apply(r, state, night);
+                SetupEngine.Apply(r, state, realism);
+                if (r.Lighting != "Day") fail("lighting after " + night.Name + " twice and Realism is " + r.Lighting);
+            }
+            else fail("no night playlist for checkpoint to check with");
+            var hardcore = all.FirstOrDefault(x => x.HardcoreCheckpoint);
+            if (hardcore != null)
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, hardcore);
+                if (!p.Hardcore) fail(hardcore.Name + " did not turn hardcore on");
+                SetupEngine.Apply(p, state, realism);
+                if (p.Hardcore) fail("after " + hardcore.Name + " then Realism hardcore is still on");
+            }
+            else fail("no hardcore playlist to check with");
+
+            // 3b. A bot value a playlist set but the player changed afterwards stays the player's.
+            var squadSetter = all.FirstOrDefault(x => x.Rules.TryGetValue("INSCheckpointGameMode", out var r) && r.ContainsKey("SoloEnemies"));
+            if (squadSetter != null)
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, squadSetter);
+                SetupEngine.SetRule(p, db, "INSCheckpointGameMode", "SoloEnemies", "5");
+                SetupEngine.Apply(p, state, realism);
+                if (SetupEngine.GetRule(p, "INSCheckpointGameMode", "SoloEnemies") != "5")
+                    fail("enemies set by hand after " + squadSetter.Name + " became " + SetupEngine.Effective(p, db, "INSCheckpointGameMode", "SoloEnemies") + " with the next preset");
+            }
+            else fail("no playlist with enemy numbers to check with");
+
+            // 3c. Every playlist that changes something is in the list (night-only ones too); map rotations are not.
+            var listed = new HashSet<string>(SetupEngine.PlaylistPresets(state, true).Select(x => ((PlaylistDef)x.Source).Key));
+            foreach (var pl in db.Playlists)
+            {
+                bool effect = pl.Mutators.Count > 0 || pl.CoopRules.Count > 0 || !string.IsNullOrEmpty(pl.Ruleset) || pl.Lighting == "Night" || pl.GameAlias == "CheckpointHardcore";
+                if (effect != listed.Contains(pl.Key)) fail("playlist " + pl.Title + (effect ? " changes the match but is not listed" : " is listed but changes nothing"));
+            }
+            if (!listed.Contains("COOP_CHADTEAM6")) fail("Chad Team 6 is not in the playlists");
+
+            // 4. Any preset after any other gives exactly the setup of the second one alone (from the same start).
+            var starts = new List<Profile> { Fresh(checkpoint) };
+            if (versus != null)
+            {
+                var v = Fresh(versus);
+                v.Lighting = "Night";
+                if (own != null) v.Mutators.Add(own);
+                SetupEngine.SetRule(v, db, versus.GameModeClass == null ? "*" : state.ModeFor(versus, false).Cls, "RoundTime", "600");
+                starts.Add(v);
+            }
+            var c = Fresh(checkpoint);
+            if (own != null) c.Mutators.Add(own);
+            SetupEngine.SetRule(c, db, "INSCheckpointGameMode", "SoloEnemies", "12");
+            SetupEngine.SetRule(c, db, "INSCheckpointGameMode", "FriendlyBotQuota", "3");
+            starts.Add(c);
+            int pairs = 0, bad = 0;
+            foreach (var start in starts)
+            {
+                var alone = new Dictionary<Preset, string>();
+                foreach (var b in all) { var q = start.Clone("q"); SetupEngine.Apply(q, state, b); alone[b] = SetupEngine.Fingerprint(q); }
+                foreach (var a in all)
+                    foreach (var b in all)
+                    {
+                        pairs++;
+                        var p = start.Clone("p");
+                        SetupEngine.Apply(p, state, a);
+                        SetupEngine.Apply(p, state, b);
+                        if (SetupEngine.Fingerprint(p) != alone[b] && ++bad <= 5)
+                            fail(a.Name + " then " + b.Name + " is not the same as " + b.Name + " alone:\n" + Diff(SetupEngine.Fingerprint(p), alone[b]));
+                    }
+            }
+            if (bad > 5) fail(bad + " preset pairs in all differ");
+            if (pairs < 100) fail("only " + pairs + " preset pairs were checked");
+
+            // 5. A saved setup loads back exactly, whatever was on screen before (Advanced options too).
+            {
+                var p = Fresh(checkpoint);
+                p.Lighting = "Night"; p.Hardcore = true; p.MaxPlayers = 12; p.MutatorsEnabled = false;
+                if (own != null) p.Mutators.Add(own);
+                SetupEngine.SetRule(p, db, "INSCheckpointGameMode", "RoundTime", "900");
+                p.CustomIniMode = "Append"; p.CustomIniText = "[/Script/X.Y]\r\nA=1"; p.ExtraUrlOptions = "?Foo=1"; p.AfterLoadCommands = "slomo 1";
+                p.EnableCheatsAfterLoad = true; p.GameModeOverride = "Checkpoint"; p.LaunchRuleset = "RS_Test"; p.ForceReload = true;
+                var saved = SetupEngine.Capture(p, "check");
+                string want = SetupEngine.Fingerprint(p);
+                var q = Fresh(versus ?? checkpoint);
+                SetupEngine.Apply(q, state, realism);
+                SetupEngine.Apply(q, state, new Preset { Name = "check", Kind = PresetKind.Saved, Saved = Json.Deserialize<RulesPreset>(Json.Serialize(saved)) });
+                if (SetupEngine.Fingerprint(q) != want) fail("a saved setup did not load back exactly:\n" + Diff(SetupEngine.Fingerprint(q), want));
+                // Every Advanced option one by one (not only through the fingerprint).
+                foreach (var (label, got, exp) in new[]
+                {
+                    ("custom Game.ini mode", q.CustomIniMode, p.CustomIniMode), ("custom Game.ini lines", q.CustomIniText, p.CustomIniText),
+                    ("extra URL options", q.ExtraUrlOptions, p.ExtraUrlOptions), ("after-load commands", q.AfterLoadCommands, p.AfterLoadCommands),
+                    ("mode override", q.GameModeOverride, p.GameModeOverride), ("launch ruleset", q.LaunchRuleset, p.LaunchRuleset),
+                    ("cheats after load", q.EnableCheatsAfterLoad.ToString(), p.EnableCheatsAfterLoad.ToString()), ("force reload", q.ForceReload.ToString(), p.ForceReload.ToString()),
+                    ("player slots", q.MaxPlayers.ToString(), p.MaxPlayers.ToString()), ("mutators on", q.MutatorsEnabled.ToString(), p.MutatorsEnabled.ToString()),
+                    ("hardcore", q.Hardcore.ToString(), p.Hardcore.ToString()), ("lighting", q.Lighting, p.Lighting), ("scenario", q.ScenarioId, p.ScenarioId),
+                })
+                    if (got != exp) fail("a saved setup loaded " + label + " as " + got + " instead of " + exp);
+                if (SetupEngine.SetupChanged(q)) fail("a saved setup just loaded counts as changed");
+                q.MaxPlayers = 13;
+                if (!SetupEngine.SetupChanged(q)) fail("a change after loading a saved setup is not noticed");
+            }
+
+            // 6. Profiles and mutator presets of older versions become saved setups; only the setup on screen stays.
+            {
+                var store = state.Store;
+                var extra = new Profile { Name = "Check old profile" };
+                Cli.PickScenario(state, extra, checkpoint);
+                SetupEngine.SetRule(extra, db, "INSCheckpointGameMode", "RoundTime", "700");
+                store.Profiles.Add(extra);
+                store.SaveProfile(extra);
+                var mp = new MutatorPreset { Name = "Check mutator preset", Mutators = own != null ? new List<string> { own } : new List<string>() };
+                state.Settings.MutatorPresets.Add(mp);
+                string extraPrint = SetupEngine.Fingerprint(extra);
+                SetupEngine.MigrateToSetups(state, true);
+                var fromProfile = state.Settings.RulesPresets.FirstOrDefault(r => r.Name == "Check old profile");
+                var fromMutators = state.Settings.RulesPresets.FirstOrDefault(r => r.Name == "Check mutator preset");
+                if (fromProfile?.Setup == null) fail("an old profile did not become a saved setup");
+                else if (SetupEngine.Fingerprint(fromProfile.Setup) != extraPrint) fail("an old profile changed on its way to a saved setup:\n" + Diff(SetupEngine.Fingerprint(fromProfile.Setup), extraPrint));
+                if (fromMutators?.Setup == null) fail("a mutator preset did not become a saved setup");
+                else if (string.Join(",", fromMutators.Setup.Mutators) != string.Join(",", mp.Mutators)) fail("a mutator preset lost its mutators on the way");
+                if (store.Profiles.Count != 1) fail(store.Profiles.Count + " profiles after the change to saved setups");
+                if (state.Settings.MutatorPresets.Count != 0) fail("mutator presets are left");
+                // The next start converts nothing again (the setup on screen keeps an old profile name).
+                int count = state.Settings.RulesPresets.Count;
+                store.Active.Name = "Check named profile";
+                SetupEngine.MigrateToSetups(state);
+                SetupEngine.MigrateToSetups(state);
+                if (state.Settings.RulesPresets.Count != count) fail("starting again converted " + (state.Settings.RulesPresets.Count - count) + " more saved setups");
+                store.Active.Name = state.Settings.ActiveProfile;
+                state.Settings.RulesPresets.RemoveAll(r => r == fromProfile || r == fromMutators);
+                store.SaveSettings();
+            }
+
+            // 7. Mods that are not on this PC (deleted, unsubscribed, still downloading) are not listed.
+            string pub = Environment.GetEnvironmentVariable("PUBLIC");
+            string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-mods-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                string root = System.IO.Path.Combine(temp, "mod.io", GameInstall.ModioGameId);
+                string mods = System.IO.Path.Combine(root, "mods");
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(root, "metadata"));
+                string Mod(long id, int st, bool folder, bool pak)
+                {
+                    string dir = System.IO.Path.Combine(mods, id.ToString());
+                    if (folder) System.IO.Directory.CreateDirectory(dir);
+                    if (pak) System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, "x.pak"), new byte[64]);
+                    return "{\"ID\":" + id + ",\"PathOnDisk\":" + Json.Serialize(dir) + ",\"State\":" + st + ",\"Profile\":{\"name\":\"Mod " + id + "\"}}";
+                }
+                string json = "{\"Mods\":[" + string.Join(",", Mod(1, 1, true, true), Mod(2, 0, false, false), Mod(3, 1, true, false), Mod(4, 5, true, true)) + "],\"version\":1}";
+                System.IO.File.WriteAllText(System.IO.Path.Combine(root, "metadata", "state.json"), json);
+                Environment.SetEnvironmentVariable("PUBLIC", temp);
+                var found = ModScanner.Scan(new GameInstall(), new string[0], System.IO.Path.Combine(temp, "cache"), t => { });
+                string names = string.Join(",", found.Select(m => m.Id));
+                if (names != "1") fail("installed mods are " + names + " (only mod 1 is on the PC and kept)");
+            }
+            catch (Exception ex) { fail("mod list check: " + ex.Message); }
+            finally
+            {
+                Environment.SetEnvironmentVariable("PUBLIC", pub);
+                try { System.IO.Directory.Delete(temp, true); } catch { }
+            }
+        }
+
+        private static string Diff(string got, string want)
+        {
+            var a = got.Split('\n');
+            var b = want.Split('\n');
+            for (int i = 0; i < Math.Max(a.Length, b.Length); i++)
+            {
+                string x = i < a.Length ? a[i] : "", y = i < b.Length ? b[i] : "";
+                if (x != y) return "  got  " + x + "\n  want " + y;
+            }
+            return "  (same)";
         }
 
         /// <summary>Checks that hold after every step.</summary>

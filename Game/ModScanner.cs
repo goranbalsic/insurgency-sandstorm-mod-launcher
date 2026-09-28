@@ -84,9 +84,12 @@ namespace SandstormModLauncher.Game
                 string full = Path.GetFullPath(folder).TrimEnd('\\');
                 var paks = Directory.Exists(full) ? Directory.GetFiles(full, "*.pak", SearchOption.TopDirectoryOnly) : new string[0];
                 known.TryGetValue(full, out var mod);
+                // Only mods that are on this PC and that the game loads: none whose files are gone (deleted, or unsubscribed and
+                // removed) or still downloading, and none the game is about to remove (unsubscribed: "uninstall pending").
+                if (paks.Length == 0) continue;
+                if (mod != null && mod.StateCode == 5) { AppLog.Info("Mod " + mod.Name + " left out: the game is removing it (unsubscribed)"); continue; }
                 if (mod == null)
                 {
-                    if (paks.Length == 0) continue;
                     mod = new ModInfo { Folder = full, Name = Path.GetFileName(full), State = N("Local folder") };
                     if (long.TryParse(Path.GetFileName(full), out long id)) { mod.Id = id; mod.State = N("Not registered by the game yet"); }
                     else ReadLegacyJson(full, mod);
@@ -112,10 +115,6 @@ namespace SandstormModLauncher.Game
                 Tidy(mod.Mutators);
                 foreach (var mu in mod.Mutators) { mu.ModName = mod.Name; mu.ModId = mod.Id; }
                 foreach (var sc in mod.Scenarios) { sc.ModName = mod.Name; sc.ModId = mod.Id; }
-                if (paks.Length == 0)
-                    mod.Warnings.Add(Directory.Exists(full)
-                        ? N("No .pak files in its folder yet. The game may still be downloading it.")
-                        : N("Its files are not on this PC. The game downloads them again the next time it starts, as long as you are still subscribed."));
                 mods.Add(mod);
             }
 
@@ -177,6 +176,7 @@ namespace SandstormModLauncher.Game
                 Id = m.Get("ID").Long(),
                 Folder = m.Get("PathOnDisk").Str(),
                 SizeOnDisk = m.Get("SizeOnDisk").Long(),
+                StateCode = m.Get("State").Long(-1),
                 State = StateName(m.Get("State").Long(-1)),
                 Name = p.Get("name").Str(),
                 Summary = p.Get("summary").Str(),
