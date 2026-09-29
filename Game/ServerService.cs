@@ -68,6 +68,7 @@ namespace SandstormModLauncher.Game
                 AppLog.Info("Server Game.ini updated (" + UeIni.Split(plan.GameIni).Count + " lines)");
             }
             settings().ServerManagedIniKeys = plan.ManagedIniKeys;
+            SyncModioToken();
             Directory.CreateDirectory(inst.ServerConfigDir);
             if (plan.AdminsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, ServerPlanner.AdminsName + ".txt"), plan.AdminsText);
             if (plan.ModsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, "Mods.txt"), plan.ModsText);
@@ -82,30 +83,82 @@ namespace SandstormModLauncher.Game
         {
             var inst = install();
             Directory.CreateDirectory(inst.SavedConfigDir);
-            string current = File.Exists(inst.EngineIniPath) ? UeIni.ReadText(inst.EngineIniPath) : "";
+            foreach (string path in TokenFiles(inst)) WriteToken(path, (token ?? "").Trim());
+            AppLog.Info("Server Engine.ini and GameUserSettings.ini: mod.io token saved");
+        }
+
+        /// <summary>The two files a mod.io token is kept in (see ServerInstall.GameUserSettingsPath).</summary>
+        private static string[] TokenFiles(ServerInstall inst) => new[] { inst.EngineIniPath, inst.GameUserSettingsPath };
+
+        private static void WriteToken(string path, string token)
+        {
+            string current = File.Exists(path) ? UeIni.ReadText(path) : "";
             var section = new UeIni.Section(ModioSection)
             {
                 Values = new List<KeyValuePair<string, string>>
                 {
                     new KeyValuePair<string, string>("bHasUserAcceptedTerms", "True"),
-                    new KeyValuePair<string, string>("AccessToken", (token ?? "").Trim()),
+                    new KeyValuePair<string, string>("AccessToken", token),
                 }
             };
-            if (File.Exists(inst.EngineIniPath)) ConsoleBridge.BackupFile(inst.EngineIniPath, "server-");
-            UeIni.WriteText(inst.EngineIniPath, UeIni.MergeSections(current, new[] { section }, (s, k) => false));
-            AppLog.Info("Server Engine.ini: mod.io token saved");
+            if (File.Exists(path)) ConsoleBridge.BackupFile(path, "server-");
+            UeIni.WriteText(path, UeIni.MergeSections(current, new[] { section }, (s, k) => false));
         }
 
-        /// <summary>True when the server's Engine.ini holds a mod.io token.</summary>
-        public bool HasModioToken()
+        /// <summary>The token in a server config file (null = none). Never logged or shown.</summary>
+        private static string TokenIn(string path)
         {
             try
             {
-                var inst = install();
-                if (!inst.Found || !File.Exists(inst.EngineIniPath)) return false;
-                var sec = UeIni.Parse(UeIni.ReadText(inst.EngineIniPath)).LastOrDefault(x => x.Name.Equals(ModioSection, StringComparison.OrdinalIgnoreCase));
-                return sec != null && sec.Values.Any(v => v.Key.Equals("AccessToken", StringComparison.OrdinalIgnoreCase) && v.Value.Trim().Length > 0);
+                if (!File.Exists(path)) return null;
+                var sec = UeIni.Parse(UeIni.ReadText(path)).LastOrDefault(x => x.Name.Equals(ModioSection, StringComparison.OrdinalIgnoreCase));
+                string t = sec?.Values.LastOrDefault(v => v.Key.Equals("AccessToken", StringComparison.OrdinalIgnoreCase)).Value?.Trim();
+                return string.IsNullOrEmpty(t) ? null : t;
             }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// A token saved in one of the two files goes into the other too (the server rewrites its config files, and the
+        /// guides differ on which one it reads), so it stays wherever the server looks.
+        /// </summary>
+        public void SyncModioToken()
+        {
+            var inst = install();
+            if (!inst.Found) return;
+            var files = TokenFiles(inst);
+            string token = files.Select(TokenIn).FirstOrDefault(t => t != null);
+            if (token == null) return;
+            foreach (string f in files)
+                if (TokenIn(f) != token) { WriteToken(f, token); AppLog.Info("Server: the mod.io token was put back into " + Path.GetFileName(f)); }
+        }
+
+        /// <summary>What the running server's own log says about its mods.</summary>
+        public ServerModStatus ModStatus(bool modsOn, bool justStarted)
+        {
+            var inst = install();
+            var lines = new List<string>();
+            try
+            {
+                if (inst.LogPath != null && File.Exists(inst.LogPath))
+                    using (var fs = new FileStream(inst.LogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    using (var r = new StreamReader(fs))
+                    {
+                        string l;
+                        while ((l = r.ReadLine()) != null) if (l.IndexOf("Mod", StringComparison.Ordinal) >= 0 || l.StartsWith("Log file open", StringComparison.Ordinal)) lines.Add(l);
+                    }
+            }
+            catch (Exception ex) { AppLog.Warn("Server log for the mod check: " + ex.Message); }
+            return ServerModCheck.Parse(lines, modsOn, justStarted);
+        }
+
+        /// <summary>True when the server's Engine.ini holds a mod.io token.</summary>
+        public bool HasModioToken() => TokenSaved(install());
+
+        /// <summary>True when a token is saved in one of the server's config files.</summary>
+        public static bool TokenSaved(ServerInstall inst)
+        {
+            try { return inst != null && inst.Found && TokenFiles(inst).Any(f => TokenIn(f) != null); }
             catch { return false; }
         }
 

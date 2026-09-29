@@ -722,6 +722,24 @@ namespace SandstormModLauncher.Services
                     if (!ServerPlanner.Build(match, set, done, db, "").IsValid) fail("a finished SteamCMD install does not start");
                     System.IO.Directory.Delete(System.IO.Path.Combine(fakeServer, "steamapps"), true);
                 }
+                // Mods on and no token saved: the plan says the server will load no mods; with a token it does not.
+                {
+                    var match = LaunchPlanner.Build(Fresh(checkpoint), state);
+                    var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerModsEnabled = true, ServerMods = "1457355" };
+                    var noToken = ServerPlanner.Build(match, set, inst, db, "");
+                    if (!noToken.Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods on without a token: no warning");
+                    var cfg = System.IO.Path.Combine(fakeServer, "Insurgency", "Saved", "Config", "WindowsServer");
+                    System.IO.Directory.CreateDirectory(cfg);
+                    new ServerService(() => set, () => inst).SaveModioToken("tokentokentokentoken1234");
+                    if (ServerPlanner.Build(match, set, inst, db, "").Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods on with a saved token: still warned");
+                    // Starting the server puts the token back into a config file the server rewrote without it.
+                    System.IO.File.Delete(System.IO.Path.Combine(cfg, "GameUserSettings.ini"));
+                    new ServerService(() => set, () => inst).WriteFiles(ServerPlanner.Build(match, set, inst, db, ""));
+                    string restored = System.IO.File.Exists(System.IO.Path.Combine(cfg, "GameUserSettings.ini")) ? System.IO.File.ReadAllText(System.IO.Path.Combine(cfg, "GameUserSettings.ini")) : "";
+                    if (!restored.Contains("AccessToken=tokentokentokentoken1234")) fail("starting the server did not put the mod.io token back into GameUserSettings.ini");
+                    if (ServerPlanner.Build(match, new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" }, inst, db, "").Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods off: warned about a token");
+                    foreach (var f in System.IO.Directory.GetFiles(cfg)) System.IO.File.Delete(f);
+                }
                 // Official rules and the match's own ruleset: one ruleset, official, with a note.
                 {
                     var p = Fresh(checkpoint);

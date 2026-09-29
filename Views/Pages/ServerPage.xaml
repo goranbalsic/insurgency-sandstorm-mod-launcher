@@ -318,6 +318,28 @@
                                 <TextBox Text="{Binding ModioTokenInput, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Tag="paste the token here" />
                             </DockPanel>
                             <TextBlock Text="{Binding ModioTokenStatus}" Style="{StaticResource Mute}" Margin="0,6,0,0" />
+                            <TextBlock Text="Mods on the running server" Style="{StaticResource Label}" />
+                            <Border CornerRadius="4" Padding="12,9" BorderThickness="1"
+                                    Background="{Binding ServerModKind, Converter={StaticResource Status}, ConverterParameter=bg}"
+                                    BorderBrush="{Binding ServerModKind, Converter={StaticResource Status}, ConverterParameter=border}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Check mods" Style="{StaticResource GhostButton}" Padding="10,3" Margin="10,0,0,0" VerticalAlignment="Top" Command="{Binding CheckServerModsCommand}"
+                                            ToolTip="Reads the server's own log to see whether it logged in to mod.io and loaded the mods" />
+                                    <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="{Binding ServerModKind, Converter={StaticResource Status}}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding ServerModText}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ServerModShown}" Value="False">
+                                                        <Setter Property="Text" Value="Start the server with mods on, and its log shows here whether it loaded them." />
+                                                        <Setter Property="Foreground" Value="{StaticResource TextMute}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DockPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>

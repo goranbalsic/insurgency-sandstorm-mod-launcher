@@ -37,6 +37,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand CopyJoinCommandCommand { get; private set; }
         public ICommand AllowServerFirewallCommand { get; private set; }
         public ICommand RefreshReachabilityCommand { get; private set; }
+        public ICommand CheckServerModsCommand { get; private set; }
 
         private CancellationTokenSource installCts;
         private bool serverInstalling, installHasPercent, serverTypeNight;
@@ -59,6 +60,7 @@ namespace SandstormModLauncher.ViewModels
             CopyJoinCommandCommand = new RelayCommand(() => CopyText(ServerJoinCommand, "Copied: players paste it into the game's console (the ` key)"), () => ServerJoinCommand.Length > 0);
             AllowServerFirewallCommand = new AsyncCommand(AllowServerFirewall, () => !serverBusy && ServerInstall.Found && !ServerRemote);
             RefreshReachabilityCommand = new RelayCommand(RefreshReachability);
+            CheckServerModsCommand = new AsyncCommand(() => CheckServerMods(false), () => !ServerRemote);
             RebuildServerTypes();
         }
 
@@ -253,6 +255,62 @@ namespace SandstormModLauncher.ViewModels
             firewall = fw;
             RefreshReachability();
             ShowToast(ok && fw == FirewallState.Allowed ? "Windows Firewall now lets the server in" : "Windows Firewall was not changed");
+        }
+
+        // ------------------------------------------------------------------ mods on the server
+
+        private string serverModText = "", serverModKind = "Off";
+        private DateTime serverStartedUtc;
+        private ModVerdict lastModVerdict = ModVerdict.NotAsked;
+
+        /// <summary>What the running server's log says about its mods (empty when there is nothing to say).</summary>
+        public string ServerModText { get => serverModText; private set { if (Set(ref serverModText, value)) Raise(nameof(ServerModShown)); } }
+        /// <summary>Off, Busy, Match (loaded) or Bad, for the status colours.</summary>
+        public string ServerModKind { get => serverModKind; private set => Set(ref serverModKind, value); }
+        public bool ServerModShown => serverModText.Length > 0;
+
+        /// <summary>
+        /// Reads the server's own log for what it did with the mods. A server that starts "fine" with mods on but never logs in
+        /// to mod.io has no mods (players cannot join a modded match), and the launcher says so instead of showing a green light.
+        /// </summary>
+        private async Task CheckServerMods(bool automatic)
+        {
+            if (Server == null || ServerRemote) return;
+            bool on = State.Settings.ServerModsEnabled;
+            if (!ServerRunningHere)
+            {
+                ServerModText = on && !automatic ? T("The server is not running.") : "";
+                ServerModKind = "Off";
+                lastModVerdict = ModVerdict.NotAsked;
+                return;
+            }
+            if (!on && automatic) { ServerModText = ""; return; }
+            bool just = DateTime.UtcNow - serverStartedUtc < TimeSpan.FromSeconds(50);
+            var st = await Task.Run(() => Server.ModStatus(on, just));
+            if (st.Verdict != lastModVerdict && (st.Verdict == ModVerdict.NoLogin || st.Verdict == ModVerdict.LoginFailed))
+                AppLog.Warn("Server mods: " + st.Verdict + (st.LoginError != null ? " (" + st.LoginError + ")" : ""));
+            lastModVerdict = st.Verdict;
+            ServerModText = on || !automatic ? st.Text : "";
+            ServerModKind = st.Verdict == ModVerdict.Loaded ? "Match" : st.Verdict == ModVerdict.NoLogin || st.Verdict == ModVerdict.LoginFailed ? "Bad"
+                          : st.Verdict == ModVerdict.Waiting ? "Busy" : "Off";
+        }
+
+        /// <summary>After a start with mods on: looks at the log a little later, when the server has had time to log in to mod.io.</summary>
+        private async void WatchServerMods()
+        {
+            if (!State.Settings.ServerModsEnabled) { ServerModText = ""; return; }
+            serverStartedUtc = DateTime.UtcNow;
+            ServerModText = T("Waiting for the server to report its mods...");
+            ServerModKind = "Busy";
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(35));
+                await CheckServerMods(true);
+                await Task.Delay(TimeSpan.FromSeconds(40));
+                await CheckServerMods(true);
+                if (lastModVerdict == ModVerdict.NoLogin || lastModVerdict == ModVerdict.LoginFailed) ShowToast("The server started, but it has no mods: see the Mods card");
+            }
+            catch (Exception ex) { AppLog.Warn("Server mod check: " + ex.Message); }
         }
 
         // ------------------------------------------------------------------ options from the admin guide

@@ -372,6 +372,75 @@ namespace SandstormModLauncher.Services
             }
             finally { try { System.IO.Directory.Delete(temp, true); } catch { } }
 
+            // Mods on the server, from the server's own log (real lines: the dedicated server of build 24065441 that never logs
+            // in to mod.io, and the game client's log of a working login).
+            const string ts = "[2026.09.29-17.57.";
+            var never = new[]
+            {
+                "Log file open, 09/29/26 19:57:08",
+                ts + "17:087][  0]LogModioGame: ModSubsystem: mod.io initialization complete with result: The operation completed successfully.",
+                ts + "25:616][ 80]LogOnlineSession: Warning: STEAM (NWI): Empty session setting ModList  : OnlineService of type String",
+            };
+            void Verdict(string what, string[] lines, bool modsOn, bool just, ModVerdict want, string mustSay = null)
+            {
+                var st = ServerModCheck.Parse(lines, modsOn, just);
+                if (st.Verdict != want) fail("server mods, " + what + ": " + st.Verdict + " instead of " + want);
+                if (mustSay != null && st.Text.IndexOf(mustSay, StringComparison.OrdinalIgnoreCase) < 0) fail("server mods, " + what + ": the text says '" + st.Text + "'");
+                if (string.IsNullOrWhiteSpace(st.Text)) fail("server mods, " + what + ": no text");
+            }
+            Verdict("never logged in", never, true, false, ModVerdict.NoLogin, "never logged in");
+            Verdict("just started", never, true, true, ModVerdict.Waiting);
+            Verdict("mods off", never, false, false, ModVerdict.NotAsked);
+            var working = new[]
+            {
+                "Log file open, 09/27/26 03:42:06",
+                ts + "17:087][  0]LogModioGame: ModSubsystem: mod.io initialization complete with result: The operation completed successfully.",
+                ts + "18:179][132]LogModioGame: ModSubsystem: User authentication successful",
+                ts + "18:523][139]LogModioGame: ModSubsystem: ModManager enabled",
+                ts + "18:523][139]LogModioGame: ModSubsystem: Mod added, id: 1457355 to PendingChanges with state Added",
+                ts + "18:523][139]LogModioGame: ModSubsystem: Mod added, id: 150867 to PendingChanges with state Added",
+                ts + "18:747][139]LogINSModioGame: MountMod: CountFlex in C:\\Users\\Public\\mod.io\\254\\mods\\1457355 (id: 1457355, package: /CountFlex/, content: ../../../Insurgency/Plugins/CountFlex/Content)",
+                ts + "18:677][139]LogINSModioGame: MountMod: ISMCm in C:\\Users\\Public\\mod.io\\254\\mods\\150867 (id: 150867, package: /ISMCm/, content: ../../../Insurgency/Mods/ISMCm/Content)",
+            };
+            Verdict("mods mounted", working, true, false, ModVerdict.Loaded, "2 mods");
+            if (ServerModCheck.Parse(working, true).Added.Count != 2) fail("server mods: the added mods were not counted");
+            Verdict("logged in, nothing mounted yet", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication successful" }).ToArray(), true, false, ModVerdict.Unknown);
+            Verdict("refused, with a code", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication failed with error: 11007, message Invalid token" }).ToArray(), true, false, ModVerdict.LoginFailed, "11007");
+            Verdict("terms not accepted", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication failed (Terms of Use): Terms not accepted" }).ToArray(), true, false, ModVerdict.LoginFailed, "Terms not accepted");
+            // Lines of an earlier run in the same file do not count.
+            Verdict("old run loaded, this one did not", working.Concat(never).ToArray(), true, false, ModVerdict.NoLogin);
+            Verdict("empty log", new string[0], true, false, ModVerdict.Waiting);
+            // A login after the empty list was published is fine: it is not "never logged in".
+            if (ServerModCheck.Parse(never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication successful" }), true).Verdict == ModVerdict.NoLogin) fail("server mods: a server that did log in was called never logged in");
+
+            // The token goes into both config files, is put back into the one the server rewrote, and keeps the rest of the file.
+            string fake = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-tok-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                System.IO.Directory.CreateDirectory(fake);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(fake, "InsurgencyServer.exe"), "");
+                var inst = ServerInstall.At(fake);
+                var svc = new ServerService(() => new AppSettings(), () => inst);
+                Directory.CreateDirectory(inst.SavedConfigDir);
+                System.IO.File.WriteAllText(inst.GameUserSettingsPath, "[/Script/Engine.GameUserSettings]\r\nbUseVSync=False\r\n");
+                if (svc.HasModioToken()) fail("mod token: a server without a token has one");
+                svc.SaveModioToken("tokentokentokentoken1234");
+                foreach (var path in new[] { inst.EngineIniPath, inst.GameUserSettingsPath })
+                {
+                    string text = System.IO.File.ReadAllText(path);
+                    if (!text.Contains("AccessToken=tokentokentokentoken1234") || !text.Contains("bHasUserAcceptedTerms=True")) fail("mod token: not saved in " + System.IO.Path.GetFileName(path));
+                }
+                if (!System.IO.File.ReadAllText(inst.GameUserSettingsPath).Contains("bUseVSync=False")) fail("mod token: the rest of GameUserSettings.ini was lost");
+                System.IO.File.WriteAllText(inst.GameUserSettingsPath, "[/Script/Engine.GameUserSettings]\r\nbUseVSync=True\r\n");   // the server rewrote it without our section
+                svc.SyncModioToken();
+                string back = System.IO.File.ReadAllText(inst.GameUserSettingsPath);
+                if (!back.Contains("AccessToken=tokentokentokentoken1234") || !back.Contains("bUseVSync=True")) fail("mod token: not put back into the rewritten file, or its other values were lost:\n" + back);
+                System.IO.File.Delete(inst.EngineIniPath);
+                svc.SyncModioToken();
+                if (!System.IO.File.Exists(inst.EngineIniPath) || !svc.HasModioToken()) fail("mod token: not put back into Engine.ini");
+            }
+            finally { try { System.IO.Directory.Delete(fake, true); } catch { } }
+
             // Vote kick: on writes the guide's two lines once; off takes only the launcher's own lines out again.
             string on = ServerPlanner.ApplyVoteKick("[Rcon]\r\nbEnabled=True\r\n", true);
             if (!ServerPlanner.VoteKickOn(on)) fail("vote kick: switched on but not in Game.ini:\n" + on);
