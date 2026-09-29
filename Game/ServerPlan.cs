@@ -283,6 +283,7 @@ namespace SandstormModLauncher.Game
                 foreach (var id in plan.MatchModIds) if (!mods.Contains(id)) mods.Add(id);
                 if (mods.Count == 0) plan.Warnings.Add(T("Mods are on but no mod ids are listed."));
                 plan.ModsText = string.Concat(mods.Select(m => m.ToString(CultureInfo.InvariantCulture) + "\r\n"));
+                if (!ServerService.TokenSaved(inst)) plan.Warnings.Add(T("Mods are on but no mod.io token is saved for the server (Mods card): without it the server cannot log in to mod.io and loads no mods."));
                 plan.Args.Add("-Mods");
                 // The mods are downloaded after the server has started: then it loads the match again, with its mod content.
                 plan.Args.Add("-ModDownloadTravelTo=" + plan.Url);

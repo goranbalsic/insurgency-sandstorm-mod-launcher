@@ -122,7 +122,11 @@ namespace SandstormModLauncher.ViewModels
             {
                 if (Page != "Server" || serverBusy) return;
                 if (ServerRemote) await CheckServerConnection(false);
-                else if (ServerRunningHere && Server.Monitor?.Phase == GamePhase.InMatch) await RefreshPlayers(true);
+                else if (ServerRunningHere && Server.Monitor?.Phase == GamePhase.InMatch)
+                {
+                    await RefreshPlayers(true);
+                    if (State.Settings.ServerModsEnabled && lastModVerdict != ModVerdict.Loaded) await CheckServerMods(true);
+                }
             };
             serverTimer.Start();
             LoadMapCycle();
@@ -184,7 +188,7 @@ namespace SandstormModLauncher.ViewModels
                 ServerStatusKind = remoteReachable ? "Match" : "Off";
             }
             else if (!ServerInstall.Found) { ServerStatus = T("Server not found"); ServerStatusKind = "Bad"; }
-            else if (m == null || !m.IsRunning) { ServerStatus = T("Not running"); ServerStatusKind = "Off"; ServerPlayers.Clear(); }
+            else if (m == null || !m.IsRunning) { ServerStatus = T("Not running"); ServerStatusKind = "Off"; ServerPlayers.Clear(); if (serverModText.Length > 0) { ServerModText = ""; ServerModKind = "Off"; lastModVerdict = ModVerdict.NotAsked; } }
             else if (m.Phase == GamePhase.InMatch)
             {
                 string level = m.CurrentLevel == null ? "" : m.CurrentLevel.Substring(m.CurrentLevel.LastIndexOf('/') + 1);
@@ -293,6 +297,7 @@ namespace SandstormModLauncher.ViewModels
             SaveSettingsSoon();
             if (failed != null) { await ShowMessage("The server did not start", failed); return false; }
             ShowToast(F("Server running: {0}", plan.Match.Map?.DisplayName ?? plan.Match.Level));
+            WatchServerMods();
             await RefreshPlayers(true);
             return true;
         }

@@ -606,7 +606,7 @@ namespace SandstormModLauncher.Services
                             // The Server page: settings typed in (good and bad), switches, and the map cycle (its file stays in the
                             // test data folder; nothing is ever started and the real server's files are not touched).
                             if (rnd.Next(3) == 0) vm.Page = "Server";
-                            int what = rnd.Next(12);
+                            int what = rnd.Next(13);
                             string[] ids = { "76561198000000001", "76561198000000002\n76561198000000003", "notanid", "", "7656119\n123", "76561198000000004, 76561198000000005" };
                             switch (what)
                             {
@@ -620,6 +620,7 @@ namespace SandstormModLauncher.Services
                                 case 7: name = "server remote"; vm.ServerRemote = !vm.ServerRemote; vm.ServerRemoteHost = Pick(new[] { "", "203.0.113.5", "server.example" }); vm.ServerRemotePortText = Pick(new[] { "27015", "0", "abc" }); break;
                                 case 8: name = "map cycle switch"; vm.ServerUseMapCycle = !vm.ServerUseMapCycle; break;
                                 case 9: name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break;
+                                case 12: name = "check server mods"; vm.ServerModsEnabled = rnd.Next(2) == 0; await Do(vm.CheckServerModsCommand, null); break;
                                 default:
                                 {
                                     if (vm.MapCycleItems.Count == 0) { name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break; }
@@ -789,6 +790,8 @@ namespace SandstormModLauncher.Services
             string disk = string.Join(" | ", onDisk.Select(e => e.Line)), shown = string.Join(" | ", vm.MapCycleItems.Select(i => i.Entry.Line));
             if (disk != shown) fail("map cycle on screen differs from the file:\n  file   " + disk + "\n  screen " + shown);
             if (vm.MapCycleCount != onDisk.Count(e => e.IsEntry)) fail("map cycle count " + vm.MapCycleCount + " but the file has " + onDisk.Count(e => e.IsEntry));
+            // The mod status of a server that is not running says so (or nothing), never a verdict from an old log.
+            if (!vm.ServerRunningHere && vm.ServerModKind != "Off") fail("the mod status says " + vm.ServerModKind + " but the server is not running: " + vm.ServerModText);
             // How players join follows the ports.
             if (!vm.ServerPortsText.Contains(s.ServerPort.ToString(CultureInfo.InvariantCulture)) || !vm.ServerPortsText.Contains(s.ServerQueryPort.ToString(CultureInfo.InvariantCulture))) fail("the ports to forward are shown as " + vm.ServerPortsText);
             if (vm.ServerJoinCommand.Length > 0 && !vm.ServerJoinCommand.EndsWith(":" + s.ServerPort.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) fail("the join command is " + vm.ServerJoinCommand);

@@ -1,5 +1,11 @@
 Local play, the dedicated server, mods, match rules and live control for Insurgency: Sandstorm, in one app.
 
+**Changes in 1.9.1**
+
+- Mods on the server: the Server page now shows whether the running server really loaded its mods. It reads the server's own log after the start and says so plainly: "loaded N mods", "never logged in to mod.io, so its mod list is empty", or "mod.io refused the login". Before, a server that started with no mods looked exactly like one that worked. "Check mods" reads the log again.
+- The mod.io token is saved in both Engine.ini and GameUserSettings.ini of the server (the official guide and the hosting guides disagree on which one the server reads) and put back at every start, in case the server rewrote one of them.
+- A server with mods on and no saved token now says so before it starts.
+
 **Changes in 1.9.0**
 
 - A dedicated server in minutes, from the Server page. No server yet? "Install the server" gets it with SteamCMD, Valve's own tool (about 5 GB, into a folder you pick), with progress, Stop, and carrying on where it stopped. "Update the server" and "Check its files" keep it current. The launcher downloads SteamCMD from Valve and checks it is signed by Valve, and only when you press the button.
