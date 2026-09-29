@@ -1,5 +1,18 @@
 Local play, the dedicated server, mods, match rules and live control for Insurgency: Sandstorm, in one app.
 
+**Changes in 1.8.1**
+
+- A saved setup keeps the preset it was made with: after loading it, the next preset takes that preset's mutators, night and hardcore back out, as it does without saving. Before, a mutator such as Hardcore from a loaded setup stayed. The same now works for a setup carried over from 1.7.0.
+- Checkpoint playlists set hardcore the way the official ones do: the hardcore playlists turn it on (and now also work when it is already on, night included), the others turn it off while they are in use; the next preset puts it back.
+- A playlist whose point is its mutators turns the mutators switch on when it was off; the next preset puts it back.
+- Two presets with the same name (LMGOnly for co-op and for versus, Competitive Firefight as a ruleset and a playlist) are no longer both marked as in use.
+- Free For All, Ambush and Defusal show the 5 bots the launch really brings (it said "you vs 1 bot"), and Free For All is described without teams.
+- The rule count in "Your match" and at the bottom is the count the Rules tab shows; the launcher's own adjustments for offline bots no longer count as your changes.
+- A saved setup on a custom map that was deleted since loads on the map of its scenario, and one on a mod map that is not installed any more says so.
+- Deleting the custom map in use, or mods changing, now marks the setup as changed and saves it.
+- While a question is open, the bar at the top waits, and the setup cannot change between pressing the launch button and the launch starting.
+- The server button says "Changing the map..." while a match loads on the running server.
+
 **Changes in 1.8.0**
 
 - New name: Sandstorm Local, Server & Mod Manager (formerly Sandstorm Mod Launcher). Your settings, saved setups and updates carry on as before.

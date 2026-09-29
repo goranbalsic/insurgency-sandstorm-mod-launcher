@@ -241,7 +241,7 @@ namespace SandstormModLauncher.ViewModels
         private void MarkActivePresets()
         {
             foreach (var item in RulePresets.Concat(SquadPresets))
-                item.IsActive = item.Source is Preset pr && pr.Kind == PresetKind.Match && string.Equals(pr.Name, Profile.RulesPresetName, StringComparison.Ordinal);
+                item.IsActive = item.Source is Preset pr && SetupEngine.InUse(Profile, pr);
         }
 
         private void ApplyPreset(PresetItem item)
@@ -305,12 +305,13 @@ namespace SandstormModLauncher.ViewModels
             RefreshFromProfile(false);
         }
 
+        /// <summary>The player's own rule changes, as the Rules tab counts them (bots are in their own line; the launcher's
+        /// automatic adjustments for offline play are in the command line, not counted as the player's changes).</summary>
         public string RulesSummary
         {
             get
             {
-                var plan = CurrentPlan;
-                int n = plan?.Overrides.Count ?? 0;
+                int n = RuleChangeCount;
                 return n == 0 ? T("Game default rules") : n == 1 ? T("1 rule change") : F("{0} rule changes", n);
             }
         }

@@ -168,6 +168,8 @@ namespace SandstormModLauncher.ViewModels
 
         private void RefreshCatalogUi()
         {
+            // A map that is gone (a custom entry deleted, a mod removed) moves the setup to another one: that is a change.
+            string before = SetupEngine.Fingerprint(Profile);
             suppressProfileSave = true;
             try
             {
@@ -178,7 +180,8 @@ namespace SandstormModLauncher.ViewModels
                 BuildRules();
             }
             finally { suppressProfileSave = false; }
-            UpdatePlan();
+            if (SetupEngine.Fingerprint(Profile) != before) ProfileChanged();
+            else { UpdatePlan(); RaiseSetup(); }
         }
 
         // ------------------------------------------------------------------ navigation / status
@@ -264,7 +267,9 @@ namespace SandstormModLauncher.ViewModels
         private TaskCompletionSource<string> dialogTcs;
         private bool dialogOpen, dialogHasInput;
         private string dialogTitle, dialogMessage, dialogInput, dialogPrimary, dialogSecondary, dialogTertiary;
-        public bool DialogOpen { get => dialogOpen; set => Set(ref dialogOpen, value); }
+        public bool DialogOpen { get => dialogOpen; set { if (Set(ref dialogOpen, value)) Raise(nameof(HeaderEnabled)); } }
+        /// <summary>The bar at the top waits while a question is open (the dark cover only covers the page below it).</summary>
+        public bool HeaderEnabled => !dialogOpen;
         public string DialogTitle { get => dialogTitle; set => Set(ref dialogTitle, value); }
         public string DialogMessage { get => dialogMessage; set => Set(ref dialogMessage, value); }
         public string DialogInput { get => dialogInput; set => Set(ref dialogInput, value); }
@@ -326,6 +331,7 @@ namespace SandstormModLauncher.ViewModels
 
         private void ApplyProfileToUi()
         {
+            string before = SetupEngine.Fingerprint(Profile);
             suppressProfileSave = true;
             try
             {
@@ -337,7 +343,9 @@ namespace SandstormModLauncher.ViewModels
                 RaiseProfileFields();
             }
             finally { suppressProfileSave = false; }
-            UpdatePlan();
+            // The map of the setup may be gone since the last run (a mod removed): the screen moved it to another one.
+            if (SetupEngine.Fingerprint(Profile) != before) ProfileChanged();
+            else { UpdatePlan(); RaiseSetup(); }
         }
 
         public void ProfileChanged()

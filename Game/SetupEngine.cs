@@ -84,6 +84,13 @@ namespace SandstormModLauncher.Game
                 var m = db.Mode(cls);
                 if (m != null && !m.Coop && m.Defaults.ContainsKey("bBots")) return "True";
             }
+            // Ambush, Defusal and Free For All have no bots by default (0): the launch brings 5 (LaunchPlanner), so the
+            // screen shows 5 too.
+            if (key.Equals("BotQuota", StringComparison.OrdinalIgnoreCase))
+            {
+                var m = db.Mode(cls);
+                if (m != null && !m.Coop && m.Defaults.ContainsKey("bBots") && int.TryParse(db.DefaultValue(cls, key), out int q) && q <= 0) return "5";
+            }
             return db.DefaultValue(cls, key);
         }
 
@@ -268,34 +275,50 @@ namespace SandstormModLauncher.Game
                             }
                         }
                     p.PresetKeys = set;
+                    changes.PresetId = PresetId(preset);
                     if (preset.Mutators != null)
                     {
                         // The preset's mutators join the ones picked by hand; the next preset takes out only the preset's.
                         var list = new List<string>(p.Mutators);
+                        bool any = false;
                         foreach (var id in preset.Mutators)
                         {
                             var info = s.FindMutator(id);
                             if (info == null) { if (!missing.Contains(id, StringComparer.OrdinalIgnoreCase)) missing.Add(id); continue; }
+                            any = true;
                             if (list.Contains(info.Id, StringComparer.OrdinalIgnoreCase)) continue;
                             list.Add(info.Id);
                             changes.AddedMutators.Add(info.Id);
                         }
                         p.Mutators = list;
                         p.MutatorPreset = null;
+                        // Its mutators are the point of the preset: with the switch off the match would have none of them.
+                        if (any && !p.MutatorsEnabled)
+                        {
+                            changes.MutatorsOnBefore = false;
+                            p.MutatorsEnabled = true;
+                            changes.MutatorsOnAfter = true;
+                        }
+                    }
+                    // A Checkpoint playlist says whether it is played hardcore: the hardcore ones turn it on, the others off
+                    // (their rules are Checkpoint's). The next preset puts it back.
+                    bool hardcoreChanged = false;
+                    if (preset.ForModes.Contains("INSCheckpointGameMode", StringComparer.OrdinalIgnoreCase) && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode"
+                        && p.Hardcore != preset.HardcoreCheckpoint)
+                    {
+                        changes.HardcoreBefore = p.Hardcore;
+                        p.Hardcore = preset.HardcoreCheckpoint;
+                        changes.HardcoreAfter = p.Hardcore;
+                        hardcoreChanged = true;
                     }
                     var current = CurrentMode(p, s);
-                    bool fits = current == null || preset.ForModes.Count == 0 || preset.ForModes.Contains(current.Cls, StringComparer.OrdinalIgnoreCase);
+                    bool fits = current == null || preset.ForModes.Count == 0 || preset.ForModes.Contains(current.Cls, StringComparer.OrdinalIgnoreCase)
+                                || (preset.HardcoreCheckpoint && current.Cls == "INSCheckpointHardcoreGameMode");
                     if (fits && preset.Night && p.Lighting != "Night")
                     {
                         changes.LightingBefore = p.Lighting;
                         p.Lighting = "Night";
                         changes.LightingAfter = p.Lighting;
-                    }
-                    if (fits && preset.HardcoreCheckpoint && !p.Hardcore && Scenario(p, s)?.GameModeClass == "INSCheckpointGameMode")
-                    {
-                        changes.HardcoreBefore = p.Hardcore;
-                        p.Hardcore = true;
-                        changes.HardcoreAfter = true;
                     }
                     p.PresetChanges = changes;
                     MarkPreset(p, preset.Name, false);
@@ -303,6 +326,7 @@ namespace SandstormModLauncher.Game
                                  : p.Mutators.Count == 0 ? F("{0} applied with no mutators", T(preset.Name))
                                  : p.Mutators.Count == 1 ? F("{0} applied with 1 mutator", T(preset.Name))
                                  : F("{0} applied with {1} mutators", T(preset.Name), p.Mutators.Count);
+                    if (hardcoreChanged) text += ". " + (p.Hardcore ? T("Hardcore on") : T("Hardcore off: this playlist is played as normal Checkpoint"));
                     if (!fits && preset.ForModes.Count > 0)
                         text += ". " + F("Made for {0}: pick one of those on the Map tab for the full effect", string.Join(", ", preset.ForModes.Select(m => T(db.Mode(m)?.Name ?? m)).Distinct()));
                     return text + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
@@ -315,13 +339,15 @@ namespace SandstormModLauncher.Game
                     {
                         // 1.8.0+: the whole setup, Advanced options included.
                         CopySetup(saved.Setup, p);
-                        p.Rules = new Dictionary<string, Dictionary<string, string>>();
+                        p.Rules = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
                         foreach (var mode in saved.Setup.Rules ?? new Dictionary<string, Dictionary<string, string>>())
                             foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
                         SetMutators(p, s, saved.Setup.Mutators, missing);
                         if (p.CustomMapId != null && !s.Settings.CustomMaps.Any(c => c.Id == p.CustomMapId)) p.CustomMapId = null;
                         if (p.MaxPlayers < 1 || p.MaxPlayers > 64) p.MaxPlayers = 8;
                         p.Lighting = p.Lighting == "Night" ? "Night" : "Day";
+                        // The preset the setup was made with, so the next preset still takes it back out.
+                        CopyPresetTracking(saved.Setup, p);
                     }
                     else
                     {
@@ -338,6 +364,9 @@ namespace SandstormModLauncher.Game
                             p.MutatorsEnabled = saved.MutatorsEnabled;
                         }
                     }
+                    // A map that is not installed any more (a mod removed since): the screen falls back to another one.
+                    if (Scenario(p, s) == null && !string.IsNullOrEmpty(p.ScenarioId) && string.IsNullOrEmpty(p.CustomMapId)) missing.Insert(0, p.ScenarioId);
+                    AlignMap(p, s);
                     MarkSetup(p, saved.Name);
                     return F("{0} loaded", saved.Name) + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
                 }
@@ -353,9 +382,18 @@ namespace SandstormModLauncher.Game
             var c = p.PresetChanges;
             if (c == null)
             {
-                // A setup from before 1.8.0: the preset's squad values simply go (as they did then).
+                // A setup from before 1.8.0: the preset's squad values simply go (as they did then), and so do its mutators
+                // (a preset then replaced the whole list with its own, so they are the preset's).
                 var old = new HashSet<string>(p.PresetKeys ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
                 if (old.Count > 0) ClearRules(p, (cls, key) => IsSquadKey(key) && old.Contains(cls + "|" + key));
+                if (!string.IsNullOrEmpty(p.RulesPresetName) && p.PresetCheck != null && p.PresetCheck.StartsWith("M|", StringComparison.Ordinal))
+                {
+                    var theirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var pr in OfficialPresets(s.Rules).Concat(PlaylistPresets(s, true)).Where(x => x.Mutators != null && x.Name == p.RulesPresetName))
+                        foreach (var id in pr.Mutators) { theirs.Add(id); var info = s.FindMutator(id); if (info != null) theirs.Add(info.Id); }
+                    if (theirs.Count > 0) p.Mutators = p.Mutators.Where(m => !theirs.Contains(m)).ToList();
+                }
+                p.PresetKeys = new List<string>();
                 return;
             }
             foreach (var kv in c.RulesAfter ?? new Dictionary<string, string>())
@@ -369,6 +407,7 @@ namespace SandstormModLauncher.Game
             }
             if (c.AddedMutators != null && c.AddedMutators.Count > 0)
                 p.Mutators = p.Mutators.Where(m => !c.AddedMutators.Contains(m, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (c.MutatorsOnAfter.HasValue && p.MutatorsEnabled == c.MutatorsOnAfter.Value) p.MutatorsEnabled = c.MutatorsOnBefore ?? true;
             if (c.LightingAfter != null && p.Lighting == c.LightingAfter) p.Lighting = c.LightingBefore == "Night" ? "Night" : "Day";
             if (c.HardcoreAfter.HasValue && p.Hardcore == c.HardcoreAfter.Value) p.Hardcore = c.HardcoreBefore ?? false;
             p.PresetChanges = null;
@@ -387,6 +426,42 @@ namespace SandstormModLauncher.Game
                 if (prop.CanRead && prop.CanWrite && !TrackingFields.Contains(prop.Name)) prop.SetValue(to, prop.GetValue(copy));
             to.Mutators = to.Mutators ?? new List<string>();
             to.Rules = to.Rules ?? new Dictionary<string, Dictionary<string, string>>();
+        }
+
+        /// <summary>
+        /// The map of the setup is the map its scenario is on. They can part: a setup saved on a custom map entry keeps the
+        /// official map picked before it, and the entry may be deleted since.
+        /// </summary>
+        public static void AlignMap(Profile p, AppState s)
+        {
+            if (!string.IsNullOrEmpty(p.CustomMapId))
+            {
+                if (s.Settings.CustomMaps.Any(c => c.Id == p.CustomMapId)) return;
+                p.CustomMapId = null;
+            }
+            if (string.IsNullOrEmpty(p.ScenarioId)) return;
+            var map = s.Maps.FirstOrDefault(m => m.Key.Equals(p.MapKey ?? "", StringComparison.OrdinalIgnoreCase));
+            if (map != null && map.Scenarios.Any(x => x.Id.Equals(p.ScenarioId, StringComparison.OrdinalIgnoreCase))) return;
+            var owner = s.Maps.FirstOrDefault(m => m.Scenarios.Any(x => x.Id.Equals(p.ScenarioId, StringComparison.OrdinalIgnoreCase)));
+            if (owner != null) p.MapKey = owner.Key;
+        }
+
+        /// <summary>Which preset this is, also when another one has the same name: its list and the game's own id for it.</summary>
+        public static string PresetId(Preset pr) =>
+            pr.Group + ":" + (pr.Source is PlaylistDef pl ? pl.Key : pr.Source is RulesetDef rs ? rs.Id : pr.Name);
+
+        /// <summary>True for the match preset last applied to the setup (shown as in use in the lists).</summary>
+        public static bool InUse(Profile p, Preset pr) =>
+            pr.Kind == PresetKind.Match && (p.PresetChanges?.PresetId != null ? p.PresetChanges.PresetId == PresetId(pr)
+                                                                                : string.Equals(pr.Name, p.RulesPresetName, StringComparison.Ordinal));
+
+        /// <summary>What remembers the last match preset (its name, the rules it set and what else it changed), as a copy.</summary>
+        public static void CopyPresetTracking(Profile from, Profile to)
+        {
+            to.RulesPresetName = from.RulesPresetName;
+            to.PresetCheck = from.PresetCheck;
+            to.PresetKeys = new List<string>(from.PresetKeys ?? new List<string>());
+            to.PresetChanges = from.PresetChanges == null ? null : Json.Deserialize<PresetChanges>(Json.Serialize(from.PresetChanges));
         }
 
         /// <summary>The setup as text, without what tracks presets and saves: equal text = the same match.</summary>
@@ -422,6 +497,7 @@ namespace SandstormModLauncher.Game
         {
             var setup = new Profile();
             CopySetup(p, setup);
+            CopyPresetTracking(p, setup);
             setup.Name = name;
             var r = new RulesPreset
             {

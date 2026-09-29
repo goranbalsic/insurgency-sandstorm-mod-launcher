@@ -58,7 +58,8 @@ namespace SandstormModLauncher.ViewModels
                 switch (NextServerStep())
                 {
                     case ServerStep.Start: return T("Start the server");
-                    case ServerStep.Starting: return T("Server starting...");
+                    // A server that has been listening is changing maps (a match was just loaded on it).
+                    case ServerStep.Starting: return Server?.Monitor?.ListeningPort > 0 ? T("Changing the map...") : T("Server starting...");
                     case ServerStep.Load: return T("Load on the server");
                     default: return T("Set up the server");
                 }
@@ -73,7 +74,7 @@ namespace SandstormModLauncher.ViewModels
                 switch (NextServerStep())
                 {
                     case ServerStep.Start: return T("Starts the dedicated server with this match, its own settings and map cycle");
-                    case ServerStep.Starting: return T("The server is loading its first map");
+                    case ServerStep.Starting: return Server?.Monitor?.ListeningPort > 0 ? T("The server is loading the match") : T("The server is loading its first map");
                     case ServerStep.Load: return T("Loads this match on the running server");
                     default: return ServerPlanError ?? T("Opens the Server page: set up the dedicated server there first");
                 }

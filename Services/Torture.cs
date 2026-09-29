@@ -482,6 +482,162 @@ namespace SandstormModLauncher.Services
                 store.SaveSettings();
             }
 
+            // 8. Saving and loading a setup does not change what the next preset does: the preset the setup was made with
+            //    still comes back out ("Hardcore stays" after loading a saved setup, 2026-09-29).
+            {
+                var hc = all.FirstOrDefault(x => x.HardcoreCheckpoint && x.Night) ?? hardcore;
+                var nexts = new List<Preset> { realism };
+                if (withMutators.Count > 1) nexts.Add(withMutators[1]);
+                int checkedSaves = 0, badSaves = 0;
+                foreach (var a in withMutators.Take(12).Concat(new[] { night, hc, squadSetter }).Where(x => x != null).Distinct())
+                {
+                    var p = Fresh(checkpoint);
+                    if (own != null) p.Mutators.Add(own);
+                    SetupEngine.Apply(p, state, a);
+                    var saved = Json.Deserialize<RulesPreset>(Json.Serialize(SetupEngine.Capture(p, "check save")));
+                    var q = Fresh(versus ?? checkpoint);
+                    SetupEngine.Apply(q, state, new Preset { Name = saved.Name, Kind = PresetKind.Saved, Saved = saved });
+                    if (SetupEngine.PresetLabel(q) != SetupEngine.PresetLabel(p) && ++badSaves <= 3)
+                        fail("a saved setup made with " + a.Name + " shows the preset as '" + SetupEngine.PresetLabel(q) + "' after loading (should be '" + SetupEngine.PresetLabel(p) + "')");
+                    foreach (var b in nexts)
+                    {
+                        checkedSaves++;
+                        var p2 = p.Clone("p2"); var q2 = q.Clone("q2");
+                        SetupEngine.Apply(p2, state, b);
+                        SetupEngine.Apply(q2, state, b);
+                        if (SetupEngine.Fingerprint(q2) != SetupEngine.Fingerprint(p2) && ++badSaves <= 3)
+                            fail("saved with " + a.Name + ", loaded, then " + b.Name + " is not the same as without saving:\n" + Diff(SetupEngine.Fingerprint(q2), SetupEngine.Fingerprint(p2)));
+                    }
+                }
+                if (badSaves > 3) fail(badSaves + " save-and-load checks in all differ");
+                if (checkedSaves < 10) fail("only " + checkedSaves + " save-and-load checks");
+            }
+
+            // 9. A setup from 1.7.0 (a preset applied then, before the launcher kept what presets add): the next preset
+            //    still takes that preset's mutators back out; mutators picked by hand stay.
+            if (withMutators.Count > 0)
+            {
+                var old = withMutators.FirstOrDefault(x => x.Group == "Playlist") ?? withMutators[0];
+                var p = Fresh(checkpoint);
+                // What 1.7.0 left: the preset's mutators in place of the list, its name and check, nothing else.
+                SetupEngine.SetMutators(p, state, old.Mutators);
+                SetupEngine.MarkPreset(p, old.Name, false);
+                if (own != null) p.Mutators.Add(own);
+                p.PresetKeys = new List<string>();
+                p.PresetChanges = null;
+                SetupEngine.Apply(p, state, realism);
+                string want = own ?? "";
+                if (Muts(p) != want) fail("a 1.7.0 setup with " + old.Name + " kept " + Muts(p) + " after Realism (should be " + (want.Length == 0 ? "none" : want) + ")");
+            }
+
+            // 10. Hardcore playlists fit Hardcore Checkpoint too (hardcore already on): night comes on, no "made for" note.
+            {
+                var nightHc = all.FirstOrDefault(x => x.HardcoreCheckpoint && x.Night);
+                if (nightHc == null) fail("no night hardcore playlist to check with");
+                else
+                {
+                    var p = Fresh(checkpoint);
+                    p.Hardcore = true;
+                    string text = SetupEngine.Apply(p, state, nightHc);
+                    if (p.Lighting != "Night") fail(nightHc.Name + " with hardcore already on did not turn night on");
+                    if (!p.Hardcore) fail(nightHc.Name + " turned hardcore off");
+                    if (text.Contains("pick one of those")) fail(nightHc.Name + " with hardcore on says: " + text);
+                    SetupEngine.Apply(p, state, realism);
+                    if (p.Lighting != "Day" || !p.Hardcore) fail("after " + nightHc.Name + " (hardcore picked by hand) then Realism: " + p.Lighting + ", hardcore " + p.Hardcore);
+                }
+                // A Checkpoint playlist that is not hardcore is played as normal Checkpoint: hardcore goes off while it is
+                // in use (its rules are Checkpoint's) and comes back with the next preset.
+                var nightNormal = all.FirstOrDefault(x => x.Night && !x.HardcoreCheckpoint && x.ForModes.Contains("INSCheckpointGameMode"));
+                if (nightNormal == null) fail("no night Checkpoint playlist to check with");
+                else
+                {
+                    var p = Fresh(checkpoint);
+                    p.Hardcore = true;
+                    string text = SetupEngine.Apply(p, state, nightNormal);
+                    if (p.Hardcore || p.Lighting != "Night") fail(nightNormal.Name + " with hardcore on: hardcore " + p.Hardcore + ", " + p.Lighting + " (should be normal Checkpoint at night)");
+                    if (text.Contains("pick one of those")) fail(nightNormal.Name + " with hardcore on says: " + text);
+                    SetupEngine.Apply(p, state, realism);
+                    if (!p.Hardcore || p.Lighting != "Day") fail("after " + nightNormal.Name + " then Realism: hardcore " + p.Hardcore + ", " + p.Lighting + " (should be hardcore by day again)");
+                }
+            }
+
+            // 11. A preset whose point is its mutators turns the mutators switch on (off, the match would have none of them);
+            //     the next preset puts the switch back.
+            if (withMutators.Count > 0)
+            {
+                var p = Fresh(checkpoint);
+                p.MutatorsEnabled = false;
+                SetupEngine.Apply(p, state, withMutators[0]);
+                if (!p.MutatorsEnabled) fail(withMutators[0].Name + " left the mutators switched off");
+                SetupEngine.Apply(p, state, realism);
+                if (p.MutatorsEnabled) fail("after " + withMutators[0].Name + " then Realism the mutators are still switched on (they were off before)");
+                // Switched off by hand after the preset: stays off.
+                var q = Fresh(checkpoint);
+                SetupEngine.Apply(q, state, withMutators[0]);
+                q.MutatorsEnabled = false;
+                SetupEngine.Apply(q, state, realism);
+                if (q.MutatorsEnabled) fail("mutators switched off by hand came back on with the next preset");
+            }
+
+            // 12. Two presets with the same name (LMGOnly for co-op and for versus, Competitive Firefight as a ruleset and a
+            //     playlist): only the one applied counts as in use.
+            {
+                var lists = all.GroupBy(SetupEngine.PresetId).Select(g => g.First()).ToList();
+                var twins = lists.GroupBy(x => x.Name).Where(g => g.Select(SetupEngine.PresetId).Distinct().Count() > 1).ToList();
+                if (twins.Count == 0) fail("no two presets with the same name to check with");
+                foreach (var g in twins)
+                {
+                    var first = g.First();
+                    var p = Fresh(checkpoint);
+                    SetupEngine.Apply(p, state, first);
+                    var inUse = g.Where(x => SetupEngine.InUse(p, x)).ToList();
+                    if (inUse.Count != 1 || inUse[0] != first) fail(first.Name + ": " + inUse.Count + " presets of that name count as in use");
+                }
+            }
+
+            // 13. A saved setup on a map that is not installed any more says so when it is loaded.
+            {
+                var p = Fresh(checkpoint);
+                p.ScenarioId = "Scenario_NotInstalled_Checkpoint_Security";
+                p.MapKey = "NotInstalled";
+                var saved = SetupEngine.Capture(p, "check missing map");
+                var q = Fresh(checkpoint);
+                string text = SetupEngine.Apply(q, state, new Preset { Name = saved.Name, Kind = PresetKind.Saved, Saved = saved });
+                if (text.IndexOf("Scenario_NotInstalled_Checkpoint_Security", StringComparison.OrdinalIgnoreCase) < 0) fail("loading a setup on a map that is not installed says only: " + text);
+            }
+
+            // 14. A setup saved on a custom map entry that was deleted since loads on the map of its scenario (not on the
+            //     official map picked before the entry), unchanged.
+            {
+                var other = state.Maps.FirstOrDefault(m => !m.Scenarios.Any(x => x.Id == checkpoint.Id) && m.Scenarios.Count > 0);
+                var entry = new CustomMapEntry { Label = "check", Level = checkpoint.Level, Scenario = checkpoint.Id, GameModeClass = checkpoint.GameModeClass };
+                state.Settings.CustomMaps.Add(entry);
+                var p = Fresh(checkpoint);
+                if (other != null) p.MapKey = other.Key;
+                p.CustomMapId = entry.Id;
+                var saved = SetupEngine.Capture(p, "check custom");
+                state.Settings.CustomMaps.Remove(entry);
+                var q = Fresh(versus ?? checkpoint);
+                SetupEngine.Apply(q, state, new Preset { Name = saved.Name, Kind = PresetKind.Saved, Saved = saved });
+                var owner = state.Maps.First(m => m.Scenarios.Any(x => x.Id == checkpoint.Id));
+                if (q.CustomMapId != null || q.ScenarioId != checkpoint.Id || q.MapKey != owner.Key)
+                    fail("a setup of a deleted custom map loaded as " + q.MapKey + " / " + q.ScenarioId + " / custom " + q.CustomMapId + " (should be " + owner.Key + " / " + checkpoint.Id + ")");
+                if (SetupEngine.SetupChanged(q)) fail("a setup of a deleted custom map counts as changed right after loading");
+            }
+
+            // 15. What the screen shows as the bot count is what the launch sends (Free For All, Ambush, Defusal: 0 by
+            //     default, 5 in the launch).
+            foreach (var m in db.Modes.Where(x => !x.Coop && x.Defaults.ContainsKey("BotQuota") && x.Defaults.ContainsKey("bBots")))
+            {
+                var sc = state.AllScenarios.FirstOrDefault(x => state.ModeFor(x, false)?.Cls == m.Cls);
+                if (sc == null) continue;
+                var p = Fresh(sc);
+                var plan = LaunchPlanner.Build(p, state);
+                string sent = plan.Overrides.TryGetValue("BotQuota", out var bq) ? bq : db.DefaultValue(m.Cls, "BotQuota");
+                string shown = SetupEngine.Effective(p, db, m.Cls, "BotQuota");
+                if (!LaunchPlanner.Same(sent, shown, db.Prop("BotQuota"))) fail(m.Name + ": the bot count shown is " + shown + " but the launch sends " + sent);
+            }
+
             // 7. Mods that are not on this PC (deleted, unsubscribed, still downloading) are not listed.
             string pub = Environment.GetEnvironmentVariable("PUBLIC");
             string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-mods-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -654,6 +810,8 @@ namespace SandstormModLauncher.Services
                 if (LaunchPlanner.Same(want ?? "", got ?? "", prop)) continue;
                 bool stored = SetupEngine.GetRule(p, mode.Cls, key) != null;
                 if (key == "BotQuota" && versusBots && int.TryParse(want, out var wq) && wq <= 0 && (got == "1" || got == "5")) continue;
+                // Bots off: the team size means nothing and is not sent (the screen still shows what bots would get).
+                if (key == "BotQuota" && !mode.Coop && !versusBots && !stored) continue;
                 if ((key == "MinimumPlayers" || key == "MinimumPlayersInProgress") && versusBots && !stored && got == "1") continue;
                 if (key == "bBots" && mode.Coop && !stored && LaunchPlanner.IsTrue(got)
                     && int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var fb) && fb > 0) continue;

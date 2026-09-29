@@ -121,7 +121,11 @@ namespace SandstormModLauncher.Models
     /// </summary>
     public sealed class PresetChanges
     {
+        /// <summary>Which preset it was (two can share a name, e.g. a co-op and a versus playlist).</summary>
+        public string PresetId { get; set; }
         public List<string> AddedMutators { get; set; } = new List<string>();
+        public bool? MutatorsOnBefore { get; set; }
+        public bool? MutatorsOnAfter { get; set; }
         public string LightingBefore { get; set; }
         public string LightingAfter { get; set; }
         public bool? HardcoreBefore { get; set; }
@@ -207,9 +211,9 @@ namespace SandstormModLauncher.Models
         public DateTime LastUpdateCheckUtc { get; set; }
         public string SkippedUpdateTag { get; set; }             // a release that cannot be installed (its exe is not newer)
         public string StartWith { get; set; } = "Store";        // how the game is started: Store (Steam or Epic), Exe (its own exe), Command
-        public string StartCommand { get; set; } = "";
-        public string PlayTarget { get; set; } = "Local";
-        public bool SetupsMigrated { get; set; }                  // profiles and mutator presets became saved setups (1.8.0, once)        // the big button: Local (the game on this PC) or Server (the dedicated server)           // the player's own start command ({options} = where the launcher's options go)
+        public string StartCommand { get; set; } = "";            // the player's own start command ({options} = where the launcher's options go)
+        public string PlayTarget { get; set; } = "Local";        // the big button: Local (the game on this PC) or Server (the dedicated server)
+        public bool SetupsMigrated { get; set; }                  // profiles and mutator presets became saved setups (1.8.0, once)
         public string Language { get; set; } = "";               // translation in use ("" = English)
 
         // Dedicated server (Server page)

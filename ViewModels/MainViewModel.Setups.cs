@@ -35,7 +35,7 @@ namespace SandstormModLauncher.ViewModels
         }
 
         /// <summary>A setup cannot be switched while the catalog is being read or a launch is running.</summary>
-        public bool CanChangeSetup => !loading && !launchRunning;
+        public bool CanChangeSetup => !loading && !launchRunning && !launchPreparing;
 
         /// <summary>The saved setup the one on screen came from (or was saved as), when it still exists.</summary>
         private RulesPreset LoadedSetup =>

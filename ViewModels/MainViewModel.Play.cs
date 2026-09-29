@@ -85,6 +85,8 @@ namespace SandstormModLauncher.ViewModels
         {
             MapItem target = null;
             if (!string.IsNullOrEmpty(Profile.CustomMapId)) target = Maps.FirstOrDefault(m => m.Custom?.Id == Profile.CustomMapId);
+            // Off a custom entry (deleted since): the map the scenario is on, which may not be the map picked before it.
+            if (target == null) SetupEngine.AlignMap(Profile, State);
             if (target == null) target = Maps.FirstOrDefault(m => m.Custom == null && m.Info.Key.Equals(Profile.MapKey ?? "", StringComparison.OrdinalIgnoreCase));
             if (target == null) target = Maps.FirstOrDefault(m => m.Info.Key == "Farmhouse") ?? Maps.FirstOrDefault();
             SetSelectedMap(target, false);
@@ -287,11 +289,15 @@ namespace SandstormModLauncher.ViewModels
         private int EffectiveInt(string key)
         {
             var mode = CurrentMode;
-            string v = RuleGet(mode?.Cls, key) ?? State.Rules.DefaultValue(mode?.Cls, key);
+            string v = RuleGet(mode?.Cls, key) ?? SetupEngine.LauncherDefault(State.Rules, mode?.Cls, key);
             return int.TryParse(v, out var i) ? i : 0;
         }
 
-        private int DefaultInt(string key) => int.TryParse(State.Rules.DefaultValue(CurrentMode?.Cls, key), out var i) ? i : 0;
+        /// <summary>The value the launch uses when nothing is set (the game's default, or the launcher's where it differs).</summary>
+        private int DefaultInt(string key) => int.TryParse(SetupEngine.LauncherDefault(State.Rules, CurrentMode?.Cls, key), out var i) ? i : 0;
+
+        /// <summary>Free For All has no teams: its bot count is every bot in the match.</summary>
+        private bool NoTeams => CurrentMode?.Cls == "INSFreeForAllMode";
 
         /// <summary>
         /// Squad settings belong to the kind of play, not one mode: a value set while a co-op scenario is picked
@@ -317,7 +323,7 @@ namespace SandstormModLauncher.ViewModels
             if (mode == null || !mode.Defaults.ContainsKey(key)) return;
             value = Math.Max(min, Math.Min(max, value));
             string text = value.ToString(CultureInfo.InvariantCulture);
-            SetSquadValue(key, text, (m, v) => State.Rules.DefaultValue(m.Cls, key) == v ? null : v);
+            SetSquadValue(key, text, (m, v) => SetupEngine.LauncherDefault(State.Rules, m.Cls, key) == v ? null : v);
         }
 
         public int Teammates { get => EffectiveInt("FriendlyBotQuota"); set => SetInt("FriendlyBotQuota", value, 0, 32); }
@@ -330,7 +336,8 @@ namespace SandstormModLauncher.ViewModels
         public string MinEnemiesHint => F("MinimumEnemies · default {0}", DefaultInt("MinimumEnemies"));
         public string MaxEnemiesHint => F("MaximumEnemies · default {0}", DefaultInt("MaximumEnemies"));
         /// <summary>Versus: BotQuota is the size of each team. You take one slot of yours, bots fill the rest and the whole enemy team.</summary>
-        public string BotQuotaHint => BotQuota <= 1
+        public string BotQuotaHint => NoTeams ? F("BotQuota · you vs {0} bots · mode default {1}", BotQuota, DefaultInt("BotQuota"))
+            : BotQuota <= 1
             ? F("BotQuota · you vs 1 bot · mode default {0}", DefaultInt("BotQuota"))
             : F("BotQuota · you + {0} AI vs {1} bots · mode default {2}", BotQuota - 1, BotQuota, DefaultInt("BotQuota"));
         public bool TeammatesChanged => RuleGet(CurrentMode?.Cls, "FriendlyBotQuota") != null;
