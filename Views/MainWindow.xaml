@@ -52,7 +52,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding HeaderEnabled}">
                         <Image Source="/Assets/logo.png" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality" />
                         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="Sandstorm Local, Server &amp; Mod Manager" FontFamily="{StaticResource Display}" FontSize="14" />
@@ -89,7 +89,7 @@
                         </Button>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0" IsEnabled="{Binding HeaderEnabled}">
                         <Border Height="28" CornerRadius="2" Padding="10,0" BorderThickness="1" MaxWidth="440"
                                 Background="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=bg}"
                                 BorderBrush="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=border}">

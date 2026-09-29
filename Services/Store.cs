@@ -98,6 +98,8 @@ namespace SandstormModLauncher.Services
             {
                 r.Rules = r.Rules ?? new Dictionary<string, Dictionary<string, string>>();
                 r.Mutators = r.Mutators ?? new List<string>();
+                // The whole setup of 1.8.0+ gets the same care as the setup on screen (a hand-edited file may miss parts).
+                if (r.Setup != null) Normalize(r.Setup);
             }
         }
 

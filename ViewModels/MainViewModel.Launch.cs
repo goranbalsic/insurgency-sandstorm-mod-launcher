@@ -81,6 +81,7 @@ namespace SandstormModLauncher.ViewModels
                 }
                 if (mode.Defaults.ContainsKey("bBots"))
                     return !BotsEnabled ? T("No bots · players only")
+                         : NoTeams ? F("You vs {0} bots · AI {1}", BotQuota, diff)
                          : BotQuota <= 1 ? F("You vs 1 bot · AI {0}", diff)
                          : F("You + {0} AI vs {1} bots · AI {2}", BotQuota - 1, BotQuota, diff);
                 return F("Versus · AI {0}", diff);
@@ -148,7 +149,25 @@ namespace SandstormModLauncher.ViewModels
         public double LaunchProgress { get => launchProgress; set => Set(ref launchProgress, value); }
         public bool LaunchFailed => !launchRunning && !launchSucceeded && launchResult != null;
 
+        // From the press until the launch runs (the game is checked, questions asked) the setup may not change: the plan is made.
+        private bool launchPreparing;
+
+        private void SetLaunchPreparing(bool value)
+        {
+            if (launchPreparing == value) return;
+            launchPreparing = value;
+            Raise(nameof(CanChangeSetup));
+            CommandManager.InvalidateRequerySuggested();
+        }
+
         private async Task Launch(bool forceRestart)
+        {
+            SetLaunchPreparing(true);
+            try { await LaunchCore(forceRestart); }
+            finally { SetLaunchPreparing(false); }
+        }
+
+        private async Task LaunchCore(bool forceRestart)
         {
             UpdatePlan();
             var plan = currentPlan;
@@ -204,6 +223,7 @@ namespace SandstormModLauncher.ViewModels
             LaunchHeadline = plan.Title;
             LaunchOverlayOpen = true;
             LaunchRunning = true;
+            SetLaunchPreparing(false);
             Raise(nameof(LaunchFailed));
             launchCts = new CancellationTokenSource();
             var progress = new Progress<LaunchUpdate>(u =>

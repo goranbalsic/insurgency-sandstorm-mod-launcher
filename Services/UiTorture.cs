@@ -202,9 +202,51 @@ namespace SandstormModLauncher.Services
             var db = state.Rules;
             bindings.Lines.Clear();
 
+            // Fixed first: the custom map in use is deleted after the setup was saved on it. The screen falls back to
+            // another map, and the bar has to say the setup changed (it did not, 2026-09-29).
+            {
+                step = "custom map in use deleted";
+                // A scenario on another map than the one picked now: the entry keeps that map underneath.
+                var sc = state.AllScenarios.First(s => s.GameModeClass == "INSCheckpointGameMode" && !string.Equals(s.MapKey, vm.Profile.MapKey, StringComparison.OrdinalIgnoreCase)
+                                                        && state.Maps.Any(m => m.Scenarios.Contains(s)));
+                vm.AddCustomMapCommand.Execute(null);
+                vm.EditMapLabel = "UI check map"; vm.EditMapLevel = sc.Level; vm.EditMapScenario = sc.Id; vm.EditMapMode = "";
+                vm.SaveCustomMapCommand.Execute(null);
+                await Pump();
+                if (vm.SelectedMap?.Custom == null) Fail("the new custom map is not picked");
+                await Do(vm.SaveSetupAsCommand, null, null, "UI check");
+                if (vm.SetupChanged) Fail("just saved, but shown as changed");
+                await Do(vm.DeleteCustomMapCommand, vm.SelectedMap);
+                await Pump();
+                if (vm.Profile.CustomMapId != null) Fail("the deleted custom map is still in the setup");
+                // The setup stays on the entry's scenario, now on the map that scenario is on.
+                var owner = state.Maps.First(m => m.Scenarios.Contains(sc));
+                if (vm.Profile.ScenarioId != sc.Id || vm.SelectedMap?.Info.Key != owner.Key)
+                    Fail("after deleting the custom map in use the setup is on " + vm.SelectedMap?.Info.Key + " / " + vm.Profile.ScenarioId + " (should be " + owner.Key + " / " + sc.Id + ")");
+                Check(vm, state, Fail);
+                // Cleaned up: the saved setup of this check goes again.
+                await Do(vm.DeleteSetupCommand, null);
+
+                // Two playlists called LMGOnly (co-op and versus): only the one applied is marked in use.
+                step = "same-name presets";
+                vm.PresetFilter = "Playlists";
+                vm.PresetSearch = "LMGOnly";
+                await Pump();
+                var lmg = vm.RulePresets.Where(x => ((Preset)x.Source).Name == "LMGOnly").ToList();
+                if (lmg.Count < 2) Fail("the two LMGOnly playlists are not both listed");
+                else
+                {
+                    await Do(vm.ApplyPresetCommand, lmg[0]);
+                    await Pump();
+                    Check(vm, state, Fail);
+                }
+                vm.PresetSearch = "";
+                step = "start";
+            }
+
             for (int i = 1; i <= steps; i++)
             {
-                int op = rnd.Next(30);
+                int op = rnd.Next(31);
                 string name = "op" + op;
                 try
                 {
@@ -380,6 +422,7 @@ namespace SandstormModLauncher.Services
                                     SetupEngine.CopySetup(loadedSetup.Setup, want);
                                     want.Mutators = want.Mutators.Where(id => state.FindMutator(id) != null).ToList();
                                     SetupEngine.CleanRules(want.Rules, db);
+                                    SetupEngine.AlignMap(want, state);   // a custom map entry deleted since: the map of its scenario
                                     if (SetupEngine.Fingerprint(vm.Profile) != SetupEngine.Fingerprint(want)) Fail(name + ": the changes were not undone\n" + FirstDifference(SetupEngine.Fingerprint(vm.Profile), SetupEngine.Fingerprint(want)));
                                     if (vm.SetupChanged) Fail(name + ": undone, but still shown as changed");
                                 }
@@ -410,6 +453,39 @@ namespace SandstormModLauncher.Services
                             break;
                         }
                         case 23: name = "random mission"; await Do(vm.RandomMissionCommand, null); break;
+                        case 30:
+                        {
+                            // Custom map entries come and go (the one in use too), and mods are read again: the setup on
+                            // screen, the bar and what is saved must follow.
+                            int k = rnd.Next(4);
+                            var customs = vm.Maps.Where(m => m.Custom != null).ToList();
+                            if (k == 0 || (k == 1 && customs.Count == 0))
+                            {
+                                var sc = Pick(state.AllScenarios.ToList());
+                                name = "custom map add " + sc.Id;
+                                vm.AddCustomMapCommand.Execute(null);
+                                vm.EditMapLabel = Pick(Names);
+                                vm.EditMapLevel = sc.Level;
+                                vm.EditMapScenario = sc.Id;
+                                vm.EditMapMode = rnd.Next(2) == 0 ? "" : sc.GameModeClass;
+                                await Do(vm.SaveCustomMapCommand, null);
+                                vm.MapEditorOpen = false;
+                            }
+                            else if (k == 1)
+                            {
+                                var m = rnd.Next(2) == 0 && vm.SelectedMap?.Custom != null ? vm.SelectedMap : Pick(customs);
+                                name = "custom map delete " + m.Custom.Id + (m == vm.SelectedMap ? " (in use)" : "");
+                                await Do(vm.DeleteCustomMapCommand, m);
+                            }
+                            else if (k == 2 && customs.Count > 0)
+                            {
+                                var m = Pick(customs);
+                                name = "custom map pick " + m.Custom.Id;
+                                await Do(vm.SelectMapCommand, m);
+                            }
+                            else { name = "rescan mods"; await vm.RescanMods(true); }
+                            break;
+                        }
                         case 29:
                         {
                             // The big button: this PC or the server. Only "set up the server" is pressed here (it opens a page);
@@ -566,6 +642,7 @@ namespace SandstormModLauncher.Services
                                 SetupEngine.CopySetup(rp.Setup, want);
                                 want.Mutators = want.Mutators.Where(id => state.FindMutator(id) != null).ToList();
                                 SetupEngine.CleanRules(want.Rules, db);
+                                SetupEngine.AlignMap(want, state);   // a custom map entry deleted since: the map of its scenario
                                 if (SetupEngine.Fingerprint(p) != SetupEngine.Fingerprint(want)) Fail(name + ": not loaded exactly\n" + FirstDifference(SetupEngine.Fingerprint(p), SetupEngine.Fingerprint(want)));
                                 if (vm.SetupChanged) Fail(name + ": just loaded, but shown as changed");
                             }
@@ -751,6 +828,13 @@ namespace SandstormModLauncher.Services
                          + "; first difference at " + at + ": " + (at < shownNames.Count ? shownNames[at] : "-") + " / " + (at < wantNames.Count ? wantNames[at] : "-"));
                 }
             }
+            // The rule count in the summary is the count the Rules tab shows (not the launcher's own bot adjustments).
+            string wantRules = vm.RuleChangeCount == 0 ? Loc.T("Game default rules") : vm.RuleChangeCount == 1 ? Loc.T("1 rule change") : Loc.F("{0} rule changes", vm.RuleChangeCount);
+            if (vm.RulesSummary != wantRules) fail("the summary says \"" + vm.RulesSummary + "\" but the Rules tab has " + vm.RuleChangeCount + " changed");
+            // "In use" marks exactly the match preset last applied (not another one of the same name).
+            foreach (var item in vm.RulePresets.Concat(vm.SquadPresets))
+                if (item.IsActive != (item.Source is Preset pr && SetupEngine.InUse(p, pr))) { fail("preset " + item.Name + " is " + (item.IsActive ? "" : "not ") + "marked in use"); break; }
+            if (vm.RulePresets.Count(x => x.IsActive) > 1) fail(vm.RulePresets.Count(x => x.IsActive) + " presets are marked in use");
             if (state.Store.Profiles.Count != 1) fail(state.Store.Profiles.Count + " profiles; there is only the setup on screen now");
             if (vm.PresetFilter != "Styles" && vm.PresetFilter != "Official" && vm.PresetFilter != "Playlists") fail("preset list " + vm.PresetFilter);
             if (vm.MutatorsEnabled != p.MutatorsEnabled || vm.Night != (p.Lighting == "Night") || vm.MaxPlayers != p.MaxPlayers) fail("conditions on screen differ from the profile");
