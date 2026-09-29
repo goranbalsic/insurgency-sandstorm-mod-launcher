@@ -1,5 +1,13 @@
 Local play, the dedicated server, mods, match rules and live control for Insurgency: Sandstorm, in one app.
 
+**Changes in 1.9.0**
+
+- A dedicated server in minutes, from the Server page. No server yet? "Install the server" gets it with SteamCMD, Valve's own tool (about 5 GB, into a folder you pick), with progress, Stop, and carrying on where it stopped. "Update the server" and "Check its files" keep it current. The launcher downloads SteamCMD from Valve and checks it is signed by Valve, and only when you press the button.
+- Server types like the official servers: Co-op, Co-op Hardcore, Co-op Frenzy, Versus (Push) and Competitive (Firefight). One click sets up the match in Play, a map cycle of every official map of that mode (by day, or by day and night) and the number of players, and switches the big button to "Start the server".
+- How players join: the address players on your network use, the ports to forward for players on the internet, and whether Windows Firewall lets the server in, with a button to allow it.
+- Two options from the game's server admin guide: players can vote to kick, and official rules (listed under the official rules filter).
+- The Visual C++ runtime the server needs is checked, with a link to Microsoft's download when it is missing.
+
 **Changes in 1.8.1**
 
 - A saved setup keeps the preset it was made with: after loading it, the next preset takes that preset's mutators, night and hardcore back out, as it does without saving. Before, a mutator such as Hardcore from a loaded setup stayed. The same now works for a setup carried over from 1.7.0.

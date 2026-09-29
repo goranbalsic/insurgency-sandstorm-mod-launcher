@@ -100,7 +100,8 @@ namespace SandstormModLauncher.ViewModels
                 default:
                     Page = "Server";
                     ShowToast(serverPlan?.Error != null && ServerInstall.Found ? serverPlan.Error
-                              : T("Set up the dedicated server on this page, then press the button again."));
+                              : ServerInstall.Found ? T("Set up the dedicated server on this page, then press the button again.")
+                              : T("Install the dedicated server on this page (one button), then press the big button again."));
                     break;
             }
             RaiseMainAction();

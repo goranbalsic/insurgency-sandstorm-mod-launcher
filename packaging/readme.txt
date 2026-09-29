@@ -23,8 +23,10 @@ How to use
    any other rule on the Rules tab. Press LAUNCH (or F5).
    The launcher starts the game, waits for the main menu and loads the match
    through the game's own remote console (RCON). Nothing is typed into the game.
-4. Running a dedicated server? The Server page starts it with the Play match,
-   its own settings and map cycle, and shows the players while it runs.
+4. Running a dedicated server? The Server page installs it (one button, with
+   Valve's SteamCMD), sets it up as one of the official kinds of server, starts
+   it with the Play match, its own settings and map cycle, shows how players
+   join, and shows the players while it runs.
 5. Something wrong? Settings > "Something went wrong?" saves a report with
    everything needed to find the cause.
 
@@ -46,8 +48,10 @@ What it does on your PC
   (Game.ini, Engine.ini, Admins.txt, MapCycle.txt, Mods.txt, backed up first)
   and starts or stops the server.
 - Keeps its settings and logs in %APPDATA%\SandstormModLauncher
-- No telemetry. The only network access is the update check against the
-  project's GitHub releases (Settings > About turns it off).
+- No telemetry. The only automatic network access is the update check against
+  the project's GitHub releases (Settings > About turns it off). Installing or
+  updating the dedicated server downloads Valve's SteamCMD and the server, only
+  when you press the button on the Server page.
 - Never changes game files and does not touch the anti-cheat. Local play only.
 
 

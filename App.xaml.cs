@@ -319,8 +319,8 @@ namespace SandstormModLauncher
                 foreach (var entry in pages)
                 {
                     // "Server@end" = the page scrolled to its end (to check the lower part of a long page)
-                    bool toEnd = entry.EndsWith("@end", StringComparison.Ordinal);
-                    string page = toEnd ? entry.Substring(0, entry.Length - 4) : entry;
+                    bool toEnd = entry.EndsWith("@end", StringComparison.Ordinal), toMid = entry.EndsWith("@mid", StringComparison.Ordinal);
+                    string page = toEnd || toMid ? entry.Substring(0, entry.Length - 4) : entry;
                     // "Play-Rules" = page Play, tab Rules
                     var parts = page.Split('-');
                     vm.Page = parts[0];
@@ -333,9 +333,10 @@ namespace SandstormModLauncher
                     Layout();
                     await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                     Layout();
-                    if (toEnd)
+                    if (toEnd || toMid)
                     {
-                        foreach (var sv in Descendants<System.Windows.Controls.ScrollViewer>(host).Where(s => s.ActualHeight > 0 && s.ScrollableHeight > 0)) sv.ScrollToEnd();
+                        foreach (var sv in Descendants<System.Windows.Controls.ScrollViewer>(host).Where(s => s.ActualHeight > 0 && s.ScrollableHeight > 0))
+                            if (toEnd) sv.ScrollToEnd(); else sv.ScrollToVerticalOffset(sv.ScrollableHeight / 2);
                         Layout();
                     }
                     // Off screen nothing is "loaded", so the XAML texts are translated here (in a window that happens as they appear).

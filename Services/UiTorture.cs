@@ -246,7 +246,7 @@ namespace SandstormModLauncher.Services
 
             for (int i = 1; i <= steps; i++)
             {
-                int op = rnd.Next(31);
+                int op = rnd.Next(32);
                 string name = "op" + op;
                 try
                 {
@@ -453,6 +453,49 @@ namespace SandstormModLauncher.Services
                             break;
                         }
                         case 23: name = "random mission"; await Do(vm.RandomMissionCommand, null); break;
+                        case 31:
+                        {
+                            // Server types (never the install, update or firewall buttons: those change the PC).
+                            int k = rnd.Next(4);
+                            if (k == 0) { name = "server vote kick"; vm.ServerVoteKick = !vm.ServerVoteKick; break; }
+                            if (k == 1) { name = "server official rules"; vm.ServerOfficialRules = !vm.ServerOfficialRules; break; }
+                            var item = Pick(vm.ServerTypeItems.ToList());
+                            vm.ServerTypeNight = rnd.Next(2) == 0;
+                            string answer = Pick(new[] { "Set it up", "Replace", "Keep mine", "Cancel" });
+                            name = "server type " + item.Type.Id + (vm.ServerTypeNight ? " night" : "") + " (" + answer + ")";
+                            if (!vm.ApplyServerTypeCommand.CanExecute(item)) break;
+                            var beforeType = SetupEngine.Fingerprint(vm.Profile);
+                            int cycleBefore = vm.MapCycleCount;
+                            bool asked = vm.SetupChanged;
+                            vm.ApplyServerTypeCommand.Execute(item);
+                            // Every question gets the same answer: the setup question and the map cycle one.
+                            for (int q = 0; q < 6; q++)
+                            {
+                                await Pump();
+                                if (!vm.DialogOpen) break;
+                                string shownAnswer = Loc.T(answer);
+                                if (shownAnswer != vm.DialogPrimary && shownAnswer != vm.DialogSecondary && shownAnswer != vm.DialogTertiary) shownAnswer = answer == "Cancel" ? vm.DialogSecondary : vm.DialogPrimary;
+                                vm.DialogCommand.Execute(shownAnswer);
+                            }
+                            await Pump();
+                            var sc = SetupEngine.Scenario(vm.Profile, state);
+                            bool applied = sc != null && state.ModeFor(sc, false)?.Cls == item.Type.ModeCls && SetupEngine.Fingerprint(vm.Profile) != beforeType;
+                            if (answer == "Cancel" && (asked || cycleBefore > 0)) { if (SetupEngine.Fingerprint(vm.Profile) != beforeType) Fail(name + ": cancelled, but the setup changed"); break; }
+                            if (!applied && SetupEngine.Fingerprint(vm.Profile) != beforeType) Fail(name + ": the setup changed but is not a " + item.Type.ModeCls + " match");
+                            if (applied)
+                            {
+                                if (vm.PlayTarget != "Server") Fail(name + ": the big button is not on the server");
+                                if (state.Settings.ServerMaxPlayers != item.Type.MaxPlayers) Fail(name + ": max players " + state.Settings.ServerMaxPlayers);
+                                if (vm.Profile.Hardcore != item.Type.Hardcore) Fail(name + ": hardcore is " + vm.Profile.Hardcore);
+                                if (vm.SelectedSetup != null) Fail(name + ": the new setup is shown as the saved setup " + vm.SelectedSetup);
+                                bool replaced = cycleBefore == 0 || answer == "Replace" || answer == "Set it up";
+                                int want = ServerTypes.Cycle(state, item.Type, vm.ServerTypeNight).Count;
+                                if (replaced && vm.MapCycleCount != want) Fail(name + ": " + vm.MapCycleCount + " scenarios in the map cycle instead of " + want);
+                                if (!replaced && vm.MapCycleCount != cycleBefore) Fail(name + ": the map cycle was replaced after Keep mine");
+                                if (vm.MapCycleCount > 0 && !state.Settings.ServerUseMapCycle) Fail(name + ": the map cycle is not switched on");
+                            }
+                            break;
+                        }
                         case 30:
                         {
                             // Custom map entries come and go (the one in use too), and mods are read again: the setup on
@@ -737,12 +780,18 @@ namespace SandstormModLauncher.Services
                 if (fresh.Args.Contains("-Mods") != s.ServerModsEnabled) fail("-Mods does not follow the switch");
                 if (fresh.Args.Any(a => a.StartsWith("-MapCycle=", StringComparison.Ordinal)) != s.ServerUseMapCycle) fail("-MapCycle does not follow the switch");
                 if (!fresh.GameIni.Contains("Password=" + s.ServerRconPassword) || !fresh.GameIni.Contains("ListenPort=" + s.ServerRconPort)) fail("the server's Game.ini has no RCON section with its port and password");
+                if (ServerPlanner.VoteKickOn(fresh.GameIni) != s.ServerVoteKick) fail("vote kick in the server's Game.ini does not follow the switch");
+                if (fresh.Args.Contains("-ruleset=OfficialRules") != s.ServerOfficialRules) fail("official rules do not follow the switch: " + fresh.ShownCommandLine);
+                if (fresh.Args.Count(a => a.StartsWith("-ruleset=", StringComparison.Ordinal)) > 1) fail("two rulesets on the server's command line");
             }
             // The list on screen is the file.
             var onDisk = File.Exists(TortureCycle) ? MapCycle.Parse(File.ReadAllText(TortureCycle)) : new List<MapCycleEntry>();
             string disk = string.Join(" | ", onDisk.Select(e => e.Line)), shown = string.Join(" | ", vm.MapCycleItems.Select(i => i.Entry.Line));
             if (disk != shown) fail("map cycle on screen differs from the file:\n  file   " + disk + "\n  screen " + shown);
             if (vm.MapCycleCount != onDisk.Count(e => e.IsEntry)) fail("map cycle count " + vm.MapCycleCount + " but the file has " + onDisk.Count(e => e.IsEntry));
+            // How players join follows the ports.
+            if (!vm.ServerPortsText.Contains(s.ServerPort.ToString(CultureInfo.InvariantCulture)) || !vm.ServerPortsText.Contains(s.ServerQueryPort.ToString(CultureInfo.InvariantCulture))) fail("the ports to forward are shown as " + vm.ServerPortsText);
+            if (vm.ServerJoinCommand.Length > 0 && !vm.ServerJoinCommand.EndsWith(":" + s.ServerPort.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) fail("the join command is " + vm.ServerJoinCommand);
         }
 
         private static string TortureCycle;

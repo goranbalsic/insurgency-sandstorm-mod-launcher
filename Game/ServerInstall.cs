@@ -33,6 +33,34 @@ namespace SandstormModLauncher.Game
         public string ServerConfigDir => Root == null ? null : Path.Combine(Root, "Insurgency", "Config", "Server");
         public string LogPath => Root == null ? null : Path.Combine(Root, "Insurgency", "Saved", "Logs", "Insurgency.log");
 
+        /// <summary>Installed with SteamCMD into its own folder (it keeps its manifest there): SteamCMD also updates it.
+        /// A server in a Steam library is kept up to date by Steam instead.</summary>
+        public bool ManagedBySteamCmd => Root != null && File.Exists(OwnManifest(Root));
+
+        /// <summary>A SteamCMD install that was stopped or failed before the end (its manifest is not "fully installed"):
+        /// the server's files are not all there yet.</summary>
+        public bool Unfinished { get; private set; }
+
+        private static string OwnManifest(string root) => Path.Combine(root, "steamapps", "appmanifest_" + SteamAppId + ".acf");
+
+        /// <summary>The Microsoft Visual C++ runtime files the server needs (the admin guide's prerequisite) that are missing.</summary>
+        public static List<string> MissingRuntime()
+        {
+            var missing = new List<string>();
+            try
+            {
+                string sys = Environment.Is64BitProcess || !Environment.Is64BitOperatingSystem
+                    ? Environment.SystemDirectory : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Sysnative");
+                foreach (var dll in new[] { "vcruntime140.dll", "msvcp140.dll" })
+                    if (!File.Exists(Path.Combine(sys, dll))) missing.Add(dll);
+            }
+            catch { }
+            return missing;
+        }
+
+        /// <summary>Where the Visual C++ runtime comes from (Microsoft's own download, 64-bit).</summary>
+        public const string RuntimeUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe";
+
         public static bool IsServerDir(string dir)
         {
             try
@@ -159,12 +187,17 @@ namespace SandstormModLauncher.Game
         {
             try
             {
+                // SteamCMD keeps the manifest in the server folder; a Steam library two levels up.
                 string lib = Directory.GetParent(Directory.GetParent(Root).FullName)?.FullName;
-                string manifest = lib == null ? null : Path.Combine(lib, "appmanifest_" + SteamAppId + ".acf");
+                string manifest = File.Exists(OwnManifest(Root)) ? OwnManifest(Root) : lib == null ? null : Path.Combine(lib, "appmanifest_" + SteamAppId + ".acf");
                 if (manifest != null && File.Exists(manifest))
                 {
-                    var m = Regex.Match(File.ReadAllText(manifest), "\"buildid\"\\s+\"(\\d+)\"");
+                    string text = File.ReadAllText(manifest);
+                    var m = Regex.Match(text, "\"buildid\"\\s+\"(\\d+)\"");
                     if (m.Success) BuildId = m.Groups[1].Value;
+                    // StateFlags 4 = fully installed (seen in Steam's and SteamCMD's manifests); without it an install stopped half way.
+                    var f = Regex.Match(text, "\"StateFlags\"\\s+\"(\\d+)\"");
+                    if (manifest == OwnManifest(Root) && f.Success && int.TryParse(f.Groups[1].Value, out int flags) && (flags & 4) == 0) Unfinished = true;
                 }
             }
             catch { }

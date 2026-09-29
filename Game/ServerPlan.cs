@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using SandstormModLauncher.Core;
 using SandstormModLauncher.Models;
 using static SandstormModLauncher.Core.Loc;
 
@@ -127,6 +128,45 @@ namespace SandstormModLauncher.Game
         private static readonly Regex SafePassword = new Regex(@"^[A-Za-z0-9_\-\.!@#\$%\^\*\+~]*$", RegexOptions.Compiled);
         private static readonly Regex SafeCycleName = new Regex(@"^[A-Za-z0-9_\-\.]+$", RegexOptions.Compiled);
 
+        public const string TeamInfoSection = "/Script/Insurgency.TeamInfo";
+        public const string VoteKickIssue = "/Script/Insurgency.VoteIssueKick";
+
+        /// <summary>The ruleset the admin guide calls official rules (the game takes OfficialRules or RS_OfficialRules).</summary>
+        public static bool IsOfficialRules(string ruleset) =>
+            string.Equals(ruleset, "OfficialRules", StringComparison.OrdinalIgnoreCase) || string.Equals(ruleset, "RS_OfficialRules", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Player voting with the vote kick (the admin guide's [/Script/Insurgency.TeamInfo] lines). Switched off, only the
+        /// launcher's own lines go again: voting set up by hand with other vote issues stays as it is.
+        /// </summary>
+        public static string ApplyVoteKick(string gameIni, bool on)
+        {
+            bool Ours(string section, string key) => section.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase)
+                                                     && (key.Equals("bVotingEnabled", StringComparison.OrdinalIgnoreCase) || key.Equals("TeamVoteIssues", StringComparison.OrdinalIgnoreCase));
+            if (on)
+                return UeIni.MergeSections(gameIni ?? "", new[]
+                {
+                    new UeIni.Section(TeamInfoSection) { Values = new List<KeyValuePair<string, string>>
+                    {
+                        new KeyValuePair<string, string>("bVotingEnabled", "True"),
+                        new KeyValuePair<string, string>("TeamVoteIssues", VoteKickIssue),
+                    } }
+                }, (sec, key) => false);
+            var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase));
+            if (sec == null) return gameIni ?? "";
+            var issues = UeIni.ReadArray(gameIni ?? "", TeamInfoSection, "TeamVoteIssues");
+            bool onlyOurs = issues.All(i => i.Equals(VoteKickIssue, StringComparison.OrdinalIgnoreCase));
+            return onlyOurs ? UeIni.MergeSections(gameIni ?? "", new UeIni.Section[0], Ours) : gameIni ?? "";
+        }
+
+        /// <summary>True when the server's Game.ini has the vote kick switched on.</summary>
+        public static bool VoteKickOn(string gameIni)
+        {
+            var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase));
+            return sec != null && sec.Values.Any(v => UeIni.KeyOf(v.Key + "=").Equals("bVotingEnabled", StringComparison.OrdinalIgnoreCase) && LaunchPlanner.IsTrue(v.Value.Trim()))
+                   && UeIni.ReadArray(gameIni, TeamInfoSection, "TeamVoteIssues").Any(i => i.Equals(VoteKickIssue, StringComparison.OrdinalIgnoreCase));
+        }
+
         /// <summary>Steam IDs (64-bit) from free text, one per line; anything else is reported.</summary>
         public static List<string> SteamIds(string text, List<string> bad)
         {
@@ -168,7 +208,8 @@ namespace SandstormModLauncher.Game
         {
             var plan = new ServerPlan { Match = match };
             if (match == null || !match.IsValid) { plan.Error = match?.Error ?? T("Pick a map and scenario in Play first."); return plan; }
-            if (inst == null || !inst.Found) { plan.Error = T("The dedicated server was not found. Set its folder on this page."); return plan; }
+            if (inst == null || !inst.Found) { plan.Error = T("The dedicated server is not installed yet: install it on the Server page, or pick its folder there."); return plan; }
+            if (inst.Unfinished) { plan.Error = T("The server's install did not finish: press Update the server to finish it."); return plan; }
             plan.Warnings.AddRange(match.Warnings);
 
             // The first map: the Play match, with the server's own player count and password instead of the offline ones.
@@ -261,8 +302,16 @@ namespace SandstormModLauncher.Game
             else if (plan.MatchModIds.Count > 0)
                 plan.Warnings.Add(F("This match uses mods ({0}). Turn on mods for the server, or players and the server will not have them.", string.Join(", ", plan.MatchModIds)));
 
-            string ruleset = match.Profile.LaunchRuleset;
-            if (!string.IsNullOrWhiteSpace(ruleset)) plan.Args.Add("-ruleset=" + ruleset.Trim());
+            string ruleset = (match.Profile.LaunchRuleset ?? "").Trim();
+            if (s.ServerOfficialRules)
+            {
+                // One ruleset per server: official rules win over the match's own (the admin guide's opt-in).
+                if (ruleset.Length > 0 && !IsOfficialRules(ruleset)) plan.Warnings.Add(F("Official rules replace the match's ruleset ({0}): a server runs one ruleset.", ruleset));
+                if (match.Overrides.Keys.Any(k => !SetupEngine.IsSquadKey(k) && match.Profile.Rules.TryGetValue(match.Mode?.Cls ?? "", out var own) && own.ContainsKey(k)))
+                    plan.Warnings.Add(T("Official rules keep the official values: some of your rule changes from Play may not apply on this server."));
+                ruleset = "OfficialRules";
+            }
+            if (ruleset.Length > 0) plan.Args.Add("-ruleset=" + ruleset);
             string gslt = (s.ServerGslt ?? "").Trim();
             if (gslt.Length > 0)
             {
@@ -282,7 +331,7 @@ namespace SandstormModLauncher.Game
             // Game.ini: the match rules as for local play, and the server's own RCON section.
             RconSetup.EnsureServerSettings(s);
             string merged = LaunchPlanner.MergeGameIni(currentGameIni ?? "", match, db, s.ServerManagedIniKeys);
-            plan.GameIni = RconSetup.Apply(merged, RconSetup.IniSection(s.ServerRconPort, s.ServerRconPassword, s.ServerRconFromNetwork));
+            plan.GameIni = ApplyVoteKick(RconSetup.Apply(merged, RconSetup.IniSection(s.ServerRconPort, s.ServerRconPassword, s.ServerRconFromNetwork)), s.ServerVoteKick);
             plan.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(match, db);
             if (s.ServerRconPort == s.ServerPort || s.ServerRconPort == s.ServerQueryPort)
                 plan.Warnings.Add(T("The RCON port is the same as a game port; pick another one."));

@@ -190,6 +190,52 @@ namespace SandstormModLauncher.Services
                         svc.Monitor?.Dispose();
                         return failed == null ? 0 : 1;
                     }
+                    case "server-install":
+                    {
+                        // server-install [folder] [validate] [stop-after=seconds]: installs (or updates) the dedicated server with SteamCMD,
+                        // as the Server page does; stop-after presses Stop after that many seconds (the page's Stop).
+                        string dir = args.Length > 1 && args[1] != "validate" && !args[1].StartsWith("stop-after=") ? args[1] : !string.IsNullOrWhiteSpace(state.Settings.ServerInstallDir) ? state.Settings.ServerInstallDir : null;
+                        if (dir == null) { print("server-install <folder> [validate]"); save = false; return 1; }
+                        bool validate = args.Contains("validate");
+                        string lastStage = null; int lastPct = -1;
+                        // Reported at once (a Progress<T> would wait for the blocked main thread).
+                        var progress = new DirectProgress<SteamCmdProgress>(u =>
+                        {
+                            int pct = u.Percent.HasValue ? (int)u.Percent.Value : -1;
+                            if (u.Error != null) print("  error: " + u.Error);
+                            else if (u.Stage != lastStage || pct / 10 != lastPct / 10) print("  " + u.Stage + (pct >= 0 ? " " + pct + "%" : "") + (u.Total > 0 ? " (" + u.Done + " / " + u.Total + ")" : ""));
+                            lastStage = u.Stage; lastPct = pct;
+                        });
+                        var cts = new System.Threading.CancellationTokenSource();
+                        string stopArg = args.FirstOrDefault(x => x.StartsWith("stop-after="));
+                        if (stopArg != null && int.TryParse(stopArg.Substring(11), out int stopSecs)) cts.CancelAfter(TimeSpan.FromSeconds(stopSecs));
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        var r = System.Threading.Tasks.Task.Run(() => SteamCmd.InstallServer(dir, validate, progress, cts.Token)).GetAwaiter().GetResult();
+                        print((r.Ok ? (r.UpToDate ? "Up to date: " : "Installed: ") + dir : r.Cancelled ? "STOPPED: " + r.Error : "NOT INSTALLED: " + r.Error) + " after " + (int)sw.Elapsed.TotalSeconds + " s; SteamCMD still running: " + SteamCmd.IsRunning);
+                        if (r.Ok) state.Settings.ServerDirOverride = dir;
+                        return r.Ok ? 0 : 1;
+                    }
+                    case "server-type":
+                    {
+                        // server-type <coop|coop-hardcore|coop-frenzy|push|competitive> [night]: sets the server up as that kind, as the Server page does.
+                        var type = ServerTypes.Find(A(1) ?? "");
+                        if (type == null) { print("server-type " + string.Join("|", ServerTypes.All.Select(t => t.Id)) + " [night]"); save = false; return 1; }
+                        string text = ServerTypes.Apply(p, state, type);
+                        if (text == null) { print("No scenario of that mode"); save = false; return 1; }
+                        var inst = ServerInstall.Detect(state.Settings.ServerDirOverride);
+                        string file = ServerPlanner.MapCyclePath(state.Settings, inst);
+                        var cycle = ServerTypes.Cycle(state, type, args.Contains("night"));
+                        if (file != null)
+                        {
+                            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
+                            if (System.IO.File.Exists(file)) ConsoleBridge.BackupFile(file, "server-");
+                            System.IO.File.WriteAllText(file, MapCycle.Render(cycle), new System.Text.UTF8Encoding(false));
+                            state.Settings.ServerUseMapCycle = true;
+                        }
+                        state.Settings.ServerMaxPlayers = type.MaxPlayers;
+                        print(text + " · " + cycle.Count + " scenarios in the map cycle" + (file == null ? " (not written: no server folder)" : " (" + file + ")"));
+                        return 0;
+                    }
                     case "server-stop":
                     {
                         save = false;
@@ -431,8 +477,20 @@ namespace SandstormModLauncher.Services
                 case "remotehost": s.ServerRemoteHost = value; return true;
                 case "remoteport": if (!num) return false; s.ServerRemoteRconPort = n; return true;
                 case "remotepassword": s.ServerRemoteRconPassword = value; return true;
+                case "votekick": if (on == null) return false; s.ServerVoteKick = on.Value; return true;
+                case "officialrules": if (on == null) return false; s.ServerOfficialRules = on.Value; return true;
+                case "installdir": s.ServerInstallDir = value; return true;
                 default: return false;
             }
         }
+    }
+
+    /// <summary>A progress report handled at once, on the thread that reports it (for command-line tools).</summary>
+    public sealed class DirectProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> handler;
+        private readonly object gate = new object();
+        public DirectProgress(Action<T> handler) { this.handler = handler; }
+        public void Report(T value) { lock (gate) handler(value); }
     }
 }

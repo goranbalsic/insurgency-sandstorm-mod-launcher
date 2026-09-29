@@ -301,6 +301,90 @@ namespace SandstormModLauncher.Services
             if (ServerService.ParsePlayers("ID\t | Name\t | NetID\t | IP\t | Score\t |\n" + new string('=', 79) + "\n").Count != 0) fail("listplayers: an empty server has players");
         }
 
+        /// <summary>
+        /// Installing the server with SteamCMD: its output lines (real ones) read as the right step, percentage and outcome,
+        /// the command it gets, which folders it may use; and the vote kick lines in the server's Game.ini.
+        /// </summary>
+        private static void ServerSetupChecks(Action<string> fail)
+        {
+            void Line(string line, string stage, double? pct, bool success = false, bool upToDate = false, string errorPart = null, long done = 0, long total = 0)
+            {
+                var p = SteamCmd.ParseLine(line);
+                if (stage == null && errorPart == null && !success) { if (p != null) fail("steamcmd: '" + line + "' was read as " + p.Stage); return; }
+                if (p == null) { fail("steamcmd: '" + line + "' was not read"); return; }
+                if (stage != null && p.Stage != stage) fail("steamcmd: '" + line + "' is " + p.Stage + " instead of " + stage);
+                if (pct.HasValue != p.Percent.HasValue || (pct.HasValue && Math.Abs(pct.Value - p.Percent.Value) > 0.001)) fail("steamcmd: '" + line + "' percent " + p.Percent + " instead of " + pct);
+                if (p.Success != success || p.UpToDate != upToDate) fail("steamcmd: '" + line + "' success " + p.Success + "/" + p.UpToDate);
+                if (errorPart == null ? p.Error != null : p.Error == null || p.Error.IndexOf(errorPart, StringComparison.OrdinalIgnoreCase) < 0) fail("steamcmd: '" + line + "' error " + (p.Error ?? "none"));
+                if (done != p.Done || total != p.Total) fail("steamcmd: '" + line + "' bytes " + p.Done + "/" + p.Total);
+            }
+            Line("Redirecting stderr to 'C:\\steamcmd\\logs\\stderr.txt'", null, null);
+            Line("[  0%] Checking for available updates...", "Updating SteamCMD", 0);
+            Line("[----] Downloading update (0 of 42,431 KB)...", "Updating SteamCMD", null);
+            Line("[ 12%] Downloading update (5,120 of 42,431 KB)...", "Updating SteamCMD", 12);
+            Line("[----] Update complete, launching Steamcmd...", "Updating SteamCMD", null);
+            Line("Loading Steam API...OK", null, null);
+            Line("Connecting anonymously to Steam Public...OK", "Connecting to Steam", null);
+            Line("Waiting for user info...OK", "Connecting to Steam", null);
+            Line(" Update state (0x3) reconfiguring, progress: 0.00 (0 / 0)", "Preparing", 0);
+            Line(" Update state (0x61) downloading, progress: 3.52 (269853491 / 7667458210)", "Downloading", 3.52, done: 269853491, total: 7667458210);
+            Line(" Update state (0x81) verifying update, progress: 42.10 (1234 / 5678)", "Checking files", 42.10, done: 1234, total: 5678);
+            Line(" Update state (0x5) verifying install, progress: 7.5 (10 / 100)", "Checking files", 7.5, done: 10, total: 100);
+            Line(" Update state (0x101) committing, progress: 99.12 (7000 / 7100)", "Installing", 99.12, done: 7000, total: 7100);
+            Line(" Update state (0x11) preallocating, progress: 50.00 (1 / 2)", "Making room on the disk", 50, done: 1, total: 2);
+            Line("Success! App '581330' fully installed.", "Done", 100, success: true);
+            Line("Success! App '581330' already up to date.", "Done", 100, success: true, upToDate: true);
+            Line("Error! App '581330' state is 0x202 after update job.", null, null, errorPart: "disk");
+            Line("Error! App '581330' state is 0x602 after update job.", null, null, errorPart: "Steam's servers");
+            Line("Error! App '581330' state is 0x1234 after update job.", null, null, errorPart: "0x1234");
+            Line("ERROR! Failed to install app '581330' (Disk write failure)", null, null, errorPart: "read-only");
+            Line("ERROR! Failed to install app '581330' (No Connection)", null, null, errorPart: "internet");
+            // Seen live on the first SteamCMD run of a PC; the launcher tries once more by itself.
+            Line("ERROR! Failed to install app '581330' (Missing configuration)", null, null, errorPart: "again");
+            if (SteamCmd.ParseLine("ERROR! Failed to install app '581330' (Missing configuration)")?.Retryable != true) fail("steamcmd: Missing configuration is not tried again");
+            if (SteamCmd.ParseLine("Error! App '581330' state is 0x202 after update job.")?.Retryable != false) fail("steamcmd: a full disk is tried again");
+            if (SteamCmd.ParseLine("ERROR! Failed to install app '581330' (Disk write failure)")?.Retryable != false) fail("steamcmd: a folder it cannot write is tried again");
+            Line("FAILED (No Connection)", null, null, errorPart: "internet");
+            Line("", null, null);
+            string args = SteamCmd.ServerArgs(@"C:\My Servers\Sandstorm\", false);
+            if (args != "+force_install_dir \"C:\\My Servers\\Sandstorm\" +login anonymous +app_update 581330 +quit") fail("steamcmd arguments: " + args);
+            if (!SteamCmd.ServerArgs(@"D:\S", true).EndsWith(" +app_update 581330 validate +quit", StringComparison.Ordinal)) fail("steamcmd arguments with validate: " + SteamCmd.ServerArgs(@"D:\S", true));
+
+            // Folders: not empty text, not a drive, not Windows, not a folder of other things; a new or empty one is fine.
+            string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-srv-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                foreach (var bad in new[] { "", "  ", "C:\\", "relative\\folder", Environment.GetFolderPath(Environment.SpecialFolder.Windows) + "\\Server", "C:\\a\"b" })
+                    if (SteamCmd.CheckFolder(bad) == null) fail("steamcmd: the folder '" + bad + "' was taken");
+                if (SteamCmd.CheckFolder(System.IO.Path.Combine(temp, "new")) != null) fail("steamcmd: a new folder was refused: " + SteamCmd.CheckFolder(System.IO.Path.Combine(temp, "new")));
+                string other = System.IO.Path.Combine(temp, "other");
+                System.IO.Directory.CreateDirectory(other);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(other, "photo.jpg"), "x");
+                if (SteamCmd.CheckFolder(other) == null) fail("steamcmd: a folder with other files in it was taken");
+                string resumed = System.IO.Path.Combine(temp, "resumed");
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(resumed, "steamapps"));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(resumed, "steamapps", "appmanifest_581330.acf"), "x");
+                if (SteamCmd.CheckFolder(resumed) != null) fail("steamcmd: a half-installed server folder was refused (it must go on)");
+                // A first try that stopped at once leaves only an empty steamapps folder (seen live): the next try goes on there.
+                string stopped = System.IO.Path.Combine(temp, "stopped");
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(stopped, "steamapps"));
+                if (SteamCmd.CheckFolder(stopped) != null) fail("steamcmd: a folder where an install stopped early was refused: " + SteamCmd.CheckFolder(stopped));
+            }
+            finally { try { System.IO.Directory.Delete(temp, true); } catch { } }
+
+            // Vote kick: on writes the guide's two lines once; off takes only the launcher's own lines out again.
+            string on = ServerPlanner.ApplyVoteKick("[Rcon]\r\nbEnabled=True\r\n", true);
+            if (!ServerPlanner.VoteKickOn(on)) fail("vote kick: switched on but not in Game.ini:\n" + on);
+            if (ServerPlanner.ApplyVoteKick(on, true) != on) fail("vote kick: switching it on twice changed Game.ini");
+            if (on.Split('\n').Count(l => l.Trim().StartsWith("bVotingEnabled")) != 1) fail("vote kick: bVotingEnabled is not there exactly once");
+            string off = ServerPlanner.ApplyVoteKick(on, false);
+            if (ServerPlanner.VoteKickOn(off) || off.Contains("TeamInfo") || !off.Contains("[Rcon]")) fail("vote kick: switched off but Game.ini is:\n" + off);
+            string was = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=False\r\n";
+            if (!ServerPlanner.VoteKickOn(ServerPlanner.ApplyVoteKick(was, true))) fail("vote kick: an old bVotingEnabled=False was not replaced");
+            string own = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=True\r\n+TeamVoteIssues=/Script/Insurgency.VoteIssueKick\r\n+TeamVoteIssues=/Script/Insurgency.VoteIssueOther\r\n";
+            if (ServerPlanner.ApplyVoteKick(own, false) != own) fail("vote kick: switching it off removed voting set up by hand with another issue");
+        }
+
         /// <summary>The player's own start command: program and arguments, and where the launcher's options go.</summary>
         private static void StartCommandChecks(Action<string> fail)
         {
@@ -434,6 +518,7 @@ namespace SandstormModLauncher.Services
             ServerFormatChecks(new Random(seed), Fail);
             TranslationChecks(new Random(seed), Fail);
             StartCommandChecks(Fail);
+            ServerSetupChecks(Fail);
             var settings = new AppSettings();
             RconSetup.EnsureSettings(settings);
             using (var server = new FakeRconServer(settings.RconPassword, seed) { Chaos = true, SlowMs = 1400 })
