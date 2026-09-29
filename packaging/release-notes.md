@@ -1,191 +1,153 @@
-Local play, the dedicated server, mods, match rules and live control for Insurgency: Sandstorm, in one app.
+Local play, dedicated server, mods, match rules and live control for Insurgency: Sandstorm.
 
-**Changes in 1.9.1**
+**1.9.1**
 
-- Mods on the server: the Server page now shows whether the running server really loaded its mods. It reads the server's own log after the start and says so plainly: "loaded N mods", "never logged in to mod.io, so its mod list is empty", or "mod.io refused the login". Before, a server that started with no mods looked exactly like one that worked. "Check mods" reads the log again.
-- The mod.io token is saved in both Engine.ini and GameUserSettings.ini of the server (the official guide and the hosting guides disagree on which one the server reads) and put back at every start, in case the server rewrote one of them.
-- A server with mods on and no saved token now says so before it starts.
+- Server page shows whether the server actually loaded its mods (reads its log).
+- mod.io token is written to Engine.ini and GameUserSettings.ini and restored on every start.
+- Warns before start if mods are on and no token is saved.
 
-**Changes in 1.9.0**
+**1.9.0**
 
-- A dedicated server in minutes, from the Server page. No server yet? "Install the server" gets it with SteamCMD, Valve's own tool (about 5 GB, into a folder you pick), with progress, Stop, and carrying on where it stopped. "Update the server" and "Check its files" keep it current. The launcher downloads SteamCMD from Valve and checks it is signed by Valve, and only when you press the button.
-- Server types like the official servers: Co-op, Co-op Hardcore, Co-op Frenzy, Versus (Push) and Competitive (Firefight). One click sets up the match in Play, a map cycle of every official map of that mode (by day, or by day and night) and the number of players, and switches the big button to "Start the server".
-- How players join: the address players on your network use, the ports to forward for players on the internet, and whether Windows Firewall lets the server in, with a button to allow it.
-- Two options from the game's server admin guide: players can vote to kick, and official rules (listed under the official rules filter).
-- The Visual C++ runtime the server needs is checked, with a link to Microsoft's download when it is missing.
+- Install and update the dedicated server from the Server page (SteamCMD, only when you press the button).
+- Server types: Co-op, Co-op Hardcore, Co-op Frenzy, Push, Competitive.
+- Join info: LAN address, ports to forward, Windows Firewall state.
+- Options: vote kick, official rules.
 
-**Changes in 1.8.1**
+**1.8.1**
 
-- A saved setup keeps the preset it was made with: after loading it, the next preset takes that preset's mutators, night and hardcore back out, as it does without saving. Before, a mutator such as Hardcore from a loaded setup stayed. The same now works for a setup carried over from 1.7.0.
-- Checkpoint playlists set hardcore the way the official ones do: the hardcore playlists turn it on (and now also work when it is already on, night included), the others turn it off while they are in use; the next preset puts it back.
-- A playlist whose point is its mutators turns the mutators switch on when it was off; the next preset puts it back.
-- Two presets with the same name (LMGOnly for co-op and for versus, Competitive Firefight as a ruleset and a playlist) are no longer both marked as in use.
-- Free For All, Ambush and Defusal show the 5 bots the launch really brings (it said "you vs 1 bot"), and Free For All is described without teams.
-- The rule count in "Your match" and at the bottom is the count the Rules tab shows; the launcher's own adjustments for offline bots no longer count as your changes.
-- A saved setup on a custom map that was deleted since loads on the map of its scenario, and one on a mod map that is not installed any more says so.
-- Deleting the custom map in use, or mods changing, now marks the setup as changed and saves it.
-- While a question is open, the bar at the top waits, and the setup cannot change between pressing the launch button and the launch starting.
-- The server button says "Changing the map..." while a match loads on the running server.
+- Saved setups keep their preset, so the next preset removes its mutators (Hardcore no longer sticks).
+- Checkpoint playlists set hardcore like the official ones; mutator playlists switch mutators on.
+- Free For All, Ambush and Defusal show the 5 bots the launch sends. Rule count matches the Rules tab.
+- Setups on a deleted custom map or missing mod map load on the scenario's map and count as changed.
+- Only the applied preset is marked in use when names repeat.
 
-**Changes in 1.8.0**
+**1.8.0**
 
-- New name: Sandstorm Local, Server & Mod Manager (formerly Sandstorm Mod Launcher). Your settings, saved setups and updates carry on as before.
-- Presets now replace each other cleanly: a rules preset or playlist takes the previous one's rules and mutators back out, and turns off the night and hardcore it turned on, before it puts in its own. Before, a mutator such as Hardcore stayed when you switched to a preset without mutators. Mutators, night and bot values you changed by hand stay.
-- One way to keep a match: saved setups. The Setup bar at the top saves everything (map, scenario, day or night, bots, every rule, mutators and the Advanced options), loads a saved setup back exactly and shows when the setup on screen has unsaved changes. Profiles and mutator presets are gone; the ones you had are now saved setups with the same names, so nothing is lost.
-- The launch button has a second choice: "Start the server" runs the match on your dedicated server (the Server page opens first when the server is not set up yet).
-- Live is its own page, between Server and Settings.
-- Installed mods only lists mods that are on your PC; mods you deleted or unsubscribed from no longer show up anywhere.
-- Presets can be searched, the one in use is marked, and three night playlists that were missing (Night Maps Normal, Night Battle, Vampire TDM) are listed.
+- Renamed to Sandstorm Local, Server & Mod Manager.
+- A preset removes the previous preset's rules, mutators, night and hardcore.
+- Saved setups replace profiles and mutator presets. Old ones are converted.
+- The big button can start the dedicated server. Live is its own page.
+- Installed mods lists only mods on disk.
+- Preset search. Added the missing night playlists.
 
-**Changes in 1.7.0**
+**1.7.0**
 
-- New Server page for server admins: the match you set up in Play runs on the Insurgency: Sandstorm dedicated server, with the same rules and mutators plus the server's own settings (name, ports, player slots, join password, admins, mods, Steam server token, game stats). Start, stop and restart the server from the launcher; it waits until the map is loaded and the server answers.
-- Live server control over RCON: the player list with kick and ban, chat messages, load the Play match, restart the round (with or without swapping teams) and any admin command. It also works for a server on another PC.
-- Map cycle editor: build the server's map cycle from the Play page (order, day or night), or use any MapCycle.txt you already have.
-- The server's command line is shown and can be copied for your own scripts. The Steam server token is never shown in it, and the mod.io token the server needs for mods is saved without being shown or logged.
-- The launcher can be used in other languages. Every text is in one table that players translate with Excel, Google Sheets or LibreOffice (Settings > Language > "Save a translation file..."), and a finished translation can be tried at once and sent in to come with the next release. Translations are welcome.
-- Settings > Launching: the game can start without Steam, from its own exe or with your own command.
+- Server page: run the Play match on a dedicated server, start/stop, control over RCON (players, kick/ban, chat, round restart, any command).
+- Map cycle editor.
+- Translations from a CSV table.
+- Start the game without Steam (own exe or command).
 
-**Changes in 1.6.1**
+**1.6.1**
 
-- Fixed: after a launch from the main menu the game could keep you on the class selection screen. The round started, but you could not move. A map opened over RCON left the game in its menu state. The launcher now has the game run the open command as if you had typed it into its console, which switches the game into play like before, still without pressing any keys.
-- Cheats, the versus AI difficulty, your own after-load commands, the Live tab buttons and the Live console now go over RCON the same way. Nothing is typed into the game any more and the game does not need to be in front. The game confirms the versus AI difficulty.
-- Typing into the game console is now only a fallback for a game the launcher cannot reach over RCON (for example one started before the launcher set RCON up).
-- Fixed: a map that took more than a few seconds to load could be reported as "cannot be reached over RCON" while it was loading.
-- Fixed: with a mod or mutator whose name contains words such as "Authentic" or "Tickets", the launcher could miss the map load and report a failed launch although the map loaded. The filter that keeps account lines out of the launcher's logs no longer hides the game's own map and match lines.
-- The launcher warns if a match loads without the game switching into play, and notices when the game goes back to its main menu.
+- Fix: stuck on the class screen after launching from the main menu. The map is now opened as a typed console command.
+- Cheats, AI difficulty and Live buttons go over RCON. Typing is only a fallback.
+- Fix: false "no RCON" during long map loads. Mod names like "Authentic" no longer hide the map load.
 
-**Changes in 1.6.0**
+**1.6.0**
 
-- Launching no longer types into the game. The launcher now talks to the game through its own remote console (RCON, the one server admins use), on this PC only (127.0.0.1) with a random password. Maps load and rules are set without any key presses, the game can stay in the background, and the game confirms every step. This fixes the command that sometimes stayed in the console until you pressed Enter yourself, and the focus problems around it.
-- Rules changed in a running match are set over RCON too, and the game answers with each new value. The Live tab's round restarts, live rule changes, "Read current values" and "Count bots" work the same way.
-- Cheats and the versus AI difficulty still need the game's console (the game takes them from nowhere else). That typing is safer now: every key press is checked on screen before the next one, Enter is only pressed on a line that is verified, and the console is recognised even when the game's suggestion box covers part of it (the cause of the failures right after a map loaded). Settings can turn all typing off.
-- New in Settings: "Game connection (RCON)" shows whether the launcher reaches the game, with a Check button. A game started before this update is offered a one-time restart.
-- Extra URL options (Advanced) now replace the launcher's value for the same key instead of sending it twice.
-- The game is closed over RCON when the launcher needs to restart it.
+- Launch and rule changes go over RCON (127.0.0.1, random password) instead of typing into the game.
+- Settings: RCON status and check.
+- Typing fallback verifies each key on screen.
+- Extra URL options replace the launcher's value for the same key.
 
-**Changes in 1.5.1**
+**1.5.1**
 
-- Fixed: in versus, "Fill teams with bots" could not be turned off.
-- Fixed: official versus rulesets and playlists no longer switch the bots off (online they are played without bots; offline that left an empty match).
-- Fixed: extra Game.ini lines that add to a list (+Key=...) were written again on every launch, and removed ones stayed in Game.ini. Free For All rules are now cleaned up like every other mode.
-- Fixed: two profiles whose names differ only in characters Windows does not allow in file names (like a/b and a?b) overwrote each other, and names like CON could not be saved.
-- Fixed: a custom mutator ID, extra URL options or a mode override with a space broke the open command. They are now checked, and the launcher says what it left out.
-- Fixed: after "Save setup" the match summary kept showing the previous preset name. It now also says "(changed)" once you change something after applying a preset.
-- Live rule changes only accept one clean value per setting, so a stray | or space can no longer run a second console command.
-- The launch plan warns when minimum enemies is above maximum enemies.
+- Fix: versus "Fill teams with bots" could not be turned off. Official versus presets no longer turn bots off.
+- Fix: stale and duplicate extra Game.ini lines.
+- Fix: profile names that collide as file names (a/b, a?b, CON).
+- Fix: spaces in custom mutator IDs, URL options and mode override broke the open command. Now validated.
+- Live rule values accept one clean value only.
 
-**Changes in 1.5.0**
+**1.5.0**
 
-- Presets rebuilt from the ground up. A rules preset now replaces the rules of the preset before it and sets exactly its own values, instead of adding to whatever was there. Squad presets only change the bot values, so a squad and a rules preset can be combined in any order.
-- New Squad tab in Play: squad presets (Lone Wolf, Fireteam, Squad Leader, Full Platoon, 1 v 1 to 16 v 16, relaxed or elite bots) next to the teammate, enemy and AI difficulty values.
-- "Save setup" keeps the whole match (map, scenario, day or night, bots, every rule and the mutators) as one preset under Rules > Presets > Saved, and loading it brings all of it back.
-- Calmer Play layout: a "Your match" column shows the whole setup on every tab; click a line to change it. At small window sizes or large text it makes room, and the page no longer scrolls sideways at 150%.
-- Fixed: "access to the path is denied" when Game.ini is read-only. The launcher writes it and keeps it read-only. A Game.ini that another program briefly holds open is retried instead of failing.
-- Fixed: versus with bots and a team size of 0 could start with no bots at all. The smallest team size is now 1.
-- Values in hand-edited or older profiles are checked when loading; anything the game or the open command cannot take is removed.
-- Send a problem report straight from the launcher: Settings > "Something went wrong?" > "Send a report...". You see the whole cleaned report first and nothing leaves your PC until you press Send. Posting it on GitHub still works.
-- Mods tab: "Load the mutators" switch next to the mutator list.
+- Rules presets replace the previous preset instead of adding to it. Squad presets change bot values only.
+- Squad tab. "Save setup" keeps the whole match. "Your match" column on every tab.
+- Fix: read-only Game.ini. Fix: versus with team size 0 started without bots.
+- Problem report from the launcher, shown in full before sending.
 
-**Changes in 1.4.0**
+**1.4.0**
 
-- Fixed: the Styles presets did nothing when a versus scenario was picked (they only changed co-op modes). Styles now follow the scenario on the map: co-op styles (Lone Wolf, Fireteam, Squad Leader, ...) for co-op, versus styles (1 v 1, 5 v 5, 10 v 10, 16 v 16, relaxed or elite bots, quick rounds, ...) for versus.
-- Playlists are now a preset tab in Play > Rules (Styles, Official, Playlists, Mine) instead of their own page. Applying one adds its mutators and rules to the map you picked; it no longer jumps to a random map.
-- Every preset is tagged Co-op (PvE: solo or with AI teammates) or Versus (played against bots offline).
-- Presets that change nothing are gone: 56 playlists that only picked maps, and official rulesets whose changes only exist in the game-start ruleset option (Advanced).
+- Fix: Styles presets ignored versus scenarios.
+- Playlists moved into Play > Rules, tagged Co-op or Versus.
+- Removed presets that change nothing.
 
-**Changes in 1.3.9**
+**1.3.9**
 
-- Small maintenance release: same launcher as 1.3.8, published for Windows and Linux on mod.io so the page shows the current version everywhere.
+- Same as 1.3.8, published for Windows and Linux on mod.io.
 
-**Changes in 1.3.8**
+**1.3.8**
 
-- Playlists has its own page again, in the left bar between Play and Settings, using the full width. Play keeps Map, Rules, Mods, Live and Advanced.
-- The updater also installs a release that was rebuilt without a new version number.
+- Playlists page back in the left bar. The updater installs releases rebuilt under the same version.
 
-**Changes in 1.3.7**
+**1.3.7**
 
-- Fixed: Ambush and Free For All stayed at "waiting for players" with no bots. Both modes wait for two human players before the match starts, and bots only join after that. With bots on, one player is now enough, the modes get a bot count (5 when none is set) and enough player slots for all bots.
-- Mods are now a tab of Play (Map, Rules, Playlists, Mods, Live, Advanced), next to everything else you set up for a match. The left bar has Play and Settings.
-- The Mods tab keeps its lists readable at large text sizes.
+- Fix: Ambush and Free For All waited for players with no bots.
+- Mods became a tab of Play.
 
-**Changes in 1.3.6**
+**1.3.6**
 
-- New license (see LICENSE). Versions up to 1.3.5 keep their MIT license.
+- New license, see LICENSE. 1.3.5 and earlier stay MIT.
 
-**Changes in 1.3.5**
+**1.3.5**
 
-- Large text sizes: every page scrolls when it no longer fits the window (the Rules tab could not be scrolled at 150%). The Rules categories wrap under the search box, and the setup column, rule rows and live rule rows give up width instead of squeezing their text.
+- Pages scroll at large text sizes.
 
-**Changes in 1.3.4**
+**1.3.4**
 
-- Fixed: drop-down lists that show a name (saved key binding copies, presets) showed a program name instead of the entry.
+- Fix: drop-downs showed a type name instead of the entry.
 
-**Changes in 1.3.3**
+**1.3.3**
 
-- Text size: Settings > Text size (90% to 150%), or Ctrl + / Ctrl - / Ctrl 0 and Ctrl + mouse wheel anywhere. Scales the whole window, tooltips and menus. The smallest labels are also a bit bigger by default.
-- Shorter descriptions everywhere, so pages are less crowded.
-- New versions are found within minutes: while the launcher is open it checks every 3 minutes with a tiny request (just where the latest release page points to, no data downloaded unless there is a new version). Offline, it stays quiet.
+- Text size 90-150% (Ctrl +/-/0, Ctrl + wheel).
+- Update check every 3 minutes (a HEAD request, no download unless newer).
 
-**Changes in 1.3.2**
+**1.3.2**
 
-- Report a problem on GitHub from the launcher: Settings > Something went wrong? > Report on GitHub (or "Report this problem" after a failed launch). You see the whole report first; it has no user or PC name, user folders, Steam IDs, account lines, screenshots or console history. Your browser opens the issue form filled in, and nothing is posted until you press Submit.
-- Fixed "A keyboard key is held down" when no key is pressed: a key Windows reports as held for seconds while you are in the launcher (a remapping tool, macro software or a controller mapped to keys) is now ignored. Shift, Ctrl, Alt and Windows still have to be let go, and a key held while you are in the game still stops the send. The message now names the key.
+- Report a problem on GitHub from the launcher.
+- Fix: false "A keyboard key is held down".
 
-**Changes in 1.3.1**
+**1.3.1**
 
-- New look: plain Windows-style layout with square corners, normal text and classic tabs.
-- The Play tabs no longer jump around: the tab row is fixed, and the scenario and squad column stays on every tab.
-- Console: faster and calmer. The line is only cleared as far as needed, the quick console reopen before Enter no longer waits on a step that never shows, and the launch waits 2 s less for the main menu.
+- Plain Windows-style layout, fixed tab row, faster console.
 
-**Changes in 1.3.0**
+**1.3.0**
 
-- Updates itself: every few hours the launcher looks at this project's GitHub releases, checks the new zip against its SHA-256 and quietly puts the new exe in place. It is used from the next start; "Update ready" next to the version (bottom left) restarts right away. Settings > About turns it off.
-- Fixed: renaming a profile to other letter case, switching profiles while mods were being read, co-op AI difficulty compared with a fixed 0.5, official playlists counting default values as rule changes, key binding copies of profiles with a dash in the name.
-- Saving a rules preset under an existing name now asks first. "Remove launcher rules" checks the game is closed before asking.
-- Disabled menu items look disabled, focused text boxes keep their border, and help texts point at the real pages.
+- Self-updater, SHA-256 checked. Settings > About turns it off.
+- Fixes: profile rename by letter case, key binding copies, AI difficulty compare, playlist rule counts.
 
-**Changes in 1.2.4**
+**1.2.4**
 
-- Co-op with AI teammates always gets at least 8 player slots (teammates did not join with only 2 or 3), and the teammate count is also sent after the map loads.
+- Co-op with AI teammates gets at least 8 player slots.
 
-**Changes in 1.2.3**
+**1.2.3**
 
-- Co-op AI teammates: the match is now started with bots enabled (bBots), which co-op modes have off by default.
+- Co-op starts with bBots on so AI teammates join.
 
-**Changes in 1.2.2**
+**1.2.2**
 
-- AI teammates: the solo-game flag stopped them from joining; it is left out when co-op has teammates.
-- Console: a long command no longer confuses the console check (it opened the big console and gave up before Enter). If Enter still fails, the launch waits for you to press it in the game.
-- Versus is played against bots by default. Squad settings apply to all co-op modes together and to all versus modes together.
+- Solo-game flag no longer blocks AI teammates.
+- Console: long commands, Enter fallback.
+- Versus is played against bots by default.
 
-**Changes in 1.2.1**
+**1.2.1**
 
-- Fixed: the command was typed into the console but Enter did not run it. Right after the game window comes to the front, the game's menu can take the keyboard back, and then Enter presses a menu button instead. The launcher now closes and reopens the console right before Enter (the console takes the keyboard when it opens) and checks the line is still there. Checked in the game at the main menu and in a match.
-- Waits longer for the main menu to settle before using the console.
+- Fix: Enter ignored after the game window came to the front. The console is reopened before Enter.
 
-**Changes in 1.2**
+**1.2**
 
-- AI teammates work again: Game.ini had collected many copies of the same settings (the game rewrites the file and drops the launcher's markers), and the game used the oldest one. Settings are now written by key, one line each, and old copies are cleaned up. Game.ini is only written while the game is closed.
-- Player slots grow automatically to fit you plus your AI teammates.
-- Console: uses ` / ~ when your keyboard has it and F10 otherwise, tries the other key if the first shows nothing, and uses a console that is already open.
-- Commands after the map loads wait for the loading screen to finish (they were sent under it before).
-- Play has Map, Rules, Playlists, Live and Advanced tabs; Mods has Mutators and Installed mods. Official mutators are grouped by the co-op and versus playlists that use them.
+- Game.ini is written by key, one line each (duplicates broke AI teammates), only while the game is closed.
+- Player slots fit the AI teammates.
+- Console key ` / ~ or F10. Commands wait for the loading screen.
 
-**Changes in 1.1**
+**1.1**
 
-- The console is now checked on screen: keys are only typed after the console line is seen open, otherwise nothing else is pressed. Earlier versions could send Backspace/Enter into the game menus when the console did not open (for example on a non-English keyboard layout).
-- F10 is added as a console key automatically while the game is closed, so every keyboard layout works.
-- Copies of your game key bindings are kept before any key is sent, with a restore option in Settings.
-- Play and Rules are one page (Map, Rules and Advanced tabs); nothing is shown twice.
-- Versus with bots uses team sizes (1v1, 5v5, 10v10 or any size).
-- Fully offline: no mod.io connection, mod logos come from the game's own cache.
-- Logs for every run and a one-click problem report (Settings > Something went wrong?).
-- The game folder is detected in more places, and the Settings page now shows it right away.
+- Console verified on screen before typing. F10 added automatically.
+- Key binding backups with restore.
+- Play and Rules merged. Fully offline. Logs and problem report.
 
-**Download** `SandstormModLauncher-{VERSION}.zip`, extract it and run `SandstormModLauncher.exe`. Windows 10/11, no installer, no admin rights. `readme.txt` has the details.
+**Download** `SandstormModLauncher-{VERSION}.zip`, extract, run `SandstormModLauncher.exe`. Windows 10/11, no installer.
 
-This release was built by GitHub Actions from the source at this tag: {RUN_URL}
+Built by GitHub Actions from this tag: {RUN_URL}
 
 **SHA-256**
 
@@ -193,7 +155,7 @@ This release was built by GitHub Actions from the source at this tag: {RUN_URL}
 {SHA256}
 ```
 
-**Check your download**
+**Verify**
 
 ```powershell
 Get-FileHash .\SandstormModLauncher-{VERSION}.zip -Algorithm SHA256
