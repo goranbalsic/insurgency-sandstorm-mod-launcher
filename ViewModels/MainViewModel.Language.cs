@@ -86,6 +86,7 @@ namespace SandstormModLauncher.ViewModels
                 if (State.Commands != null) BuildCommandList();
                 BuildMods();
                 LoadMapCycle();
+                RebuildServerTypes();
                 UpdateServerPlan();
                 // Status lines worked out earlier, in the language of then.
                 Toast = null;

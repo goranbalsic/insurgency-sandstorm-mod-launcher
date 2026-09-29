@@ -638,6 +638,104 @@ namespace SandstormModLauncher.Services
                 if (!LaunchPlanner.Same(sent, shown, db.Prop("BotQuota"))) fail(m.Name + ": the bot count shown is " + shown + " but the launch sends " + sent);
             }
 
+            // 16. Server types (the admin guide's example servers): each one sets up a valid match of its mode with its
+            //     preset, a map cycle of installed official scenarios of that mode, and a server plan that starts.
+            string fakeServer = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-fake-server-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                System.IO.Directory.CreateDirectory(fakeServer);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(fakeServer, "InsurgencyServer.exe"), "");
+                var inst = ServerInstall.At(fakeServer);
+                string after = null;
+                foreach (var t in ServerTypes.All)
+                {
+                    var p = Fresh(versus ?? checkpoint);
+                    SetupEngine.Apply(p, state, night ?? realism);   // a preset from before: its name and what it changed must go too
+                    p.Mutators.Add(own ?? "Hardcore");
+                    SetupEngine.SetRule(p, db, "INSCheckpointGameMode", "RoundTime", "900");
+                    string text = ServerTypes.Apply(p, state, t);
+                    bool ownPreset = t.PlaylistKey != null || t.RulesetId != null;
+                    if (!ownPreset && (p.RulesPresetName != null || p.PresetChanges != null)) fail(t.Name + ": the preset from before is still in use (" + p.RulesPresetName + ")");
+                    if (ownPreset && (p.RulesPresetName == null || p.RulesPresetName == (night ?? realism).Name)) fail(t.Name + ": the preset in use is " + p.RulesPresetName);
+                    if (text == null) { fail(t.Name + ": no scenario of its mode"); continue; }
+                    var sc = SetupEngine.Scenario(p, state);
+                    if (sc == null || state.ModeFor(sc, false)?.Cls != t.ModeCls) fail(t.Name + ": the match is " + sc?.Id + " (should be a " + t.ModeCls + " scenario)");
+                    if (p.Hardcore != t.Hardcore) fail(t.Name + ": hardcore is " + p.Hardcore);
+                    if (SetupEngine.GetRule(p, "INSCheckpointGameMode", "RoundTime") != null) fail(t.Name + ": a rule of the setup before stayed");
+                    if (own != null && p.Mutators.Contains(own)) fail(t.Name + ": a mutator of the setup before stayed");
+                    var pl = t.PlaylistKey == null ? null : db.Playlists.First(x => x.Key == t.PlaylistKey);
+                    if (pl != null && pl.Mutators.Any(id => state.FindMutator(id) != null && !p.Mutators.Contains(state.FindMutator(id).Id, StringComparer.OrdinalIgnoreCase)))
+                        fail(t.Name + ": its playlist's mutators are missing (" + string.Join(",", p.Mutators) + ")");
+                    if (t.RulesetId != null && p.RulesPresetName == null) fail(t.Name + ": its official ruleset was not applied");
+                    if (t.NoBots && LaunchPlanner.IsTrue(SetupEngine.Effective(p, db, t.ModeCls, "bBots"))) fail(t.Name + ": bots are on");
+                    if (p.SetupName != null) fail(t.Name + ": the new setup still counts as a saved one");
+                    var plan = LaunchPlanner.Build(p, state);
+                    if (!plan.IsValid) fail(t.Name + ": the match does not launch: " + plan.Error);
+                    foreach (bool atNight in new[] { false, true })
+                    {
+                        var cycle = ServerTypes.Cycle(state, t, atNight);
+                        if (cycle.Count < (atNight ? 4 : 2)) fail(t.Name + ": only " + cycle.Count + " scenarios in the map cycle");
+                        foreach (var e in cycle)
+                        {
+                            var s2 = state.AllScenarios.FirstOrDefault(x => x.Id == e.Scenario);
+                            if (s2 == null || state.ModeFor(s2, false)?.Cls != t.ModeCls || s2.Source != ContentSource.Official) { fail(t.Name + ": map cycle entry " + e.Scenario); break; }
+                            if ((e.Mode == "CheckpointHardcore") != t.Hardcore) { fail(t.Name + ": map cycle mode " + e.Mode); break; }
+                        }
+                        if (atNight != cycle.Any(e => e.Lighting == "Night")) fail(t.Name + ": night in the map cycle is " + !atNight);
+                        var back = MapCycle.Parse(MapCycle.Render(cycle));
+                        if (back.Count != cycle.Count || back.Any(e => e.Raw != null)) fail(t.Name + ": the map cycle does not read back");
+                    }
+                    var settings = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerVoteKick = true, ServerOfficialRules = t.Id == "coop" };
+                    var sp = ServerPlanner.Build(plan, settings, inst, db, "");
+                    if (!sp.IsValid) fail(t.Name + ": the server plan is not valid: " + sp.Error);
+                    else
+                    {
+                        if (!ServerPlanner.VoteKickOn(sp.GameIni)) fail(t.Name + ": vote kick is not in the server's Game.ini");
+                        if ((t.Id == "coop") != sp.Args.Contains("-ruleset=OfficialRules")) fail(t.Name + ": official rules on the command line: " + sp.CommandLine);
+                        if (sp.Args.Count(a => a.StartsWith("-ruleset=")) > 1) fail(t.Name + ": two rulesets on the command line");
+                    }
+                    // Another type after this one gives that type alone (nothing of this one stays).
+                    string print = SetupEngine.Fingerprint(p);
+                    if (after != null && print == after && t != ServerTypes.All[0]) fail(t.Name + ": the same setup as the type before");
+                    after = print;
+                    var q = p.Clone("q");
+                    var other = ServerTypes.All[(ServerTypes.All.IndexOf(t) + 1) % ServerTypes.All.Count];
+                    ServerTypes.Apply(q, state, other);
+                    var r = Fresh(checkpoint);
+                    r.MapKey = q.MapKey;
+                    ServerTypes.Apply(r, state, other);
+                    if (SetupEngine.Fingerprint(q) != SetupEngine.Fingerprint(r)) fail(t.Name + " then " + other.Name + " is not " + other.Name + " alone:\n" + Diff(SetupEngine.Fingerprint(q), SetupEngine.Fingerprint(r)));
+                }
+                // A SteamCMD install stopped half way (its manifest not "fully installed") does not start; a finished one does.
+                {
+                    System.IO.Directory.CreateDirectory(System.IO.Path.Combine(fakeServer, "steamapps"));
+                    string manifest = System.IO.Path.Combine(fakeServer, "steamapps", "appmanifest_581330.acf");
+                    var match = LaunchPlanner.Build(Fresh(checkpoint), state);
+                    var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" };
+                    System.IO.File.WriteAllText(manifest, "\"AppState\"\n{\n\t\"appid\"\t\t\"581330\"\n\t\"StateFlags\"\t\t\"1026\"\n\t\"buildid\"\t\t\"0\"\n}\n");
+                    var half = ServerInstall.At(fakeServer);
+                    if (!half.Unfinished || !half.ManagedBySteamCmd) fail("a half-installed server is not seen as unfinished");
+                    if (ServerPlanner.Build(match, set, half, db, "").IsValid) fail("a half-installed server would start");
+                    System.IO.File.WriteAllText(manifest, "\"AppState\"\n{\n\t\"appid\"\t\t\"581330\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"buildid\"\t\t\"24065441\"\n}\n");
+                    var done = ServerInstall.At(fakeServer);
+                    if (done.Unfinished || done.BuildId != "24065441") fail("a finished SteamCMD install reads as unfinished or without its build: " + done.BuildId);
+                    if (!ServerPlanner.Build(match, set, done, db, "").IsValid) fail("a finished SteamCMD install does not start");
+                    System.IO.Directory.Delete(System.IO.Path.Combine(fakeServer, "steamapps"), true);
+                }
+                // Official rules and the match's own ruleset: one ruleset, official, with a note.
+                {
+                    var p = Fresh(checkpoint);
+                    p.LaunchRuleset = "RS_Hardcore";
+                    var sp = ServerPlanner.Build(LaunchPlanner.Build(p, state), new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerOfficialRules = true }, inst, db, "");
+                    if (sp.Args.Count(a => a.StartsWith("-ruleset=")) != 1 || !sp.Args.Contains("-ruleset=OfficialRules")) fail("official rules with a match ruleset: " + sp.CommandLine);
+                    if (!sp.Warnings.Any(w => w.Contains("RS_Hardcore"))) fail("official rules with a match ruleset: no note that the match's ruleset was left out");
+                    var sp2 = ServerPlanner.Build(LaunchPlanner.Build(p, state), new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" }, inst, db, "");
+                    if (!sp2.Args.Contains("-ruleset=RS_Hardcore") || ServerPlanner.VoteKickOn(sp2.GameIni)) fail("without the server options: " + sp2.CommandLine);
+                }
+            }
+            catch (Exception ex) { fail("server types: " + ex.GetType().Name + ": " + ex.Message + "\n" + ex.StackTrace); }
+            finally { try { System.IO.Directory.Delete(fakeServer, true); } catch { } }
+
             // 7. Mods that are not on this PC (deleted, unsubscribed, still downloading) are not listed.
             string pub = Environment.GetEnvironmentVariable("PUBLIC");
             string temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-mods-" + Guid.NewGuid().ToString("N").Substring(0, 8));

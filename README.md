@@ -22,14 +22,15 @@ Local play, the dedicated server, mods, match rules and live control for **Insur
 - One button for both: "Start and launch" plays the match on this PC; switch it to "Start the server" and the same match starts on your dedicated server (the Server page opens first when the server is not set up yet)
 - One click: writes your rules, starts the game, waits for the main menu and loads the match through the game's own remote console (RCON, on this PC only). No keys are pressed, no window has to be in front, and the game confirms the map load and every rule it sets
 - Cheats, the versus AI difficulty and your own console commands go over RCON too: the game runs them as if you had typed them into its console, but nothing is typed
-- Dedicated server: the match you set up in Play runs on the Insurgency: Sandstorm dedicated server with the same rules and mutators, plus the server's own settings (name, ports, player slots, join password, admins, map cycle, mods, Steam server token, game stats). Start, stop and restart it from the launcher, and control it live over RCON: players, kick and ban, chat, change the map, restart the round, any admin command. Works for a server on this PC or, over RCON, on another one
+- A server in minutes: the Server page installs the dedicated server with Valve's SteamCMD (and updates it with one button), sets it up as one of the official kinds of server (Co-op, Co-op Hardcore, Co-op Frenzy, Versus Push, Competitive Firefight) with a full map cycle, and shows how players join: the address, the ports to forward, and Windows Firewall with a button to allow the server
+- Dedicated server: the match you set up in Play runs on the Insurgency: Sandstorm dedicated server with the same rules and mutators, plus the server's own settings (name, ports, player slots, join password, admins, map cycle, mods, Steam server token, game stats, vote kick, official rules). Start, stop and restart it from the launcher, and control it live over RCON: players, kick and ban, chat, change the map, restart the round, any admin command. Works for a server on this PC or, over RCON, on another one
 - Map cycle editor: build the server's map cycle from the Play page, or point it at any MapCycle.txt you already have
 - Any language: every text of the launcher is in one table that players translate with Excel, Google Sheets or LibreOffice (see [Translations](#translations))
 - Custom map entries, extra Game.ini lines and after-load commands for advanced setups
 - Adjustable text size (90% to 150%, Ctrl + / Ctrl - or Ctrl + mouse wheel) in a plain, classic Windows look
 - Send a problem report straight from the launcher: you see the cleaned report (no names, IDs or screenshots) first, and it is sent only when you press Send. You can post it on GitHub instead
 - Updates itself quietly from this repository's releases, checked against the published SHA-256 (can be turned off)
-- Plays offline: no accounts, no telemetry. The only automatic connection is a tiny update check every few minutes while the launcher is open
+- Plays offline: no accounts, no telemetry. The only automatic connection is a tiny update check every few minutes while the launcher is open; installing or updating the dedicated server downloads it with Valve's SteamCMD, only when you press the button
 
 | Match rules | Presets: official playlists |
 | --- | --- |
@@ -66,9 +67,11 @@ Typing into the game's console is only a fallback for a game the launcher cannot
 
 ## Dedicated server
 
-Install the dedicated server from Steam (Library > Tools > "Insurgency: Sandstorm Dedicated Server") or with SteamCMD (app 581330). The Server page finds it on its own, or you pick its folder.
+No server yet? The Server page installs it: press "Install the server" and the launcher gets it with SteamCMD, Valve's own tool (about 5 GB, into a folder you pick), and updates it later with one button. A server you already have (from Steam: Library > Tools > "Insurgency: Sandstorm Dedicated Server", or from SteamCMD, app 581330) is found on its own, or you pick its folder.
 
-1. Set up the match on the Play page as usual: map, scenario, day or night, bots, rules, mutators.
+The quickest way to a working server is a server type, set up like the official servers of the game: Co-op, Co-op Hardcore, Co-op Frenzy, Versus (Push) or Competitive (Firefight). One click sets up the match in Play, a map cycle of every official map of that mode (by day, or by day and night) and the number of players; the big button then starts the server. Change anything afterwards.
+
+1. Set up the match on the Play page as usual (or pick a server type): map, scenario, day or night, bots, rules, mutators.
 2. On the Server page, fill in the server's own settings: name, ports, player slots, join password, admins (Steam IDs), mods (mod.io ids) and, for a server in the online browser, a Steam server token (GSLT).
 3. Press Start. The launcher writes the server's `Game.ini`, `Admins.txt`, `MapCycle.txt` and `Mods.txt` (each backed up first), starts `InsurgencyServer.exe` and waits until the map is loaded and the server answers over RCON.
 
@@ -77,6 +80,8 @@ While it runs, the page shows the players and lets you kick, ban, write to the c
 The map cycle is either built on the Server page (add the Play match, reorder, day or night) or any `MapCycle.txt` you pick; the server gets a copy in its `Config\Server` folder when it starts.
 
 For a server on another PC, switch the page to "On another PC (RCON)" and enter its address, RCON port and password: player control and admin commands then work over the network. On the server PC, "Allow RCON from other PCs" opens RCON on the network (a strong random password, and the game locks out an address after 5 wrong tries); keep the RCON port closed in your router unless you need it from outside.
+
+"How players join" on the Server page shows the address players on your network use (`open <address>:<port>` in the game console, or LAN in the server browser), the ports to forward on your router for players on the internet, and whether Windows Firewall lets the server in, with a button to allow it (Windows asks you for administrator rights). The server settings also switch on the vote kick and the official rules (`-ruleset=OfficialRules`) from the game's server admin guide.
 
 For mods, the server needs a mod.io access token (from mod.io > your account > Access); the launcher saves it in the server's `Engine.ini` and never shows or logs it.
 
@@ -108,6 +113,7 @@ What the program does on your PC:
 - For the dedicated server (only when you use the Server page): writes the server's `Game.ini`, `Engine.ini` (the mod.io token, only when you save one), `Admins.txt`, `MapCycle.txt` and `Mods.txt`, each backed up first, and starts or stops `InsurgencyServer.exe`. The server itself is a network program by design; its RCON listens on the network only when you allow it
 - Keeps its settings and logs in `%APPDATA%\SandstormModLauncher`
 - Sends a problem report only when you press Send in Settings > "Something went wrong?", after showing you all of it
+- Installs or updates the dedicated server only when you press the button on the Server page: it downloads SteamCMD from Valve (steamcdn-a.akamaihd.net, checked to be signed by Valve) and runs it, which downloads the server from Steam. Allowing the server through Windows Firewall happens only when you press Allow and Windows asks you for administrator rights
 - No telemetry. Its only automatic network access is the update check: it reads the latest release of this repository from GitHub, and when there is a newer one it downloads the zip, checks it against the release's SHA256SUMS.txt and replaces its own exe (Settings > About turns this off)
 - Never changes game files and does not touch the anti-cheat. It is for local play only
 

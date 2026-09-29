@@ -154,6 +154,7 @@ namespace SandstormModLauncher.ViewModels
                       nameof(ServerShowLog), nameof(ServerCheats), nameof(ServerGslt), nameof(ServerGameStats), nameof(ServerExtraArgs), nameof(ServerRemoteHost),
                       nameof(ServerRemotePortText), nameof(ServerRemotePassword), nameof(ServerUseMapCycle), nameof(MapCycleFile), nameof(MapCycleIsDefault),
                       nameof(ServerAdmins), nameof(ServerModsEnabled), nameof(ServerModIds), nameof(ModioTokenStatus), nameof(ServerRconAddress));
+            RaiseServerSetup();
             OnServerStateChanged();
         }
 
@@ -220,7 +221,7 @@ namespace SandstormModLauncher.ViewModels
         public bool ServerRemote
         {
             get => State.Settings.ServerRemote;
-            set { SetServerSetting(() => State.Settings.ServerRemote = value); remoteReachable = false; Raise(nameof(ServerLocal)); Raise(nameof(ServerRconAddress)); OnServerStateChanged(); if (value) _ = CheckServerConnection(false); }
+            set { SetServerSetting(() => State.Settings.ServerRemote = value); remoteReachable = false; Raise(nameof(ServerLocal)); Raise(nameof(ServerRconAddress)); RaiseServerSetup(); OnServerStateChanged(); if (value) _ = CheckServerConnection(false); }
         }
         public bool ServerLocal { get => !ServerRemote; set => ServerRemote = !value; }
         public string ServerName { get => State.Settings.ServerName; set => SetServerSetting(() => State.Settings.ServerName = value ?? ""); }
@@ -268,7 +269,8 @@ namespace SandstormModLauncher.ViewModels
             catch (Exception ex) { AppLog.Error("Could not build the server plan", ex); serverPlan = null; }
             ServerWarnings.Clear();
             if (serverPlan != null) foreach (var w in serverPlan.Warnings.Distinct()) ServerWarnings.Add(w);
-            RaiseMany(nameof(ServerCommandLine), nameof(ServerPlanError), nameof(ServerMatchSummary), nameof(ServerMatchMods), nameof(CanStartServer));
+            RaiseMany(nameof(ServerCommandLine), nameof(ServerPlanError), nameof(ServerMatchSummary), nameof(ServerMatchMods), nameof(CanStartServer),
+                      nameof(ServerPortsText), nameof(ServerJoinCommand), nameof(ServerJoinText), nameof(ServerInternetText));
             RaiseMainAction();
         }
 

@@ -33,6 +33,19 @@ namespace SandstormModLauncher
             }
         }
 
+        /// <summary>
+        /// Big files that belong to this PC and need no roaming (SteamCMD): %LOCALAPPDATA%\SandstormModLauncher, or the
+        /// data folder in portable mode and test runs.
+        /// </summary>
+        public static string LocalDir
+        {
+            get
+            {
+                if (overrideDir != null || File.Exists(Path.Combine(ExeDir, "portable")) || File.Exists(Path.Combine(ExeDir, "portable.txt"))) return DataDir;
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SandstormModLauncher");
+            }
+        }
+
         public static string CacheDir => Path.Combine(DataDir, "cache");
         public static string ProfilesDir => Path.Combine(DataDir, "profiles");
         public static string SettingsFile => Path.Combine(DataDir, "settings.json");

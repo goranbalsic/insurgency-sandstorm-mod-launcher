@@ -52,6 +52,7 @@ namespace SandstormModLauncher.ViewModels
             InitLaunchCommands();
             InitUpdateCommands();
             InitServerCommands();
+            InitServerSetupCommands();
             InitLanguageCommands();
         }
 
@@ -127,6 +128,8 @@ namespace SandstormModLauncher.ViewModels
             modWatcher?.Dispose();
             serverTimer?.Stop();
             Server?.Monitor?.Dispose();
+            // A server install still going: SteamCMD stops with the launcher (the next install carries on).
+            if (serverInstalling) SteamCmd.StopAll();
         }
 
         private void StartModWatcher()

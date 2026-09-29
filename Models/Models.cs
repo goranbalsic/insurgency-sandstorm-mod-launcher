@@ -240,6 +240,9 @@ namespace SandstormModLauncher.Models
         public bool ServerCheats { get; set; }
         public bool ServerShowLog { get; set; } = true;           // -log: the server's own log window
         public string ServerExtraArgs { get; set; } = "";
+        public bool ServerVoteKick { get; set; }                  // players can vote to kick someone ([/Script/Insurgency.TeamInfo])
+        public bool ServerOfficialRules { get; set; }             // -ruleset=OfficialRules: listed under the official rules filter
+        public string ServerInstallDir { get; set; } = "";        // where SteamCMD installs the server (empty = C:\SandstormServer)
         public List<string> ServerManagedIniKeys { get; set; } = new List<string>();
     }
 }

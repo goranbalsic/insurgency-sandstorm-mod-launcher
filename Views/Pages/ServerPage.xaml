@@ -49,21 +49,68 @@
                             </Border>
 
                             <StackPanel Visibility="{Binding ServerRemote, Converter={StaticResource VisNot}}">
-                                <TextBlock Style="{StaticResource Label}">
-                                    <Run Text="Server folder" /><Run Text="   " /><Run Text="{Binding ServerBuild, Mode=OneWay}" FontWeight="Normal" />
-                                </TextBlock>
-                                <Border Style="{StaticResource Well}" Padding="10,7">
-                                    <TextBlock Text="{Binding ServerDir}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                                <!-- not installed yet: install it here -->
+                                <StackPanel Visibility="{Binding ServerNotInstalled, Converter={StaticResource Vis}}">
+                                    <TextBlock Style="{StaticResource Mute}" Margin="0,12,0,0" TextWrapping="Wrap"
+                                               Text="The dedicated server is free. The launcher installs it with SteamCMD, Valve's own tool: about 5 GB is downloaded into the folder below." />
+                                    <TextBlock Text="Install it in" Style="{StaticResource Label}" />
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Change..." Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding ChooseServerInstallDirCommand}" />
+                                        <Border Style="{StaticResource Well}" Padding="10,7">
+                                            <TextBlock Text="{Binding ServerInstallDir}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                                        </Border>
+                                    </DockPanel>
+                                    <WrapPanel Margin="0,10,0,0">
+                                        <Button Style="{StaticResource AccentButton}" Margin="0,0,8,6" Command="{Binding InstallServerCommand}" ToolTip="Downloads SteamCMD from Valve and installs the server (Steam app 581330)">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="11" Margin="0,0,7,0" />
+                                                <TextBlock Text="Install the server" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Content="I have it: pick its folder..." Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ChangeServerDirCommand}" />
+                                        <Button Content="Find automatically" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding FindServerDirCommand}" />
+                                    </WrapPanel>
+                                </StackPanel>
+                                <!-- installed -->
+                                <StackPanel Visibility="{Binding ServerFound, Converter={StaticResource Vis}}">
+                                    <TextBlock Style="{StaticResource Label}">
+                                        <Run Text="Server folder" /><Run Text="   " /><Run Text="{Binding ServerBuild, Mode=OneWay}" FontWeight="Normal" />
+                                    </TextBlock>
+                                    <Border Style="{StaticResource Well}" Padding="10,7">
+                                        <TextBlock Text="{Binding ServerDir}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                                    </Border>
+                                    <WrapPanel Margin="0,8,0,0">
+                                        <Button Content="Update the server" Margin="0,0,8,6" Command="{Binding UpdateServerFilesCommand}" ToolTip="Gets the newest server with SteamCMD (players can only join a server of the same version as their game)"
+                                                Visibility="{Binding ServerCanUpdate, Converter={StaticResource Vis}}" />
+                                        <Button Content="Check its files" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding RepairServerFilesCommand}" ToolTip="SteamCMD checks every file and fetches the broken ones"
+                                                Visibility="{Binding ServerCanUpdate, Converter={StaticResource Vis}}" />
+                                        <Button Content="Change folder..." Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ChangeServerDirCommand}" />
+                                        <Button Content="Find automatically" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding FindServerDirCommand}" />
+                                        <Button Content="Open folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenServerPathCommand}" CommandParameter="Folder" />
+                                    </WrapPanel>
+                                    <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ServerUpdatedBySteam, Converter={StaticResource Vis}}"
+                                               Text="Installed with Steam (Library &gt; Tools): Steam keeps it up to date." />
+                                </StackPanel>
+                                <!-- SteamCMD at work -->
+                                <Border Style="{StaticResource Well}" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding ServerInstalling, Converter={StaticResource Vis}}">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Stop" Style="{StaticResource GhostButton}" Padding="10,3" Command="{Binding CancelServerInstallCommand}" />
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding InstallElapsed}" FontFamily="{StaticResource Mono}" FontSize="12" Foreground="{StaticResource TextFaint}" VerticalAlignment="Center" Margin="8,0" />
+                                            <TextBlock VerticalAlignment="Center">
+                                                <Run Text="{Binding InstallStage, Mode=OneWay}" /><Run Text="   " /><Run Text="{Binding InstallDetail, Mode=OneWay}" Foreground="{StaticResource TextFaint}" />
+                                            </TextBlock>
+                                        </DockPanel>
+                                        <ProgressBar Height="6" Margin="0,8,0,0" Minimum="0" Maximum="100" Value="{Binding InstallPercent, Mode=OneWay}"
+                                                     IsIndeterminate="{Binding InstallIndeterminate, Mode=OneWay}" />
+                                    </StackPanel>
                                 </Border>
-                                <WrapPanel Margin="0,8,0,0">
-                                    <Button Content="Change folder..." Margin="0,0,8,6" Command="{Binding ChangeServerDirCommand}" />
-                                    <Button Content="Find automatically" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding FindServerDirCommand}" />
-                                    <Button Content="Open folder" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenServerPathCommand}" CommandParameter="Folder"
-                                            Visibility="{Binding ServerFound, Converter={StaticResource Vis}}" />
-                                </WrapPanel>
-                                <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ServerFound, Converter={StaticResource VisNot}}"
-                                           Text="Install the free &quot;Insurgency: Sandstorm Dedicated Server&quot; from your Steam library (Tools), or with SteamCMD (app 581330), then press Find automatically." />
-                                <WrapPanel Margin="0,12,0,0">
+                                <!-- the admin guide's prerequisite -->
+                                <DockPanel Margin="0,10,0,0" Visibility="{Binding RuntimeMissing, Converter={StaticResource Vis}}">
+                                    <Button DockPanel.Dock="Right" Content="Get it from Microsoft" Style="{StaticResource GhostButton}" Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding OpenRuntimeDownloadCommand}" />
+                                    <TextBlock Text="{Binding RuntimeMissingText}" FontSize="12.5" Foreground="{StaticResource Warn}" TextWrapping="Wrap" />
+                                </DockPanel>
+                                <WrapPanel Margin="0,12,0,0" Visibility="{Binding ServerFound, Converter={StaticResource Vis}}">
                                     <Button Style="{StaticResource AccentButton}" Margin="0,0,8,6" Command="{Binding StartServerCommand}" ToolTip="Writes the server's settings and starts it with your match from Play">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="11" Margin="0,0,7,0" />
@@ -156,6 +203,18 @@
                                     <TextBlock Text="For testing: cheat commands work on this server, and players earn no XP (-EnableCheats)." Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerVoteKick}">
+                                <StackPanel>
+                                    <TextBlock Text="Players can vote to kick" FontSize="13.5" />
+                                    <TextBlock Text="A player calls the vote from the Esc menu; F1 votes yes, F2 no. It needs at least 3 players." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerOfficialRules}">
+                                <StackPanel>
+                                    <TextBlock Text="Official rules" FontSize="13.5" />
+                                    <TextBlock Text="Listed under the server browser's official rules filter; the server keeps the official values (-ruleset=OfficialRules)." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
                             <TextBlock Text="Steam server token (GSLT, optional)" Style="{StaticResource Label}" />
                             <TextBox Text="{Binding ServerGslt, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="from steamcommunity.com/dev/managegameservers, app id 581320" />
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerGameStats}" Margin="0,10,0,6">
@@ -166,6 +225,34 @@
                             </CheckBox>
                             <TextBlock Text="Extra command-line options" Style="{StaticResource Label}" />
                             <TextBox Text="{Binding ServerExtraArgs, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="added to the end of the server's command line" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- how players join -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding ServerRemote, Converter={StaticResource VisNot}}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Check again" Style="{StaticResource GhostButton}" Padding="10,4" Command="{Binding RefreshReachabilityCommand}" />
+                                <TextBlock Text="How players join" Style="{StaticResource H2}" VerticalAlignment="Center" />
+                            </DockPanel>
+                            <TextBlock Text="On your network" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Copy" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding CopyJoinCommandCommand}" />
+                                <Border Style="{StaticResource Well}" Padding="10,7">
+                                    <TextBlock Text="{Binding ServerJoinText}" FontFamily="{StaticResource Mono}" FontSize="12" TextWrapping="Wrap" />
+                                </Border>
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="Players type this into the game's console, or find the server under LAN in the server browser." />
+                            <TextBlock Text="Over the internet" Style="{StaticResource Label}" />
+                            <TextBlock Text="{Binding ServerInternetText}" Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding ServerPortsText}" FontFamily="{StaticResource Mono}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="Windows Firewall" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Allow it" Margin="8,0,0,0" VerticalAlignment="Top" Command="{Binding AllowServerFirewallCommand}"
+                                        Visibility="{Binding FirewallNeedsAllow, Converter={StaticResource Vis}}" />
+                                <TextBlock Text="{Binding FirewallText}" FontSize="12.5" TextWrapping="Wrap" />
+                            </DockPanel>
                         </StackPanel>
                     </Border>
 
@@ -236,6 +323,36 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
+                    <!-- server types (the admin guide's example servers) -->
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="{Binding ServerRemote, Converter={StaticResource VisNot}}">
+                        <StackPanel>
+                            <TextBlock Text="Server type" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,6" TextWrapping="Wrap"
+                                       Text="Sets up the match in Play, the map cycle and the number of players in one go, like the official servers. Change anything afterwards." />
+                            <TextBlock Style="{StaticResource Mute}" Foreground="{StaticResource Warn}" Visibility="{Binding ServerNotInstalled, Converter={StaticResource Vis}}"
+                                       Text="Install the server first (on the left)." />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerTypeNight}">
+                                <TextBlock Text="Day and night maps in the map cycle" FontSize="13.5" />
+                            </CheckBox>
+                            <ItemsControl ItemsSource="{Binding ServerTypeItems}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="0,7">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Content="Set up" Margin="10,0,0,0" VerticalAlignment="Center" ToolTip="Sets up the match in Play, the map cycle and the players for this kind of server"
+                                                        Command="{Binding DataContext.ApplyServerTypeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
                     <!-- match -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
