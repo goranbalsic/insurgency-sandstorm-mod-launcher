@@ -722,23 +722,86 @@ namespace SandstormModLauncher.Services
                     if (!ServerPlanner.Build(match, set, done, db, "").IsValid) fail("a finished SteamCMD install does not start");
                     System.IO.Directory.Delete(System.IO.Path.Combine(fakeServer, "steamapps"), true);
                 }
-                // Mods on and no token saved: the plan says the server will load no mods; with a token it does not.
+                // Mods since game update 1.20: -Mods with -SecurityCode (the waiting code once, else none), no Mods.txt, and the
+                // server's mod.io login decides the warnings.
                 {
                     var match = LaunchPlanner.Build(Fresh(checkpoint), state);
                     var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerModsEnabled = true, ServerMods = "1457355" };
-                    var noToken = ServerPlanner.Build(match, set, inst, db, "");
-                    if (!noToken.Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods on without a token: no warning");
+                    var plain = ServerPlanner.Build(match, set, inst, db, "");
+                    if (!plain.Args.Contains("-Mods") || !plain.Args.Contains("-SecurityCode=none") || plain.UsesCode || !plain.ModsOn) fail("mods on without a code: " + plain.CommandLine);
+                    set.ServerModioCode = " 12345 ";
+                    var coded = ServerPlanner.Build(match, set, inst, db, "");
+                    if (!coded.Args.Contains("-SecurityCode=12345") || !coded.UsesCode) fail("mods on with a code: " + coded.CommandLine);
+                    if (coded.ShownCommandLine.Contains("12345")) fail("the shown command line has the security code: " + coded.ShownCommandLine);
+                    set.ServerModioCode = "1234";
+                    if (!ServerPlanner.Build(match, set, inst, db, "").Args.Contains("-SecurityCode=none")) fail("a code that is not 5 digits was passed");
+                    set.ServerModioCode = "";
+                    var nobody = new ServerModioAccount();
+                    if (!ServerPlanner.Build(match, set, inst, db, "", nobody).Warnings.Any(w => w.Contains("not logged in"))) fail("mods on, server not logged in: no warning");
+                    set.ServerModioCode = "12345";
+                    if (ServerPlanner.Build(match, set, inst, db, "", nobody).Warnings.Any(w => w.Contains("not logged in"))) fail("a waiting code still warns that the server is not logged in");
+                    set.ServerModioCode = "";
+                    var logged = new ServerModioAccount { LoggedIn = true, UserId = 7, Subscriptions = new List<long> { 1457355 } };
+                    var ok = ServerPlanner.Build(match, set, inst, db, "", logged);
+                    if (ok.Warnings.Any(w => w.Contains("mod.io"))) fail("mods on, logged in and subscribed: warned: " + string.Join(" | ", ok.Warnings));
+                    set.ServerMods = "1457355\n98685";
+                    if (!ServerPlanner.Build(match, set, inst, db, "", logged).Warnings.Any(w => w.Contains("98685") && !w.Contains("1457355"))) fail("a listed mod the account lacks is not named (or a subscribed one is)");
+                    logged.SameAsGame = true;
+                    if (!ServerPlanner.Build(match, set, inst, db, "", logged).Warnings.Any(w => w.Contains("same mod.io account"))) fail("the game's own account on the server: no warning");
+                    if (ServerPlanner.Build(match, new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" }, inst, db, "", nobody).Warnings.Any(w => w.Contains("mod.io")))
+                        fail("mods off: warned about mod.io");
+                    // Starting leaves Mods.txt alone and takes the old token section out (the guides for 1.20 say so).
                     var cfg = System.IO.Path.Combine(fakeServer, "Insurgency", "Saved", "Config", "WindowsServer");
+                    var lists = System.IO.Path.Combine(fakeServer, "Insurgency", "Config", "Server");
                     System.IO.Directory.CreateDirectory(cfg);
-                    new ServerService(() => set, () => inst).SaveModioToken("tokentokentokentoken1234");
-                    if (ServerPlanner.Build(match, set, inst, db, "").Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods on with a saved token: still warned");
-                    // Starting the server puts the token back into a config file the server rewrote without it.
-                    System.IO.File.Delete(System.IO.Path.Combine(cfg, "GameUserSettings.ini"));
+                    System.IO.Directory.CreateDirectory(lists);
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(lists, "Mods.txt"), "150867\r\n");
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(cfg, "GameUserSettings.ini"), "[/Script/ModKit.ModIOClient]\r\nbHasUserAcceptedTerms=True\r\nAccessToken=tokentokentokentoken1234\r\n\r\n[/Script/Engine.GameUserSettings]\r\nbUseVSync=False\r\n");
                     new ServerService(() => set, () => inst).WriteFiles(ServerPlanner.Build(match, set, inst, db, ""));
-                    string restored = System.IO.File.Exists(System.IO.Path.Combine(cfg, "GameUserSettings.ini")) ? System.IO.File.ReadAllText(System.IO.Path.Combine(cfg, "GameUserSettings.ini")) : "";
-                    if (!restored.Contains("AccessToken=tokentokentokentoken1234")) fail("starting the server did not put the mod.io token back into GameUserSettings.ini");
-                    if (ServerPlanner.Build(match, new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" }, inst, db, "").Warnings.Any(w => w.Contains("no mod.io token"))) fail("mods off: warned about a token");
+                    if (System.IO.File.ReadAllText(System.IO.Path.Combine(lists, "Mods.txt")) != "150867\r\n") fail("starting the server changed Mods.txt");
+                    string gus = System.IO.File.ReadAllText(System.IO.Path.Combine(cfg, "GameUserSettings.ini"));
+                    if (gus.Contains("ModKit") || gus.Contains("AccessToken") || !gus.Contains("bUseVSync=False")) fail("the old token section was not taken out cleanly:\n" + gus);
                     foreach (var f in System.IO.Directory.GetFiles(cfg)) System.IO.File.Delete(f);
+                    System.IO.File.Delete(System.IO.Path.Combine(lists, "Mods.txt"));
+                }
+                // The player's own options: used as they are, with a waiting code put in and the launcher's RCON only when they have none.
+                {
+                    var set = new AppSettings
+                    {
+                        ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerUseOwnArgs = true, ServerModioCode = "54321",
+                        ServerOwnArgs = "InsurgencyServer.exe Oilfield?Scenario=Scenario_Refinery_Push_Security?MaxPlayers=20 -Port=27200 -QueryPort=27231\n-log -Mods -SecurityCode=none -hostname=\"Brett's\"",
+                    };
+                    var ownPlan = ServerPlanner.Build(null, set, inst, db, "");
+                    if (!ownPlan.IsValid) fail("own options: " + ownPlan.Error);
+                    else
+                    {
+                        if (ownPlan.CommandLine != "Oilfield?Scenario=Scenario_Refinery_Push_Security?MaxPlayers=20 -Port=27200 -QueryPort=27231 -log -Mods -SecurityCode=54321 -hostname=\"Brett's\"")
+                            fail("own options changed: " + ownPlan.CommandLine);
+                        if (!ownPlan.UsesCode || !ownPlan.ModsOn || ownPlan.GamePort != 27200 || ownPlan.QueryPort != 27231 || ownPlan.StartMap != "Oilfield") fail("own options read wrong: " + ownPlan.GamePort + "/" + ownPlan.QueryPort + "/" + ownPlan.StartMap);
+                        if (!ownPlan.GameIni.Contains("[Rcon]") || !ownPlan.GameIni.Contains("Password=abcdefghijklmnopqrstuvwx")) fail("own options without RCON: the launcher's RCON is not in Game.ini");
+                        if (ownPlan.AdminsText != null || ownPlan.MapCycleCopyFrom != null) fail("own options: the launcher's files are still written");
+                    }
+                    string theirs = "[Rcon]\r\nbEnabled=True\r\nPassword=theirs123\r\nListenPort=27020\r\n";
+                    var keep = ServerPlanner.Build(null, set, inst, db, theirs);
+                    if (keep.GameIni != theirs || keep.RconPort != 27020 || ServerPlanner.RconFor(set, theirs).Password != "theirs123") fail("own options: their own RCON in Game.ini was changed or not used");
+                    set.ServerOwnArgs = "Farmhouse -Rcon -RconPassword=cmdpass -RconListenPort=28000";
+                    var cmd = ServerPlanner.RconFor(set, theirs);
+                    if (cmd.Port != 28000 || cmd.Password != "cmdpass" || !cmd.Own) fail("own options: RCON from the command line not used");
+                    if (!ServerPlanner.Build(null, set, inst, db, "").ShownCommandLine.Contains("-RconPassword=<hidden>")) fail("own options: the RCON password is shown");
+                    if (!ServerPlanner.Build(null, set, inst, db, "").Warnings.Any(w => w.Contains("-Mods"))) fail("a waiting code without -Mods: no note");
+                    set.ServerModioCode = "";
+                    set.ServerOwnArgs = "Farmhouse -Mods -SecurityCode=12345";
+                    if (!ServerPlanner.Build(null, set, inst, db, "").Warnings.Any(w => w.Contains("only once"))) fail("a code kept in the player's options: no note that it works once");
+                    set.ServerOwnArgs = "Farmhouse -Mods -SecurityCode=none";
+                    if (ServerPlanner.Build(null, set, inst, db, "").Warnings.Any(w => w.Contains("only once"))) fail("-SecurityCode=none: noted as a used code");
+                    set.ServerOwnArgs = "  ";
+                    if (ServerPlanner.Build(null, set, inst, db, "").IsValid) fail("own options switched on but empty: would start");
+                    set.ServerOwnArgs = "Farmhouse -Port=27200";
+                    set.ServerRemote = true;
+                    if (ServerPlanner.Build(null, set, inst, db, "").OwnArgs != null) fail("own options used for a server on another PC");
+                    set.ServerRemote = false;
+                    set.ServerUseOwnArgs = false;
+                    if (ServerPlanner.RconFor(set, theirs).Own) fail("the launcher's own start used the player's RCON");
                 }
                 // Official rules and the match's own ruleset: one ruleset, official, with a note.
                 {

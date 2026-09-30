@@ -15,9 +15,9 @@ Set up an Insurgency: Sandstorm match once (map, bots, rules, mutators) and play
 - Presets: play styles, official rulesets and the official online playlists
 - Saved setups: the whole match in one file
 - Live page: restart rounds, change rules mid-match, any console command
-- Dedicated server: install with SteamCMD, server types (Co-op, Hardcore, Frenzy, Push, Competitive), map cycle, RCON player control, join info
+- Dedicated server: install with SteamCMD, server types (Co-op, Hardcore, Frenzy, Push, Competitive), map cycle, mods, RCON player control, join info, or your own .bat options
 - Any language, from a CSV table
-- Offline except the update check
+- Offline except the update check and the buttons that call Valve or mod.io
 
 | Rules | Playlists | Live |
 | --- | --- | --- |
@@ -48,11 +48,13 @@ The Server page installs the server with SteamCMD (about 5 GB, folder of your ch
 
 1. Pick a server type or set up the match on Play.
 2. Fill in name, ports, slots, password, admins, mods and a GSLT if you want it in the browser.
-3. Start. The launcher writes `Game.ini`, `Admins.txt`, `MapCycle.txt`, `Mods.txt` (backed up first), starts `InsurgencyServer.exe` and waits for RCON.
+3. Start. The launcher writes `Game.ini`, `Admins.txt`, `MapCycle.txt` (backed up first), starts `InsurgencyServer.exe` and waits for RCON.
+
+Already have a .bat? Switch on "Start with my own options" and paste its options or import the file. They are used as-is; the launcher only adds a waiting security code, and its RCON to `Game.ini` if you have none.
 
 Running, the page lists players (kick, ban, chat, restart round, any admin command). It also shows the join address, ports to forward and the Windows Firewall state, and says whether the server loaded its mods.
 
-Mods need a mod.io access token; it goes into the server's `Engine.ini` and `GameUserSettings.ini` and is never shown or logged.
+Mods (game update 1.20+): the server needs its own mod.io account, separate from the one you play with. Enter its e-mail on the Mods card, press Send code, type the 5-digit code and start the server: it logs in once (`-SecurityCode=<code>`, later starts use `-SecurityCode=none`) and loads the mods that account is subscribed to. Subscribe subscribes it to the mod list; Import Mods.txt fills the list from an old Mods.txt. Mods.txt and the access token are no longer read by the server.
 
 A server on another PC: switch to "On another PC (RCON)" and enter address, port and password.
 
@@ -67,10 +69,10 @@ New texts in code: `T("...")`, or `F("... {0} ...", v)`. `--cli translation-temp
 - Reads game paks, configs, log and the mod folder.
 - Writes match rules and its RCON settings to `Game.ini`, and F10 to `Input.ini`, only while the game is closed, with backups.
 - Keeps copies of your key bindings before sending any key; never edits them.
-- Server page only: the server's config files (see above) and `InsurgencyServer.exe`.
+- Server page only: the server's config files (see above) and `InsurgencyServer.exe`. It reads the server's mod.io login state from `%LOCALAPPDATA%\mod.io\254\ModServer` (never shows the token).
 - Settings and logs in `%APPDATA%\SandstormModLauncher`.
 - Problem reports are sent only when you press Send, after showing you all of it.
-- Network: the update check (release zip verified against SHA256SUMS.txt; Settings > About turns it off). SteamCMD from Valve (signature checked) and the server download, only when you press Install or Update.
+- Network: the update check (release zip verified against SHA256SUMS.txt; Settings > About turns it off). SteamCMD from Valve (signature checked) and the server download, only when you press Install or Update. mod.io, only when you press Send code or Subscribe.
 - No telemetry. Game files and anti-cheat are not touched. Local play only.
 
 The exe isn't code-signed, so SmartScreen may warn (More info > Run anyway). Verify a download:

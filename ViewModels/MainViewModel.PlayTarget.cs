@@ -39,13 +39,18 @@ namespace SandstormModLauncher.ViewModels
         /// <summary>What the server button does now: set the server up, start it, or load the match on it.</summary>
         private enum ServerStep { SetUp, Start, Starting, Load }
 
+        /// <summary>The Play match can be loaded on the server (with the player's own start options there may be no match).</summary>
+        private bool CanLoadMatch => serverPlan?.IsValid == true && serverPlan.Match != null && serverPlan.Url != null;
+        /// <summary>The server is ready, only the Play match is missing.</summary>
+        private bool NeedsPlayMatch => serverPlan?.IsValid == true && !CanLoadMatch && (!ServerRemote || !string.IsNullOrWhiteSpace(State.Settings.ServerRemoteHost));
+
         private ServerStep NextServerStep()
         {
             if (Server == null) return ServerStep.SetUp;
             if (ServerRemote)
-                return !string.IsNullOrWhiteSpace(State.Settings.ServerRemoteHost) && serverPlan?.IsValid == true ? ServerStep.Load : ServerStep.SetUp;
+                return !string.IsNullOrWhiteSpace(State.Settings.ServerRemoteHost) && CanLoadMatch ? ServerStep.Load : ServerStep.SetUp;
             if (!ServerInstall.Found || serverPlan?.IsValid != true) return ServerStep.SetUp;
-            if (ServerRunningHere) return Server.Monitor?.Phase == GamePhase.InMatch ? ServerStep.Load : ServerStep.Starting;
+            if (ServerRunningHere) return Server.Monitor?.Phase != GamePhase.InMatch ? ServerStep.Starting : CanLoadMatch ? ServerStep.Load : ServerStep.SetUp;
             return ServerStep.Start;
         }
 
@@ -76,7 +81,9 @@ namespace SandstormModLauncher.ViewModels
                     case ServerStep.Start: return T("Starts the dedicated server with this match, its own settings and map cycle");
                     case ServerStep.Starting: return Server?.Monitor?.ListeningPort > 0 ? T("The server is loading the match") : T("The server is loading its first map");
                     case ServerStep.Load: return T("Loads this match on the running server");
-                    default: return ServerPlanError ?? T("Opens the Server page: set up the dedicated server there first");
+                    default:
+                        if (NeedsPlayMatch) return T("Pick a map and scenario in Play first.");
+                        return ServerPlanError ?? T("Opens the Server page: set up the dedicated server there first");
                 }
             }
         }
@@ -98,6 +105,7 @@ namespace SandstormModLauncher.ViewModels
                 case ServerStep.Load: await TravelServer(); break;
                 case ServerStep.Starting: break;
                 default:
+                    if (NeedsPlayMatch) { Page = "Play"; ShowToast("Pick a map and scenario in Play first."); break; }
                     Page = "Server";
                     ShowToast(serverPlan?.Error != null && ServerInstall.Found ? serverPlan.Error
                               : ServerInstall.Found ? T("Set up the dedicated server on this page, then press the button again.")

@@ -381,14 +381,18 @@ namespace SandstormModLauncher.Services
                 ts + "17:087][  0]LogModioGame: ModSubsystem: mod.io initialization complete with result: The operation completed successfully.",
                 ts + "25:616][ 80]LogOnlineSession: Warning: STEAM (NWI): Empty session setting ModList  : OnlineService of type String",
             };
-            void Verdict(string what, string[] lines, bool modsOn, bool just, ModVerdict want, string mustSay = null)
+            void Verdict(string what, string[] lines, bool modsOn, bool just, ModVerdict want, string mustSay = null, ServerModioAccount acc = null)
             {
-                var st = ServerModCheck.Parse(lines, modsOn, just);
+                var st = ServerModCheck.Parse(lines, modsOn, just, acc);
                 if (st.Verdict != want) fail("server mods, " + what + ": " + st.Verdict + " instead of " + want);
                 if (mustSay != null && st.Text.IndexOf(mustSay, StringComparison.OrdinalIgnoreCase) < 0) fail("server mods, " + what + ": the text says '" + st.Text + "'");
                 if (string.IsNullOrWhiteSpace(st.Text)) fail("server mods, " + what + ": no text");
             }
-            Verdict("never logged in", never, true, false, ModVerdict.NoLogin, "never logged in");
+            var noSubs = new ServerModioAccount { LoggedIn = true, UserId = 3 };
+            Verdict("not logged in", never, true, false, ModVerdict.NoLogin, "not logged in");
+            Verdict("login expired", never, true, false, ModVerdict.NoLogin, "expired", new ServerModioAccount { Expired = true });
+            Verdict("logged in, no subscriptions", never, true, false, ModVerdict.NoMods, "not subscribed", noSubs);
+            Verdict("logged in with the game's account", never, true, false, ModVerdict.NoMods, "game's mod.io account", new ServerModioAccount { LoggedIn = true, SameAsGame = true, Subscriptions = new List<long> { 5 } });
             Verdict("just started", never, true, true, ModVerdict.Waiting);
             Verdict("mods off", never, false, false, ModVerdict.NotAsked);
             var working = new[]
@@ -404,40 +408,108 @@ namespace SandstormModLauncher.Services
             };
             Verdict("mods mounted", working, true, false, ModVerdict.Loaded, "2 mods");
             if (ServerModCheck.Parse(working, true).Added.Count != 2) fail("server mods: the added mods were not counted");
-            Verdict("logged in, nothing mounted yet", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication successful" }).ToArray(), true, false, ModVerdict.Unknown);
+            Verdict("added, not mounted yet", working.Take(6).ToArray(), true, false, ModVerdict.Downloading, "downloading 2 mods");
+            Verdict("already mounted", new[] { working[0], ts + "19:000][140]LogModioGame: ModSubsystem: OnModActivatedFromCloud: Mod ISMCmod[150867] is mounted and up-to-date. Not remounting." }, true, false, ModVerdict.Loaded, "1 mod");
+            Verdict("logged in by the log, nothing came", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication successful" }).ToArray(), true, false, ModVerdict.NoMods);
             Verdict("refused, with a code", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication failed with error: 11007, message Invalid token" }).ToArray(), true, false, ModVerdict.LoginFailed, "11007");
             Verdict("terms not accepted", never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication failed (Terms of Use): Terms not accepted" }).ToArray(), true, false, ModVerdict.LoginFailed, "Terms not accepted");
+            // A wrong or used security code: mod.io's answer in the SDK's own line (seen live with -SecurityCode=00000).
+            string refused = ts + "55:328][  0]LogModio: [06:15:54:794ms][Error][Http] Non 200-204 response received: {\"error\":{\"code\":401,\"error_ref\":11014,\"message\":\"Authorization failed. Invalid security code.\"}}";
+            Verdict("security code refused", never.Take(2).Concat(new[] { refused }).Concat(never.Skip(2)).ToArray(), true, false, ModVerdict.LoginFailed, "Invalid security code");
+            Verdict("old code refused, saved login loaded the mods", working.Concat(new[] { refused }).ToArray(), true, false, ModVerdict.Loaded);
+            Verdict("old code refused first, then the mods mounted", never.Take(2).Concat(new[] { refused }).Concat(working.Skip(4)).ToArray(), true, false, ModVerdict.Loaded, "2 mods");
+            Verdict("another mod.io error is not a refused login", never.Concat(new[] { ts + "56:000][  0]LogModio: [06:15:55:000ms][Error][Http] Non 200-204 response received: {\"error\":{\"code\":404,\"error_ref\":15022,\"message\":\"Mod not found.\"}}" }).ToArray(), true, false, ModVerdict.NoLogin);
             // Lines of an earlier run in the same file do not count.
             Verdict("old run loaded, this one did not", working.Concat(never).ToArray(), true, false, ModVerdict.NoLogin);
             Verdict("empty log", new string[0], true, false, ModVerdict.Waiting);
-            // A login after the empty list was published is fine: it is not "never logged in".
-            if (ServerModCheck.Parse(never.Concat(new[] { ts + "30:000][  0]LogModioGame: ModSubsystem: User authentication successful" }), true).Verdict == ModVerdict.NoLogin) fail("server mods: a server that did log in was called never logged in");
 
-            // The token goes into both config files, is put back into the one the server rewrote, and keeps the rest of the file.
+            // The server's saved login (user.json of the ModServer profile): read without the token, expiry and the game's own account seen.
+            string modio = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-modio-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            try
+            {
+                string User(long id, long expiry, string subs) => "{\"OAuth\":{\"expiry\":" + expiry + ",\"status\":0,\"token\":\"secret-token\"},\"Profile\":{\"id\":" + id
+                                                                 + ",\"username\":\"srv\"},\"subscriptions\":[" + subs + "],\"version\":1}";
+                if (ServerModio.ReadAccount(modio).LoggedIn) fail("modio login: no folder, but logged in");
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(modio, "ModServer"));
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(modio, "Player"));
+                var now = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc);
+                long future = 1830000000, past = 1700000000;
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "ModServer", "user.json"), User(11, future, "150867,1457355,150867"));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "Player", "user.json"), User(22, future, "1"));
+                var a = ServerModio.ReadAccount(modio, now);
+                if (!a.LoggedIn || a.Expired || a.UserName != "srv" || a.UserId != 11 || a.SameAsGame || !a.Subscriptions.SequenceEqual(new long[] { 150867, 1457355 }) || a.ExpiresUtc?.Year != 2027)
+                    fail("modio login read wrong: " + a.LoggedIn + " " + a.UserName + " " + a.UserId + " " + a.SameAsGame + " " + string.Join(",", a.Subscriptions) + " " + a.ExpiresUtc);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "Player", "user.json"), User(11, future, "1"));
+                if (!ServerModio.ReadAccount(modio, now).SameAsGame) fail("modio login: the game's own account on the server not seen");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "ModServer", "user.json"), User(11, past, ""));
+                var old = ServerModio.ReadAccount(modio, now);
+                if (old.LoggedIn || !old.Expired) fail("modio login: an expired login counts");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "ModServer", "user.json"), "{\"Profile\":{\"id\":11},\"subscriptions\":[]}");
+                if (ServerModio.ReadAccount(modio, now).LoggedIn) fail("modio login: a profile without a token counts as logged in");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(modio, "ModServer", "user.json"), "{broken");
+                var broken = ServerModio.ReadAccount(modio, now);
+                if (broken.LoggedIn || broken.Problem == null) fail("modio login: a broken file was not reported");
+            }
+            finally { try { System.IO.Directory.Delete(modio, true); } catch { } }
+
+            // Security codes on the command line.
+            if (ServerModio.CleanCode(" 12 345 ") != "12345" || ServerModio.CleanCode("1234") != null || ServerModio.CleanCode("abcde") != null || ServerModio.CleanCode("123456") != null)
+                fail("security code: 5 digits are not taken as they should");
+            if (ServerModio.WithSecurityCode("Map -SecurityCode=none -log", "12345") != "Map -SecurityCode=12345 -log") fail("security code: not replaced: " + ServerModio.WithSecurityCode("Map -SecurityCode=none -log", "12345"));
+            if (ServerModio.WithSecurityCode("Map -log", "12345") != "Map -log -SecurityCode=12345") fail("security code: not added");
+            if (ServerModio.WithSecurityCode("Map -mysecuritycode=1 -securitycode=none", "12345") != "Map -mysecuritycode=1 -SecurityCode=12345") fail("security code: another option was taken for it");
+            if (ServerModio.SecurityCodeIn("a -securitycode=\"777\" b") != "777" || ServerModio.SecurityCodeIn("a b") != null) fail("security code: not read");
+            if (ServerModio.HideCode("a -SecurityCode=12345 b") != "a -SecurityCode=<code> b" || ServerModio.HideCode("a -SecurityCode=none") != "a -SecurityCode=none") fail("security code: not hidden right");
+            if (!ServerModio.IsEmail("server@example.com") || ServerModio.IsEmail("server@") || ServerModio.IsEmail("a b@c.d")) fail("e-mail check wrong");
+            if (ServerModio.ErrorText(422, "{\"error\":{\"code\":422,\"error_ref\":13009,\"message\":\"Validation Failed.\",\"errors\":{\"email\":\"The \\\"email\\\" must be a valid email address.\"}}}").IndexOf("valid email", StringComparison.Ordinal) < 0)
+                fail("mod.io errors: the field message is not shown");
+            if (ServerModio.ErrorText(500, "<html>").Length == 0) fail("mod.io errors: nothing for an answer that is not JSON");
+
+            // The player's own .bat file.
+            string bat = "@echo off\r\nrem start InsurgencyServer.exe Old -Port=1\r\ntitle InsurgencyServer\r\nset MAP=Farmhouse\r\nset \"PORT=27102\"\r\ncd /d \"C:\\Servers\\sandstorm_server\"\r\n"
+                       + "start \"Sandstorm\" /wait \"C:\\Servers\\sandstorm_server\\InsurgencyServer.exe\" %MAP%?Scenario=Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=8 -Port=%PORT% ^\r\n"
+                       + "  -QueryPort=27131 -hostname=\"Brett & Co\" -log -Mods -SecurityCode=none -mutators=MapIcons,MoreAmmo -Motd=%%DAY%% > server.log\r\npause\r\n";
+            var notes = new List<string>();
+            string batArgs = ServerArgs.FromBatch(bat, notes);
+            string wantArgs = "Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=8 -Port=27102 -QueryPort=27131 -hostname=\"Brett & Co\" -log -Mods -SecurityCode=none -mutators=MapIcons,MoreAmmo -Motd=%DAY%";
+            if (batArgs != wantArgs) fail(".bat: read as\n" + batArgs + "\ninstead of\n" + wantArgs);
+            if (notes.Count != 0) fail(".bat: notes for a file with every variable set: " + string.Join(" ", notes));
+            if (!ServerArgs.Has(batArgs, "mods") || ServerArgs.Has(batArgs, "Mod") || ServerArgs.Value(batArgs, "hostname") != "Brett & Co" || ServerArgs.Value(batArgs, "Port") != "27102" || ServerArgs.FirstMap(batArgs) != "Farmhouse")
+                fail(".bat: options read wrong from " + batArgs);
+            ServerArgs.FromBatch("InsurgencyServer-Win64-Shipping.exe Map -Port=%GAMEPORT%", notes);
+            if (notes.Count != 1 || !notes[0].Contains("GAMEPORT")) fail(".bat: an unset variable is not noted");
+            if (ServerArgs.FromBatch("@echo off\r\necho Starting InsurgencyServer\r\ntaskkill /im InsurgencyServer.exe\r\npause") != null) fail(".bat: a file that does not start the server gave options");
+            if (ServerArgs.Clean("start InsurgencyServer.exe Oilfield -log") != "Oilfield -log" || ServerArgs.Clean("Oilfield\r\n-log ^\r\n-Mods") != "Oilfield -log -Mods") fail(".bat: a pasted line not cleaned");
+            if (ServerArgs.Clean("Oilfield -hostname=MyInsurgencyServer -log") != "Oilfield -hostname=MyInsurgencyServer -log") fail("a server name with InsurgencyServer in it was cut: " + ServerArgs.Clean("Oilfield -hostname=MyInsurgencyServer -log"));
+            if (ServerArgs.FirstMap("-Mods -log") != null) fail("a line without a map has a first map");
+
+            // The old token section goes, the rest of the files stays; Mods.txt is read for the list.
             string fake = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-tok-" + Guid.NewGuid().ToString("N").Substring(0, 8));
             try
             {
                 System.IO.Directory.CreateDirectory(fake);
                 System.IO.File.WriteAllText(System.IO.Path.Combine(fake, "InsurgencyServer.exe"), "");
                 var inst = ServerInstall.At(fake);
-                var svc = new ServerService(() => new AppSettings(), () => inst);
                 Directory.CreateDirectory(inst.SavedConfigDir);
-                System.IO.File.WriteAllText(inst.GameUserSettingsPath, "[/Script/Engine.GameUserSettings]\r\nbUseVSync=False\r\n");
-                if (svc.HasModioToken()) fail("mod token: a server without a token has one");
-                svc.SaveModioToken("tokentokentokentoken1234");
+                System.IO.File.WriteAllText(inst.GameUserSettingsPath, "[/Script/ModKit.ModIOClient]\r\nbHasUserAcceptedTerms=True\r\nAccessToken=tokentokentokentoken1234\r\n\r\n[/Script/Engine.GameUserSettings]\r\nbUseVSync=False\r\n");
+                System.IO.File.WriteAllText(inst.EngineIniPath, "[Core.Log]\r\nLogSkinnedMeshComp=Error\r\n\r\n[/script/modkit.modioclient]\r\nAccessToken=tokentokentokentoken1234\r\n");
+                var changed = ServerModio.RemoveObsoleteToken(inst);
+                if (changed.Count != 2) fail("old token: taken out of " + changed.Count + " files instead of 2");
                 foreach (var path in new[] { inst.EngineIniPath, inst.GameUserSettingsPath })
                 {
                     string text = System.IO.File.ReadAllText(path);
-                    if (!text.Contains("AccessToken=tokentokentokentoken1234") || !text.Contains("bHasUserAcceptedTerms=True")) fail("mod token: not saved in " + System.IO.Path.GetFileName(path));
+                    if (text.IndexOf("modkit", StringComparison.OrdinalIgnoreCase) >= 0 || text.Contains("AccessToken")) fail("old token: still in " + System.IO.Path.GetFileName(path) + ":\n" + text);
                 }
-                if (!System.IO.File.ReadAllText(inst.GameUserSettingsPath).Contains("bUseVSync=False")) fail("mod token: the rest of GameUserSettings.ini was lost");
-                System.IO.File.WriteAllText(inst.GameUserSettingsPath, "[/Script/Engine.GameUserSettings]\r\nbUseVSync=True\r\n");   // the server rewrote it without our section
-                svc.SyncModioToken();
-                string back = System.IO.File.ReadAllText(inst.GameUserSettingsPath);
-                if (!back.Contains("AccessToken=tokentokentokentoken1234") || !back.Contains("bUseVSync=True")) fail("mod token: not put back into the rewritten file, or its other values were lost:\n" + back);
-                System.IO.File.Delete(inst.EngineIniPath);
-                svc.SyncModioToken();
-                if (!System.IO.File.Exists(inst.EngineIniPath) || !svc.HasModioToken()) fail("mod token: not put back into Engine.ini");
+                if (!System.IO.File.ReadAllText(inst.GameUserSettingsPath).Contains("bUseVSync=False") || !System.IO.File.ReadAllText(inst.EngineIniPath).Contains("LogSkinnedMeshComp=Error"))
+                    fail("old token: the rest of the files was lost");
+                if (ServerModio.RemoveObsoleteToken(inst).Count != 0) fail("old token: files changed again with nothing to take out");
+                Directory.CreateDirectory(inst.ServerConfigDir);
+                string modsTxt = System.IO.Path.Combine(inst.ServerConfigDir, "Mods.txt");
+                System.IO.File.WriteAllText(modsTxt, "\uFEFF150867\r\n// ISMC\r\n1457355 // bots\r\n\r\nnot-a-mod\r\n150867\r\n");
+                var bad = new List<string>();
+                var ids = ServerModio.ReadModsTxt(modsTxt, bad);
+                if (ids == null || !ids.SequenceEqual(new long[] { 150867, 1457355 }) || bad.Count != 1) fail("Mods.txt: read as " + (ids == null ? "nothing" : string.Join(",", ids)) + ", bad " + bad.Count);
+                if (ServerModio.ReadModsTxt(System.IO.Path.Combine(fake, "none.txt")) != null) fail("Mods.txt: a missing file read as a list");
             }
             finally { try { System.IO.Directory.Delete(fake, true); } catch { } }
 

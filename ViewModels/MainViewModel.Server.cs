@@ -45,7 +45,7 @@ namespace SandstormModLauncher.ViewModels
         private ServerPlan serverPlan;
         private DispatcherTimer serverTimer;
         private bool serverBusy, remoteReachable;
-        private string serverStatus = T("Not running"), serverStatusKind = "Off", serverOutput = "", sayText = "", serverCommand = "", modioTokenInput = "", serverProgress = "";
+        private string serverStatus = T("Not running"), serverStatusKind = "Off", serverOutput = "", sayText = "", serverCommand = "", serverProgress = "";
         private readonly HashSet<string> backedUpCycles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public ICommand StartServerCommand { get; private set; }
@@ -65,7 +65,6 @@ namespace SandstormModLauncher.ViewModels
         public ICommand ChooseMapCycleFileCommand { get; private set; }
         public ICommand DefaultMapCycleFileCommand { get; private set; }
         public ICommand AddMatchModsCommand { get; private set; }
-        public ICommand SaveModioTokenCommand { get; private set; }
         public ICommand RefreshPlayersCommand { get; private set; }
         public ICommand KickPlayerCommand { get; private set; }
         public ICommand BanPlayerCommand { get; private set; }
@@ -98,12 +97,11 @@ namespace SandstormModLauncher.ViewModels
             ChooseMapCycleFileCommand = new RelayCommand(ChooseMapCycleFile);
             DefaultMapCycleFileCommand = new RelayCommand(() => { State.Settings.ServerMapCycleFile = ""; SaveSettingsSoon(); LoadMapCycle(); UpdateServerPlan(); }, () => !string.IsNullOrWhiteSpace(State.Settings.ServerMapCycleFile));
             AddMatchModsCommand = new RelayCommand(AddMatchMods, () => serverPlan != null && serverPlan.MatchModIds.Count > 0);
-            SaveModioTokenCommand = new RelayCommand(SaveModioToken, () => ServerInstall.Found && !string.IsNullOrWhiteSpace(modioTokenInput));
             RefreshPlayersCommand = new AsyncCommand(() => RefreshPlayers(false), () => CanControlServer);
             KickPlayerCommand = new AsyncCommand(p => KickPlayer(p as ServerPlayerItem), p => CanControlServer);
             BanPlayerCommand = new AsyncCommand(p => BanPlayer(p as ServerPlayerItem), p => CanControlServer);
             SayCommand = new AsyncCommand(Say, () => CanControlServer && !string.IsNullOrWhiteSpace(sayText));
-            TravelServerCommand = new AsyncCommand(TravelServer, () => CanControlServer && serverPlan?.IsValid == true);
+            TravelServerCommand = new AsyncCommand(TravelServer, () => CanControlServer && serverPlan?.IsValid == true && serverPlan.Match != null && serverPlan.Url != null);
             RestartServerRoundCommand = new AsyncCommand(p => RestartServerRound(p as string == "1"), p => CanControlServer);
             SendServerCommandCommand = new AsyncCommand(SendServerCommand, () => CanControlServer && !string.IsNullOrWhiteSpace(serverCommand));
             CheckServerConnectionCommand = new AsyncCommand(() => CheckServerConnection(true), () => !serverBusy);
@@ -121,11 +119,12 @@ namespace SandstormModLauncher.ViewModels
             serverTimer.Tick += async (s, e) =>
             {
                 if (Page != "Server" || serverBusy) return;
+                if (!ServerRemote) ReadServerAccount();
                 if (ServerRemote) await CheckServerConnection(false);
                 else if (ServerRunningHere && Server.Monitor?.Phase == GamePhase.InMatch)
                 {
                     await RefreshPlayers(true);
-                    if (State.Settings.ServerModsEnabled && lastModVerdict != ModVerdict.Loaded) await CheckServerMods(true);
+                    if (ServerModsOn && lastModVerdict != ModVerdict.Loaded) await CheckServerMods(true);
                 }
             };
             serverTimer.Start();
@@ -157,7 +156,9 @@ namespace SandstormModLauncher.ViewModels
                       nameof(ServerMaxPlayersText), nameof(ServerPortText), nameof(ServerQueryPortText), nameof(ServerRconPortText), nameof(ServerRconFromNetwork),
                       nameof(ServerShowLog), nameof(ServerCheats), nameof(ServerGslt), nameof(ServerGameStats), nameof(ServerExtraArgs), nameof(ServerRemoteHost),
                       nameof(ServerRemotePortText), nameof(ServerRemotePassword), nameof(ServerUseMapCycle), nameof(MapCycleFile), nameof(MapCycleIsDefault),
-                      nameof(ServerAdmins), nameof(ServerModsEnabled), nameof(ServerModIds), nameof(ModioTokenStatus), nameof(ServerRconAddress));
+                      nameof(ServerAdmins), nameof(ServerModsEnabled), nameof(ServerModIds), nameof(ServerRconAddress), nameof(ServerUseOwnArgs),
+                      nameof(ServerUsesLauncherArgs), nameof(ServerOwnArgs), nameof(ServerModioEmail), nameof(ServerModioCode), nameof(ModioCodeHint));
+            ReadServerAccount();
             RaiseServerSetup();
             OnServerStateChanged();
         }
@@ -258,9 +259,6 @@ namespace SandstormModLauncher.ViewModels
         public string ServerAdmins { get => State.Settings.ServerAdmins; set => SetServerSetting(() => State.Settings.ServerAdmins = value ?? ""); }
         public bool ServerModsEnabled { get => State.Settings.ServerModsEnabled; set => SetServerSetting(() => State.Settings.ServerModsEnabled = value); }
         public string ServerModIds { get => State.Settings.ServerMods; set => SetServerSetting(() => State.Settings.ServerMods = value ?? ""); }
-        public string ModioTokenInput { get => modioTokenInput; set => Set(ref modioTokenInput, value ?? ""); }
-        public string ModioTokenStatus => !ServerInstall.Found ? "" : Server?.HasModioToken() == true
-            ? T("A mod.io token is saved in the server's Engine.ini.") : T("No mod.io token yet: the server cannot download mods without one.");
         public string SayText { get => sayText; set => Set(ref sayText, value ?? ""); }
         public string ServerCommand { get => serverCommand; set => Set(ref serverCommand, value ?? ""); }
 
@@ -269,12 +267,13 @@ namespace SandstormModLauncher.ViewModels
         private void UpdateServerPlan()
         {
             if (Server == null) return;
-            try { serverPlan = CurrentPlan == null ? null : ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, ""); }
+            try { serverPlan = CurrentPlan == null && !(State.Settings.ServerUseOwnArgs && !State.Settings.ServerRemote) ? null : ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, "", serverAccount); }
             catch (Exception ex) { AppLog.Error("Could not build the server plan", ex); serverPlan = null; }
             ServerWarnings.Clear();
             if (serverPlan != null) foreach (var w in serverPlan.Warnings.Distinct()) ServerWarnings.Add(w);
             RaiseMany(nameof(ServerCommandLine), nameof(ServerPlanError), nameof(ServerMatchSummary), nameof(ServerMatchMods), nameof(CanStartServer),
-                      nameof(ServerPortsText), nameof(ServerJoinCommand), nameof(ServerJoinText), nameof(ServerInternetText));
+                      nameof(ServerPortsText), nameof(ServerJoinCommand), nameof(ServerJoinText), nameof(ServerInternetText), nameof(ServerModsOn),
+                      nameof(ModioAccountKind), nameof(ServerModsListText));
             RaiseMainAction();
         }
 
@@ -289,15 +288,17 @@ namespace SandstormModLauncher.ViewModels
         private async Task<bool> RunServer()
         {
             string ini = File.Exists(ServerInstall.GameIniPath) ? UeIni.ReadText(ServerInstall.GameIniPath) : "";
-            var plan = ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, ini);
+            ReadServerAccount();
+            var plan = ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, ini, serverAccount);
             if (!plan.IsValid) { await ShowMessage("The server cannot start", plan.Error); return false; }
             var progress = new Progress<string>(t => ServerProgress = t);
             string failed = await Server.Start(plan, progress, CancellationToken.None);
             ServerProgress = "";
             SaveSettingsSoon();
+            if (plan.UsesCode) { RaiseMany(nameof(ServerModioCode), nameof(ModioCodeHint), nameof(ModioAccountText), nameof(ModioAccountKind)); UpdateServerPlan(); }
             if (failed != null) { await ShowMessage("The server did not start", failed); return false; }
-            ShowToast(F("Server running: {0}", plan.Match.Map?.DisplayName ?? plan.Match.Level));
-            WatchServerMods();
+            ShowToast(plan.StartMap != null ? F("Server running: {0}", plan.StartMap) : T("Server running"));
+            WatchServerMods(plan.ModsOn);
             await RefreshPlayers(true);
             return true;
         }
@@ -501,18 +502,6 @@ namespace SandstormModLauncher.ViewModels
             ShowToast(F("{0} mod id(s) added", add.Count));
         }
 
-        private void SaveModioToken()
-        {
-            try
-            {
-                Server.SaveModioToken(modioTokenInput);
-                ModioTokenInput = "";
-                Raise(nameof(ModioTokenStatus));
-                ShowToast("Token saved in the server's Engine.ini");
-            }
-            catch (Exception ex) { ShowToast(F("The token could not be saved: {0}", ex.Message)); }
-        }
-
         // ------------------------------------------------------------------ live control (RCON)
 
         /// <summary>Runs something over the server's RCON on a worker thread; on failure the output says why and null comes back.</summary>
@@ -571,6 +560,7 @@ namespace SandstormModLauncher.ViewModels
         {
             var plan = serverPlan;
             if (plan?.IsValid != true) return;
+            if (plan.Match == null || plan.Url == null) { ShowToast("Pick a map and scenario in Play first."); return; }
             var r = await Task.Run(() => Server.Travel(plan));
             ServerOutput = r.Ok ? F("Loading {0} on the server.", MapSummary) : r.Delivered ? T("Sent; the server is busy loading.") : F("Not loaded: {0}", r.Error);
             ShowToast(r.Ok || r.Delivered ? "Loading the match on the server" : "The server did not take the match");

@@ -40,8 +40,19 @@ namespace SandstormModLauncher.Game
             this.install = install;
             Rcon = new GameRcon(
                 () => settings().ServerRemote ? (settings().ServerRemoteHost ?? "").Trim() : RconSetup.Address,
-                () => settings().ServerRemote ? settings().ServerRemoteRconPort : settings().ServerRconPort,
-                () => settings().ServerRemote ? settings().ServerRemoteRconPassword ?? "" : settings().ServerRconPassword ?? "");
+                () => settings().ServerRemote ? settings().ServerRemoteRconPort : LocalRcon().Port,
+                () => settings().ServerRemote ? settings().ServerRemoteRconPassword ?? "" : LocalRcon().Password ?? "");
+        }
+
+        /// <summary>The RCON of the server on this PC: the launcher's, or the player's own when they start it with their own options.</summary>
+        private (int Port, string Password, bool Own) LocalRcon()
+        {
+            var s = settings();
+            if (!s.ServerUseOwnArgs) return (s.ServerRconPort, s.ServerRconPassword, false);
+            string ini = "";
+            try { var path = install().GameIniPath; if (path != null && File.Exists(path)) ini = UeIni.ReadText(path); }
+            catch (Exception ex) { AppLog.Warn("Server Game.ini for RCON: " + ex.Message); }
+            return ServerPlanner.RconFor(s, ini);
         }
 
         /// <summary>Watches the server of the current install (again after the folder changes).</summary>
@@ -55,7 +66,10 @@ namespace SandstormModLauncher.Game
 
         public bool IsRunning => install().FindProcess() != null;
 
-        /// <summary>Writes the server's files for a plan: Game.ini (backed up), Admins.txt, Mods.txt and the map cycle.</summary>
+        /// <summary>
+        /// Writes the server's files for a plan: Game.ini (backed up), Admins.txt and the map cycle. Mods.txt is left alone:
+        /// since game update 1.20 the server loads the mods its mod.io account is subscribed to, and no longer reads it.
+        /// </summary>
         public void WriteFiles(ServerPlan plan)
         {
             var inst = install();
@@ -68,73 +82,15 @@ namespace SandstormModLauncher.Game
                 AppLog.Info("Server Game.ini updated (" + UeIni.Split(plan.GameIni).Count + " lines)");
             }
             settings().ServerManagedIniKeys = plan.ManagedIniKeys;
-            SyncModioToken();
+            if (plan.ModsOn) ServerModio.RemoveObsoleteToken(inst);
             Directory.CreateDirectory(inst.ServerConfigDir);
             if (plan.AdminsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, ServerPlanner.AdminsName + ".txt"), plan.AdminsText);
-            if (plan.ModsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, "Mods.txt"), plan.ModsText);
             if (plan.MapCycleCopyFrom != null)
                 WriteIfChanged(Path.Combine(inst.ServerConfigDir, plan.MapCycleName + ".txt"), File.ReadAllText(plan.MapCycleCopyFrom));
         }
 
-        private const string ModioSection = "/Script/ModKit.ModIOClient";
-
-        /// <summary>Saves a mod.io access token in the server's Engine.ini, where the server reads it to download mods. Never logged.</summary>
-        public void SaveModioToken(string token)
-        {
-            var inst = install();
-            Directory.CreateDirectory(inst.SavedConfigDir);
-            foreach (string path in TokenFiles(inst)) WriteToken(path, (token ?? "").Trim());
-            AppLog.Info("Server Engine.ini and GameUserSettings.ini: mod.io token saved");
-        }
-
-        /// <summary>The two files a mod.io token is kept in (see ServerInstall.GameUserSettingsPath).</summary>
-        private static string[] TokenFiles(ServerInstall inst) => new[] { inst.EngineIniPath, inst.GameUserSettingsPath };
-
-        private static void WriteToken(string path, string token)
-        {
-            string current = File.Exists(path) ? UeIni.ReadText(path) : "";
-            var section = new UeIni.Section(ModioSection)
-            {
-                Values = new List<KeyValuePair<string, string>>
-                {
-                    new KeyValuePair<string, string>("bHasUserAcceptedTerms", "True"),
-                    new KeyValuePair<string, string>("AccessToken", token),
-                }
-            };
-            if (File.Exists(path)) ConsoleBridge.BackupFile(path, "server-");
-            UeIni.WriteText(path, UeIni.MergeSections(current, new[] { section }, (s, k) => false));
-        }
-
-        /// <summary>The token in a server config file (null = none). Never logged or shown.</summary>
-        private static string TokenIn(string path)
-        {
-            try
-            {
-                if (!File.Exists(path)) return null;
-                var sec = UeIni.Parse(UeIni.ReadText(path)).LastOrDefault(x => x.Name.Equals(ModioSection, StringComparison.OrdinalIgnoreCase));
-                string t = sec?.Values.LastOrDefault(v => v.Key.Equals("AccessToken", StringComparison.OrdinalIgnoreCase)).Value?.Trim();
-                return string.IsNullOrEmpty(t) ? null : t;
-            }
-            catch { return null; }
-        }
-
-        /// <summary>
-        /// A token saved in one of the two files goes into the other too (the server rewrites its config files, and the
-        /// guides differ on which one it reads), so it stays wherever the server looks.
-        /// </summary>
-        public void SyncModioToken()
-        {
-            var inst = install();
-            if (!inst.Found) return;
-            var files = TokenFiles(inst);
-            string token = files.Select(TokenIn).FirstOrDefault(t => t != null);
-            if (token == null) return;
-            foreach (string f in files)
-                if (TokenIn(f) != token) { WriteToken(f, token); AppLog.Info("Server: the mod.io token was put back into " + Path.GetFileName(f)); }
-        }
-
         /// <summary>What the running server's own log says about its mods.</summary>
-        public ServerModStatus ModStatus(bool modsOn, bool justStarted)
+        public ServerModStatus ModStatus(bool modsOn, bool justStarted, ServerModioAccount account)
         {
             var inst = install();
             var lines = new List<string>();
@@ -149,17 +105,7 @@ namespace SandstormModLauncher.Game
                     }
             }
             catch (Exception ex) { AppLog.Warn("Server log for the mod check: " + ex.Message); }
-            return ServerModCheck.Parse(lines, modsOn, justStarted);
-        }
-
-        /// <summary>True when the server's Engine.ini holds a mod.io token.</summary>
-        public bool HasModioToken() => TokenSaved(install());
-
-        /// <summary>True when a token is saved in one of the server's config files.</summary>
-        public static bool TokenSaved(ServerInstall inst)
-        {
-            try { return inst != null && inst.Found && TokenFiles(inst).Any(f => TokenIn(f) != null); }
-            catch { return false; }
+            return ServerModCheck.Parse(lines, modsOn, justStarted, account);
         }
 
         private static void WriteIfChanged(string path, string text)
@@ -176,9 +122,10 @@ namespace SandstormModLauncher.Game
         public string PortProblem(ServerPlan plan)
         {
             var s = settings();
-            foreach (var (port, what) in new[] { (s.ServerPort, N("The game port {0} is used by another program (another server?). Pick another one.")), (s.ServerQueryPort, N("The query port {0} is used by another program (another server?). Pick another one.")) })
+            int game = plan.GamePort > 0 ? plan.GamePort : s.ServerPort, query = plan.QueryPort > 0 ? plan.QueryPort : s.ServerQueryPort, rcon = plan.RconPort > 0 ? plan.RconPort : s.ServerRconPort;
+            foreach (var (port, what) in new[] { (game, N("The game port {0} is used by another program (another server?). Pick another one.")), (query, N("The query port {0} is used by another program (another server?). Pick another one.")) })
                 if (!UdpFree(port)) return F(what, port);
-            if (!TcpFree(s.ServerRconPort, s.ServerRconFromNetwork)) return F("The RCON port {0} is used by another program. Pick another one.", s.ServerRconPort);
+            if (!TcpFree(rcon, s.ServerRconFromNetwork)) return F("The RCON port {0} is used by another program. Pick another one.", rcon);
             return null;
         }
 
@@ -226,8 +173,15 @@ namespace SandstormModLauncher.Game
                 });
             }
             catch (Exception ex) { return F("The server did not start: {0}", ex.Message); }
+            if (plan.UsesCode)
+            {
+                // A security code logs the server in once: it is used up by this start.
+                settings().ServerModioCode = "";
+                AppLog.Info("Server: started with a mod.io security code");
+            }
 
             var sw = Stopwatch.StartNew();
+            TimeSpan? loadedAt = null;
             var limit = TimeSpan.FromSeconds(Math.Max(120, settings().StartTimeoutSec));
             while (sw.Elapsed < limit)
             {
@@ -235,12 +189,19 @@ namespace SandstormModLauncher.Game
                 Monitor?.Poll();
                 bool running = IsRunning;
                 if (!running && sw.Elapsed > TimeSpan.FromSeconds(20)) return F("The server closed while starting. Its log is in {0}.", Path.GetDirectoryName(inst.LogPath));
-                if (Monitor != null && Monitor.Phase == GamePhase.InMatch && await Task.Run(() => Rcon.Probe(), ct) == null)
+                bool loaded = Monitor != null && Monitor.Phase == GamePhase.InMatch;
+                if (loaded && await Task.Run(() => Rcon.Probe(), ct) == null)
                 {
-                    AppLog.Info("Server running on port " + (Monitor.ListeningPort > 0 ? Monitor.ListeningPort : settings().ServerPort) + " after " + (int)sw.Elapsed.TotalSeconds + " s");
+                    AppLog.Info("Server running on port " + (Monitor.ListeningPort > 0 ? Monitor.ListeningPort : plan.GamePort) + " after " + (int)sw.Elapsed.TotalSeconds + " s");
                     return null;
                 }
-                progress?.Report(running ? F("Loading {0} ({1} s)", plan.Match.Map?.DisplayName ?? plan.Match.Level, (int)sw.Elapsed.TotalSeconds) : T("Starting the server"));
+                if (loaded && plan.OwnArgs != null)
+                {
+                    // The player's own options may keep RCON off or elsewhere: the server runs, only the Players card cannot reach it.
+                    loadedAt = loadedAt ?? sw.Elapsed;
+                    if (sw.Elapsed - loadedAt.Value > TimeSpan.FromSeconds(30)) { AppLog.Warn("Server running, but its RCON does not answer"); return null; }
+                }
+                progress?.Report(running ? F("Loading {0} ({1} s)", plan.StartMap ?? T("the first map"), (int)sw.Elapsed.TotalSeconds) : T("Starting the server"));
             }
             return F("The server did not finish starting in {0} s. Look at its log window.", (int)limit.TotalSeconds);
         }

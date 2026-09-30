@@ -1,4 +1,10 @@
-Local play, dedicated server, mods, match rules and live control for Insurgency: Sandstorm.
+**1.10.0**
+
+- Server mods work again. Since game update 1.20 the server logs in to mod.io with an e-mailed security code and loads the mods its own account is subscribed to.
+- Mods card: send the code, enter it, subscribe the server's account to your mod list. Mods.txt can be imported into the list.
+- The old token and Mods.txt are no longer used; the old token section is removed from the server's ini files.
+- Start with your own options: paste your server's command line or import your .bat.
+- Mod status also shows a refused code, mods still downloading and a server on your game's own account.
 
 **1.9.1**
 

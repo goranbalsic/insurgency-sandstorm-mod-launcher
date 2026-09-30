@@ -1,0 +1,29 @@
+name: Release notes
+
+# Rewrites the text of every release from packaging/release-notes.md: the sections up to that release's version,
+# with the release's own build link and checksums kept. Files and tags are not touched.
+
+on:
+  push:
+    branches: [main]
+    paths: [packaging/release-notes.md]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rewrite release notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./packaging/release-notes.ps1 -Repo "${{ github.repository }}"

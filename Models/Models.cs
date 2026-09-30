@@ -234,7 +234,11 @@ namespace SandstormModLauncher.Models
         public string ServerMapCycleFile { get; set; } = "";      // empty = MapCycle.txt in the server's Insurgency\Config\Server
         public string ServerAdmins { get; set; } = "";            // SteamID64s, one per line
         public bool ServerModsEnabled { get; set; }
-        public string ServerMods { get; set; } = "";              // mod.io mod ids, one per line
+        public string ServerMods { get; set; } = "";              // mod.io mod ids the server's account should be subscribed to, one per line
+        public string ServerModioEmail { get; set; } = "";        // the server's own mod.io account, for the security code
+        public string ServerModioCode { get; set; } = "";         // a security code from mod.io, used at the next start and then dropped
+        public bool ServerUseOwnArgs { get; set; }                // start with the player's own options (from their .bat) instead of the launcher's
+        public string ServerOwnArgs { get; set; } = "";
         public string ServerGslt { get; set; } = "";              // Steam game server login token
         public bool ServerGameStats { get; set; }
         public bool ServerCheats { get; set; }
