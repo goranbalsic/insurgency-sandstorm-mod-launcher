@@ -158,6 +158,25 @@
                         <StackPanel>
                             <TextBlock Text="Server settings" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" Text="Used the next time the server starts." />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerUseOwnArgs}" Margin="0,10,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="Start with my own options" FontSize="13.5" />
+                                    <TextBlock Text="The options from your .bat file, used as they are. The launcher adds only a waiting mod.io code, and its RCON to Game.ini when you have none." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                            <StackPanel Visibility="{Binding ServerUseOwnArgs, Converter={StaticResource Vis}}">
+                                <TextBox Style="{StaticResource CodeBox}" Height="80" TextWrapping="Wrap" Text="{Binding ServerOwnArgs, UpdateSourceTrigger=LostFocus}"
+                                         Tag="Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=8 -Port=27102 -QueryPort=27131 -log -Mods -SecurityCode=none" />
+                                <DockPanel Margin="0,6,0,0">
+                                    <Button DockPanel.Dock="Right" Content="Import .bat..." Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding ImportServerBatCommand}"
+                                            ToolTip="Reads the line of your .bat file that starts InsurgencyServer" />
+                                    <TextBlock Text="{Binding OwnArgsNote}" Style="{StaticResource Mute}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Text="The settings below, the map cycle, the admins and the Play match are not used while this is on." />
+                            </StackPanel>
+                            <Button Content="Import .bat..." Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="0,0,0,4" Command="{Binding ImportServerBatCommand}"
+                                    Visibility="{Binding ServerUsesLauncherArgs, Converter={StaticResource Vis}}" ToolTip="Start the server with the options of your own .bat file" />
                             <TextBlock Text="Name in the server browser" Style="{StaticResource Label}" />
                             <TextBox Text="{Binding ServerName, UpdateSourceTrigger=LostFocus}" Tag="e.g. Friday night co-op" />
                             <Grid>
@@ -301,23 +320,43 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerModsEnabled}" Margin="0,8,0,6">
                                 <StackPanel>
                                     <TextBlock Text="Load mods on the server" FontSize="13.5" />
-                                    <TextBlock Text="The server downloads them from mod.io when it starts (-Mods), then loads your match again; players get them when they join." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                    <TextBlock Text="The server downloads its mods from mod.io when it starts (-Mods), then loads your match again." Style="{StaticResource Mute}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </CheckBox>
-                            <TextBlock Text="mod.io mod ids, one per line" Style="{StaticResource Label}" />
+                            <TextBlock Text="The server's mod.io login" Style="{StaticResource Label}" />
+                            <Border CornerRadius="4" Padding="12,9" BorderThickness="1"
+                                    Background="{Binding ModioAccountKind, Converter={StaticResource Status}, ConverterParameter=bg}"
+                                    BorderBrush="{Binding ModioAccountKind, Converter={StaticResource Status}, ConverterParameter=border}">
+                                <TextBlock Text="{Binding ModioAccountText}" TextWrapping="Wrap" FontSize="12.5" Foreground="{Binding ModioAccountKind, Converter={StaticResource Status}}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Text="The server needs a mod.io account of its own, not the one you play with (make one on mod.io with another e-mail). It logs in once with a code mod.io e-mails to that account." />
+                            <TextBlock Text="E-mail of the server's mod.io account" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Send code" Margin="8,0,0,0" Command="{Binding SendModioCodeCommand}" ToolTip="mod.io e-mails a 5-digit security code to this address" />
+                                <TextBox Text="{Binding ServerModioEmail, UpdateSourceTrigger=PropertyChanged}" Tag="server@example.com" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding ModioText}" Style="{StaticResource Mute}" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding ModioText, Converter={StaticResource Vis}}" />
+                            <TextBlock Text="Security code from the e-mail" Style="{StaticResource Label}" />
+                            <TextBox Text="{Binding ServerModioCode, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Width="120" HorizontalAlignment="Left" Tag="12345" />
+                            <TextBlock Text="{Binding ModioCodeHint}" Style="{StaticResource Mute}" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding ModioCodeHint, Converter={StaticResource Vis}}" />
+                            <TextBlock Text="Mods for the server (mod.io ids, one per line)" Style="{StaticResource Label}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,0,0,6" TextWrapping="Wrap"
+                                       Text="The server loads the mods its account is subscribed to. Subscribe subscribes it to this list; players need the same mods." />
                             <TextBox Style="{StaticResource CodeBox}" Height="80" Text="{Binding ServerModIds, UpdateSourceTrigger=LostFocus}" Tag="e.g. 1457355" />
                             <DockPanel Margin="0,6,0,0" Visibility="{Binding ServerMatchMods, Converter={StaticResource Vis}}">
                                 <Button DockPanel.Dock="Right" Content="Add them" Style="{StaticResource GhostButton}" Command="{Binding AddMatchModsCommand}" />
                                 <TextBlock Text="{Binding ServerMatchMods}" Style="{StaticResource Mute}" VerticalAlignment="Center" />
                             </DockPanel>
-                            <TextBlock Text="mod.io access token" Style="{StaticResource Label}" />
-                            <TextBlock Style="{StaticResource Mute}" Margin="0,0,0,6"
-                                       Text="The server needs your own mod.io token to download mods: on mod.io, your account > API access > OAuth 2 > create a token with read access. It is saved only in the server's Engine.ini." />
-                            <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="Save to Engine.ini" Margin="8,0,0,0" Command="{Binding SaveModioTokenCommand}" />
-                                <TextBox Text="{Binding ModioTokenInput, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Tag="paste the token here" />
-                            </DockPanel>
-                            <TextBlock Text="{Binding ModioTokenStatus}" Style="{StaticResource Mute}" Margin="0,6,0,0" />
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="Subscribe" Margin="0,0,8,6" Command="{Binding SubscribeServerModsCommand}" ToolTip="Subscribes the server's mod.io account to every mod on the list (needs the server logged in)" />
+                                <Button Content="Import Mods.txt..." Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding ImportModsTxtCommand}" ToolTip="Adds the mod ids of a Mods.txt to the list" />
+                                <Button Content="Open mod.io" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding OpenModioCommand}" ToolTip="Log in there with the server's account to see or change its subscriptions" />
+                                <Button Content="Unsubscribe the others" Style="{StaticResource GhostButton}" Margin="0,0,8,6" Command="{Binding UnsubscribeOtherModsCommand}"
+                                        Visibility="{Binding HasOtherSubs, Converter={StaticResource Vis}}" ToolTip="Unsubscribes the server's account from the mods that are not on the list" />
+                            </WrapPanel>
+                            <TextBlock Text="{Binding ServerModsListText}" Style="{StaticResource Mute}" TextWrapping="Wrap" Visibility="{Binding ServerModsListText, Converter={StaticResource Vis}}" />
+                            <TextBlock Text="{Binding ModSyncText}" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="{Binding ModSyncText, Converter={StaticResource Vis}}" />
                             <TextBlock Text="Mods on the running server" Style="{StaticResource Label}" />
                             <Border CornerRadius="4" Padding="12,9" BorderThickness="1"
                                     Background="{Binding ServerModKind, Converter={StaticResource Status}, ConverterParameter=bg}"

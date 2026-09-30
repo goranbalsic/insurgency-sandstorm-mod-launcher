@@ -104,8 +104,6 @@ namespace SandstormModLauncher.Game
         public List<string> ManagedIniKeys = new List<string>();
         /// <summary>Admins.txt (null = the file is left alone and no admin list is used).</summary>
         public string AdminsText;
-        /// <summary>Mods.txt (null = left alone, mods off).</summary>
-        public string ModsText;
         /// <summary>Mods the match needs (its map or mutators come from them).</summary>
         public List<long> MatchModIds = new List<long>();
         public string MapCycleName;
@@ -113,13 +111,24 @@ namespace SandstormModLauncher.Game
         public string MapCycleCopyFrom;
         public List<string> Warnings = new List<string>();
         public string Error;
+        /// <summary>The player's own options (Server settings > start with my own options): used as they are instead of Url and Args.</summary>
+        public string OwnArgs;
+        /// <summary>The server loads mods (-Mods).</summary>
+        public bool ModsOn;
+        /// <summary>The start passes a security code: it logs the server in to mod.io once and is used up.</summary>
+        public bool UsesCode;
+        /// <summary>Ports the server takes (for the check that nothing else has them).</summary>
+        public int GamePort, QueryPort, RconPort;
+        /// <summary>The first map, for the progress text.</summary>
+        public string StartMap;
 
         public bool IsValid => Error == null;
-        public string CommandLine => Url == null ? "" : Url + (Args.Count > 0 ? " " + string.Join(" ", Args) : "");
+        public string CommandLine => OwnArgs ?? (Url == null ? "" : Url + (Args.Count > 0 ? " " + string.Join(" ", Args) : ""));
 
-        /// <summary>The command line to show and log: the Steam server token and the join password hidden.</summary>
-        public string ShownCommandLine => Regex.Replace(Regex.Replace(CommandLine, @"(-GSLTToken=)\S+", "$1<your token>", RegexOptions.IgnoreCase),
-                                                        @"(\?Password=)[^?\s]+", "$1<password>", RegexOptions.IgnoreCase);
+        /// <summary>The command line to show and log: the Steam server token, the join password and a security code hidden.</summary>
+        public string ShownCommandLine => ServerModio.HideCode(Regex.Replace(Regex.Replace(Regex.Replace(CommandLine, @"(-GSLTToken=)\S+", "$1<your token>", RegexOptions.IgnoreCase),
+                                                        @"(\?Password=)[^?\s]+", "$1<password>", RegexOptions.IgnoreCase),
+                                                        @"(-(?:RconPassword|GameStatsToken)=)\S+", "$1<hidden>", RegexOptions.IgnoreCase));
     }
 
     public static class ServerPlanner
@@ -204,18 +213,9 @@ namespace SandstormModLauncher.Game
             !string.IsNullOrWhiteSpace(s.ServerMapCycleFile) ? s.ServerMapCycleFile.Trim()
             : inst?.ServerConfigDir == null ? null : Path.Combine(inst.ServerConfigDir, "MapCycle.txt");
 
-        public static ServerPlan Build(LaunchPlan match, AppSettings s, ServerInstall inst, RulesDb db, string currentGameIni)
+        /// <summary>The Play match as the server's first map: its own player count and join password instead of the offline ones.</summary>
+        private static string ServerUrl(LaunchPlan match, int maxPlayers, string password)
         {
-            var plan = new ServerPlan { Match = match };
-            if (match == null || !match.IsValid) { plan.Error = match?.Error ?? T("Pick a map and scenario in Play first."); return plan; }
-            if (inst == null || !inst.Found) { plan.Error = T("The dedicated server is not installed yet: install it on the Server page, or pick its folder there."); return plan; }
-            if (inst.Unfinished) { plan.Error = T("The server's install did not finish: press Update the server to finish it."); return plan; }
-            plan.Warnings.AddRange(match.Warnings);
-
-            // The first map: the Play match, with the server's own player count and password instead of the offline ones.
-            int maxPlayers = Math.Max(1, Math.Min(100, s.ServerMaxPlayers));
-            string password = (s.ServerPassword ?? "").Trim();
-            if (!SafePassword.IsMatch(password)) { plan.Error = T("The join password can only use letters, digits and - _ . ! @ # $ % ^ * + ~ (no spaces)."); return plan; }
             var parts = match.TravelUrl.Split('?');
             var url = new StringBuilder(parts[0]);
             foreach (var opt in parts.Skip(1))
@@ -227,7 +227,63 @@ namespace SandstormModLauncher.Game
             }
             url.Append("?MaxPlayers=").Append(maxPlayers.ToString(CultureInfo.InvariantCulture));
             if (password.Length > 0) url.Append("?Password=").Append(password);
-            plan.Url = url.ToString();
+            return url.ToString();
+        }
+
+        /// <summary>
+        /// Where the launcher reaches the server's RCON: the player's own -RconPassword/-RconListenPort, or the [Rcon] section
+        /// already in the server's Game.ini when the player starts it with their own options; otherwise the launcher's.
+        /// <paramref name="own"/> = the values are the player's (the launcher leaves Game.ini alone).
+        /// </summary>
+        public static (int Port, string Password, bool Own) RconFor(AppSettings s, string gameIni)
+        {
+            if (s.ServerUseOwnArgs)
+            {
+                string args = ServerArgs.Clean(s.ServerOwnArgs);
+                string pw = ServerArgs.Value(args, "RconPassword");
+                int port = int.TryParse(ServerArgs.Value(args, "RconListenPort"), NumberStyles.None, CultureInfo.InvariantCulture, out int p) && p > 0 && p < 65536 ? p : 0;
+                if (!string.IsNullOrEmpty(pw)) return (port > 0 ? port : s.ServerRconPort, pw, true);
+                var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(RconSetup.Section, StringComparison.OrdinalIgnoreCase));
+                string Val(string key) => sec?.Values.LastOrDefault(v => v.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value?.Trim();
+                if (sec != null && LaunchPlanner.IsTrue(Val("bEnabled") ?? "") && !string.IsNullOrEmpty(Val("Password")))
+                    return (int.TryParse(Val("ListenPort"), NumberStyles.None, CultureInfo.InvariantCulture, out int ip) && ip > 0 && ip < 65536 ? ip : 27015, Val("Password"), true);
+            }
+            return (s.ServerRconPort, s.ServerRconPassword, false);
+        }
+
+        /// <summary>What the server's mod.io login means for this start (the account is null when it was not looked at).</summary>
+        private static void ModWarnings(ServerPlan plan, ServerModioAccount account, List<long> wanted, bool code, bool codeInArgs)
+        {
+            if (account == null) return;
+            if (!code && !codeInArgs && !account.LoggedIn)
+                plan.Warnings.Add(account.Expired ? T("The server's mod.io login has expired, so it loads no mods: send a new security code (Mods card).")
+                                                  : T("The server is not logged in to mod.io, so it loads no mods: send a security code to its mod.io account (Mods card)."));
+            if (account.SameAsGame)
+                plan.Warnings.Add(T("The server is logged in with the same mod.io account as your game. mod.io gives it nothing that way: log the server in with an account of its own."));
+            if (!account.LoggedIn) return;
+            var missing = wanted.Where(id => !account.Subscriptions.Contains(id)).ToList();
+            if (missing.Count > 0)
+                plan.Warnings.Add(F("The server's mod.io account is not subscribed to {0} (press Subscribe on the Mods card): the server loads only its subscriptions.", string.Join(", ", missing)));
+            else if (account.Subscriptions.Count == 0)
+                plan.Warnings.Add(T("The server's mod.io account is not subscribed to any mods, so it loads none."));
+        }
+
+        public static ServerPlan Build(LaunchPlan match, AppSettings s, ServerInstall inst, RulesDb db, string currentGameIni, ServerModioAccount account = null)
+        {
+            var plan = new ServerPlan { Match = match };
+            // Own options start the server on this PC; a server on another PC is only reached over RCON.
+            if (s.ServerUseOwnArgs && !s.ServerRemote) return BuildOwn(plan, match, s, inst, currentGameIni, account);
+            if (match == null || !match.IsValid) { plan.Error = match?.Error ?? T("Pick a map and scenario in Play first."); return plan; }
+            if (inst == null || !inst.Found) { plan.Error = T("The dedicated server is not installed yet: install it on the Server page, or pick its folder there."); return plan; }
+            if (inst.Unfinished) { plan.Error = T("The server's install did not finish: press Update the server to finish it."); return plan; }
+            plan.Warnings.AddRange(match.Warnings);
+
+            // The first map: the Play match, with the server's own player count and password instead of the offline ones.
+            int maxPlayers = Math.Max(1, Math.Min(100, s.ServerMaxPlayers));
+            string password = (s.ServerPassword ?? "").Trim();
+            if (!SafePassword.IsMatch(password)) { plan.Error = T("The join password can only use letters, digits and - _ . ! @ # $ % ^ * + ~ (no spaces)."); return plan; }
+            plan.Url = ServerUrl(match, maxPlayers, password);
+            plan.StartMap = match.Map?.DisplayName ?? match.Level;
 
             // Mods the match needs: its map's and its mutators'.
             if (match.Scenario.Source == ContentSource.Mod && match.Scenario.ModId > 0) plan.MatchModIds.Add(match.Scenario.ModId);
@@ -236,6 +292,9 @@ namespace SandstormModLauncher.Game
 
             if (s.ServerPort < 1 || s.ServerPort > 65535 || s.ServerQueryPort < 1 || s.ServerQueryPort > 65535) { plan.Error = T("The game port and the query port must be numbers from 1 to 65535."); return plan; }
             if (s.ServerPort == s.ServerQueryPort) { plan.Error = T("The game port and the query port must be different."); return plan; }
+            plan.GamePort = s.ServerPort;
+            plan.QueryPort = s.ServerQueryPort;
+            plan.RconPort = s.ServerRconPort;
             plan.Args.Add("-Port=" + s.ServerPort.ToString(CultureInfo.InvariantCulture));
             plan.Args.Add("-QueryPort=" + s.ServerQueryPort.ToString(CultureInfo.InvariantCulture));
             if (s.ServerShowLog) plan.Args.Add("-log");
@@ -281,10 +340,14 @@ namespace SandstormModLauncher.Game
             if (s.ServerModsEnabled)
             {
                 foreach (var id in plan.MatchModIds) if (!mods.Contains(id)) mods.Add(id);
-                if (mods.Count == 0) plan.Warnings.Add(T("Mods are on but no mod ids are listed."));
-                plan.ModsText = string.Concat(mods.Select(m => m.ToString(CultureInfo.InvariantCulture) + "\r\n"));
-                if (!ServerService.TokenSaved(inst)) plan.Warnings.Add(T("Mods are on but no mod.io token is saved for the server (Mods card): without it the server cannot log in to mod.io and loads no mods."));
+                plan.ModsOn = true;
                 plan.Args.Add("-Mods");
+                // Since game update 1.20 the server logs in to mod.io with a code e-mailed to its own account, once; later starts
+                // use the saved login (the official guide's -SecurityCode=none).
+                string code = ServerModio.CleanCode(s.ServerModioCode);
+                plan.UsesCode = code != null;
+                plan.Args.Add("-SecurityCode=" + (code ?? "none"));
+                ModWarnings(plan, account, mods, code != null, false);
                 // The mods are downloaded after the server has started: then it loads the match again, with its mod content.
                 plan.Args.Add("-ModDownloadTravelTo=" + plan.Url);
                 if (match.Scenario.Source == ContentSource.Mod)
@@ -336,6 +399,48 @@ namespace SandstormModLauncher.Game
             plan.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(match, db);
             if (s.ServerRconPort == s.ServerPort || s.ServerRconPort == s.ServerQueryPort)
                 plan.Warnings.Add(T("The RCON port is the same as a game port; pick another one."));
+            return plan;
+        }
+
+        /// <summary>
+        /// The player's own options, used as they are (from their .bat file or pasted). The launcher only adds a security code
+        /// that is waiting, and its [Rcon] section to Game.ini when the options and the file have no RCON of their own.
+        /// </summary>
+        private static ServerPlan BuildOwn(ServerPlan plan, LaunchPlan match, AppSettings s, ServerInstall inst, string currentGameIni, ServerModioAccount account)
+        {
+            if (inst == null || !inst.Found) { plan.Error = T("The dedicated server is not installed yet: install it on the Server page, or pick its folder there."); return plan; }
+            if (inst.Unfinished) { plan.Error = T("The server's install did not finish: press Update the server to finish it."); return plan; }
+            string own = ServerArgs.Clean(s.ServerOwnArgs);
+            if (own.Length == 0) { plan.Error = T("Paste your server's options, or import them from your .bat file (Server settings)."); return plan; }
+            plan.ModsOn = ServerArgs.Has(own, "Mods");
+            string code = ServerModio.CleanCode(s.ServerModioCode);
+            string theirs = ServerModio.SecurityCodeIn(own);
+            if (code != null && plan.ModsOn) { own = ServerModio.WithSecurityCode(own, code); plan.UsesCode = true; }
+            else if (code != null) plan.Warnings.Add(T("A security code is waiting, but your options have no -Mods: add it to log the server in to mod.io."));
+            if (!plan.UsesCode && theirs != null && !theirs.Equals("none", StringComparison.OrdinalIgnoreCase))
+                plan.Warnings.Add(T("Your options pass a security code. A code works only once: after the first start, change it to -SecurityCode=none."));
+            plan.OwnArgs = own;
+            if (plan.ModsOn)
+                ModWarnings(plan, account, ModIds(s.ServerMods, null), plan.UsesCode,
+                            theirs != null && !theirs.Equals("none", StringComparison.OrdinalIgnoreCase));
+            plan.StartMap = ServerArgs.FirstMap(own);
+            plan.GamePort = int.TryParse(ServerArgs.Value(own, "Port"), NumberStyles.None, CultureInfo.InvariantCulture, out int gp) ? gp : 27102;
+            plan.QueryPort = int.TryParse(ServerArgs.Value(own, "QueryPort"), NumberStyles.None, CultureInfo.InvariantCulture, out int qp) ? qp : 27131;
+
+            // RCON for the Players card: theirs when they have it, else the launcher's section in Game.ini.
+            RconSetup.EnsureServerSettings(s);
+            var rcon = RconFor(s, currentGameIni);
+            plan.RconPort = rcon.Port;
+            plan.GameIni = rcon.Own ? currentGameIni ?? "" : RconSetup.Apply(currentGameIni ?? "", RconSetup.IniSection(s.ServerRconPort, s.ServerRconPassword, s.ServerRconFromNetwork));
+            plan.ManagedIniKeys = s.ServerManagedIniKeys ?? new List<string>();
+
+            // "Load the Play match now" on the running server still loads the match from Play.
+            if (match != null && match.IsValid)
+            {
+                string password = (s.ServerPassword ?? "").Trim();
+                plan.Url = ServerUrl(match, Math.Max(1, Math.Min(100, s.ServerMaxPlayers)), SafePassword.IsMatch(password) ? password : "");
+            }
+            else plan.Match = null;
             return plan;
         }
     }

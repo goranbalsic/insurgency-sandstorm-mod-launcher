@@ -30,7 +30,8 @@ namespace SandstormModLauncher.Services
     ///   server-rcon cmd.. | server-travel | server-players          a running server over its RCON
     ///   server-set key value                     name, port, queryport, maxplayers, password, rconport, rconnetwork, mapcycle,
     ///                                            mapcyclefile, admins, mods, modids, gslt, gamestats, cheats, log, extra, dir,
-    ///                                            remote, remotehost, remoteport, remotepassword (on/off for switches)
+    ///                                            remote, remotehost, remoteport, remotepassword, useownargs, ownargs,
+    ///                                            bat (a .bat file's options), modioemail, modiocode (on/off for switches)
     ///   mapcycle show | add | remove n | clear   the server's map cycle file (add = the Play match)
     ///   translation-template [repo] [out.csv]    every English text, read from the source (Resources\Languages\template.csv)
     ///   translation-check [repo]                 the table the launcher carries has exactly the texts in the source
@@ -431,7 +432,7 @@ namespace SandstormModLauncher.Services
         private static ServerPlan ServerPlanFor(AppState state, Profile p, ServerInstall inst)
         {
             string ini = inst.Found && File.Exists(inst.GameIniPath) ? UeIni.ReadText(inst.GameIniPath) : "";
-            return ServerPlanner.Build(LaunchPlanner.Build(p, state), state.Settings, inst, state.Rules, ini);
+            return ServerPlanner.Build(LaunchPlanner.Build(p, state), state.Settings, inst, state.Rules, ini, ServerModio.ReadAccount());
         }
 
         private static void PrintServerPlan(ServerPlan plan, Action<string> print)
@@ -440,7 +441,12 @@ namespace SandstormModLauncher.Services
             print("Command line: " + plan.ShownCommandLine);
             if (plan.MatchModIds.Count > 0) print("Mods the match needs: " + string.Join(", ", plan.MatchModIds));
             if (plan.AdminsText != null) print("Admins.txt: " + UeIni.Split(plan.AdminsText).Count(l => l.Trim().Length > 0) + " admin(s)");
-            if (plan.ModsText != null) print("Mods.txt: " + plan.ModsText.Replace("\r\n", " ").Trim());
+            if (plan.ModsOn)
+            {
+                var acc = ServerModio.ReadAccount();
+                print("mod.io login: " + (acc.LoggedIn ? "yes, " + acc.Subscriptions.Count + " subscription(s)" + (acc.SameAsGame ? ", SAME ACCOUNT AS THE GAME" : "") : acc.Expired ? "expired" : "no")
+                      + (plan.UsesCode ? " (a security code is passed)" : ""));
+            }
             if (plan.MapCycleName != null) print("Map cycle: " + plan.MapCycleName + (plan.MapCycleCopyFrom != null ? " (copied from " + plan.MapCycleCopyFrom + ")" : ""));
             print("Game.ini:");
             foreach (var l in UeIni.Split(DebugReport.HidePasswords(plan.GameIni))) print("  " + l);
@@ -480,6 +486,17 @@ namespace SandstormModLauncher.Services
                 case "votekick": if (on == null) return false; s.ServerVoteKick = on.Value; return true;
                 case "officialrules": if (on == null) return false; s.ServerOfficialRules = on.Value; return true;
                 case "installdir": s.ServerInstallDir = value; return true;
+                case "useownargs": if (on == null) return false; s.ServerUseOwnArgs = on.Value; return true;
+                case "ownargs": s.ServerOwnArgs = value; return true;
+                case "bat":
+                    if (!File.Exists(value)) return false;
+                    string args = ServerArgs.FromBatch(File.ReadAllText(value));
+                    if (string.IsNullOrWhiteSpace(args)) return false;
+                    s.ServerOwnArgs = args;
+                    s.ServerUseOwnArgs = true;
+                    return true;
+                case "modioemail": s.ServerModioEmail = value; return true;
+                case "modiocode": s.ServerModioCode = value; return true;
                 default: return false;
             }
         }

@@ -29,9 +29,9 @@ namespace SandstormModLauncher.Game
         public string SavedConfigDir => Root == null ? null : Path.Combine(Root, "Insurgency", "Saved", "Config", "WindowsServer");
         public string GameIniPath => SavedConfigDir == null ? null : Path.Combine(SavedConfigDir, "Game.ini");
         public string EngineIniPath => SavedConfigDir == null ? null : Path.Combine(SavedConfigDir, "Engine.ini");
-        /// <summary>The community server guides (Nodecraft, HostHavoc) keep the mod.io token here; the official admin guide says Engine.ini.</summary>
+        /// <summary>Before game update 1.20 the community guides kept the mod.io token here (see ServerModio.RemoveObsoleteToken).</summary>
         public string GameUserSettingsPath => SavedConfigDir == null ? null : Path.Combine(SavedConfigDir, "GameUserSettings.ini");
-        /// <summary>Admins.txt, MapCycle.txt, Mods.txt.</summary>
+        /// <summary>Admins.txt and MapCycle.txt (and Mods.txt, which the server no longer reads).</summary>
         public string ServerConfigDir => Root == null ? null : Path.Combine(Root, "Insurgency", "Config", "Server");
         public string LogPath => Root == null ? null : Path.Combine(Root, "Insurgency", "Saved", "Logs", "Insurgency.log");
 

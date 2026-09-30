@@ -92,7 +92,9 @@ namespace SandstormModLauncher.Services
             "ServerRconFromNetwork", "ServerShowLog", "ServerCheats", "ServerGslt", "ServerGameStats", "ServerExtraArgs", "ServerAdmins",
             "ServerModsEnabled", "ServerModIds", "ServerUseMapCycle", "ServerRemote", "ServerLocal", "ServerRemoteHost", "ServerRemotePortText",
             "ServerCommandLine", "ServerPlanError", "ServerMatchSummary", "ServerMatchMods", "MapCycleFile", "MapCycleIsDefault", "MapCycleCount",
-            "ServerRconAddress", "CanStartServer", "PlayTarget", "PlaysOnServer", "MainActionTitle", "MainActionTip", "CanMainAction"
+            "ServerRconAddress", "CanStartServer", "PlayTarget", "PlaysOnServer", "MainActionTitle", "MainActionTip", "CanMainAction",
+            "ServerUseOwnArgs", "ServerUsesLauncherArgs", "ServerOwnArgs", "ServerModsOn", "ServerModioEmail", "ServerModioCode", "ModioCodeHint",
+            "ModioAccountText", "ModioAccountKind", "ServerModsListText", "HasOtherSubs", "ModSyncText", "ModioText", "OwnArgsNote"
         };
 
         private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120), "Settings" };   // (a name that is also a text of the launcher)
@@ -542,9 +544,9 @@ namespace SandstormModLauncher.Services
                                 if (vm.MainActionCommand.CanExecute(null) != vm.CanLaunch) Fail(name + ": the button can" + (vm.CanLaunch ? "not" : "") + " be pressed but launching can" + (vm.CanLaunch ? "" : "not"));
                                 break;
                             }
-                            var plan = vm.CurrentPlan == null ? null : ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, state.Rules, "");
+                            var plan = vm.CurrentPlan == null && !(state.Settings.ServerUseOwnArgs && !state.Settings.ServerRemote) ? null : ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, state.Rules, "");
                             bool planOk = plan?.IsValid == true;
-                            bool setUp = vm.ServerRemote ? string.IsNullOrWhiteSpace(state.Settings.ServerRemoteHost) || !planOk : !vm.ServerFound || !planOk;
+                            bool setUp = vm.ServerRemote ? string.IsNullOrWhiteSpace(state.Settings.ServerRemoteHost) || !planOk || plan.Match == null || plan.Url == null : !vm.ServerFound || !planOk;
                             string want = setUp ? Loc.T("Set up the server") : vm.ServerRemote ? Loc.T("Load on the server") : Loc.T("Start the server");
                             if (vm.MainActionTitle != want) Fail(name + ": the button says " + vm.MainActionTitle + " instead of " + want);
                             if (setUp && vm.MainActionCommand.CanExecute(null))
@@ -552,7 +554,8 @@ namespace SandstormModLauncher.Services
                                 vm.Page = "Play";
                                 vm.MainActionCommand.Execute(null);
                                 await Pump();
-                                if (vm.Page != "Server") Fail(name + ": pressed, but the Server page did not open");
+                                string page = planOk && (plan.Match == null || plan.Url == null) && !(vm.ServerRemote && string.IsNullOrWhiteSpace(state.Settings.ServerRemoteHost)) ? "Play" : "Server";
+                                if (vm.Page != page) Fail(name + ": pressed, but the " + page + " page did not open");
                             }
                             break;
                         }
@@ -606,7 +609,7 @@ namespace SandstormModLauncher.Services
                             // The Server page: settings typed in (good and bad), switches, and the map cycle (its file stays in the
                             // test data folder; nothing is ever started and the real server's files are not touched).
                             if (rnd.Next(3) == 0) vm.Page = "Server";
-                            int what = rnd.Next(13);
+                            int what = rnd.Next(15);
                             string[] ids = { "76561198000000001", "76561198000000002\n76561198000000003", "notanid", "", "7656119\n123", "76561198000000004, 76561198000000005" };
                             switch (what)
                             {
@@ -621,6 +624,24 @@ namespace SandstormModLauncher.Services
                                 case 8: name = "map cycle switch"; vm.ServerUseMapCycle = !vm.ServerUseMapCycle; break;
                                 case 9: name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break;
                                 case 12: name = "check server mods"; vm.ServerModsEnabled = rnd.Next(2) == 0; await Do(vm.CheckServerModsCommand, null); break;
+                                case 13:
+                                    // The player's own options (as pasted or read from a .bat file; the file picker is never opened here).
+                                    name = "own options";
+                                    vm.ServerUseOwnArgs = rnd.Next(3) > 0;
+                                    vm.ServerOwnArgs = Pick(new[]
+                                    {
+                                        "", "Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=8 -Port=27102 -QueryPort=27131 -log",
+                                        "InsurgencyServer.exe Oilfield?Scenario=Scenario_Refinery_Push_Security -Mods -SecurityCode=none -hostname=\"x y\"",
+                                        "-Mods -Rcon -RconPassword=abc -RconListenPort=27999", "start \"\" InsurgencyServer.exe Ministry -Port=27200 ^\n -QueryPort=27231 -mods > log.txt",
+                                    });
+                                    break;
+                                case 14:
+                                    // The server's mod.io login: typed in only (sending a code and subscribing go to mod.io and are never pressed here).
+                                    name = "server mod.io login";
+                                    vm.ServerModioEmail = Pick(new[] { "", "server@example.com", "bad@" });
+                                    vm.ServerModioCode = Pick(new[] { "", "12345", "12a", " 54321 ", "123456" });
+                                    if (vm.SendModioCodeCommand.CanExecute(null) != ServerModio.IsEmail(vm.ServerModioEmail)) Fail(name + ": Send code can" + (ServerModio.IsEmail(vm.ServerModioEmail) ? "not" : "") + " be pressed with " + vm.ServerModioEmail);
+                                    break;
                                 default:
                                 {
                                     if (vm.MapCycleItems.Count == 0) { name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break; }
@@ -764,10 +785,24 @@ namespace SandstormModLauncher.Services
         {
             var s = state.Settings;
             if (!string.Equals(s.ServerMapCycleFile, TortureCycle, StringComparison.OrdinalIgnoreCase)) fail("the map cycle file moved to " + s.ServerMapCycleFile);
-            var fresh = vm.CurrentPlan == null ? null : ServerPlanner.Build(vm.CurrentPlan, s, vm.ServerInstall, state.Rules, "");
+            var fresh = vm.CurrentPlan == null && !(s.ServerUseOwnArgs && !s.ServerRemote) ? null : ServerPlanner.Build(vm.CurrentPlan, s, vm.ServerInstall, state.Rules, "");
             string want = fresh?.IsValid == true ? "InsurgencyServer.exe " + fresh.ShownCommandLine : "";
             if (vm.ServerCommandLine != want) fail("server command line on screen is stale:\n  shown " + vm.ServerCommandLine + "\n  fresh " + want);
-            if (fresh?.IsValid == true)
+            string code = ServerModio.CleanCode(s.ServerModioCode);
+            if (code != null && vm.ServerCommandLine.Contains(code)) fail("the command line on screen shows the security code: " + vm.ServerCommandLine);
+            bool modsOn = s.ServerUseOwnArgs ? ServerArgs.Has(ServerArgs.Clean(s.ServerOwnArgs), "Mods") : s.ServerModsEnabled;
+            if (vm.ServerModsOn != modsOn) fail("mods on is shown as " + vm.ServerModsOn + " but the options say " + modsOn);
+            if (fresh?.IsValid == true && fresh.OwnArgs != null)
+            {
+                // The player's own options go through unchanged, but for a waiting security code.
+                string own = ServerArgs.Clean(s.ServerOwnArgs);
+                bool withCode = code != null && modsOn;
+                if (fresh.UsesCode != withCode) fail("own options: the security code is " + (fresh.UsesCode ? "" : "not ") + "passed");
+                if (fresh.CommandLine != (withCode ? ServerModio.WithSecurityCode(own, code) : own)) fail("own options changed:\n  " + fresh.CommandLine + "\n  " + own);
+                if (!ServerPlanner.RconFor(s, "").Own && (!fresh.GameIni.Contains("Password=" + s.ServerRconPassword) || !fresh.GameIni.Contains("ListenPort=" + s.ServerRconPort)))
+                    fail("own options without RCON: the launcher's RCON is not in Game.ini");
+            }
+            else if (fresh?.IsValid == true)
             {
                 if (fresh.Url.Contains("bSoloGame")) fail("the server URL has bSoloGame: " + fresh.Url);
                 if (!fresh.Url.Contains("?MaxPlayers=" + Math.Max(1, Math.Min(100, s.ServerMaxPlayers)))) fail("the server URL does not have the server's player count: " + fresh.Url);
@@ -779,6 +814,8 @@ namespace SandstormModLauncher.Services
                 bool admins = ServerPlanner.SteamIds(s.ServerAdmins, null).Count > 0;
                 if (fresh.Args.Contains("-AdminList=Admins") != admins) fail("-AdminList does not follow the admins list");
                 if (fresh.Args.Contains("-Mods") != s.ServerModsEnabled) fail("-Mods does not follow the switch");
+                if (s.ServerModsEnabled && !fresh.Args.Contains("-SecurityCode=" + (code ?? "none"))) fail("-SecurityCode is not the waiting code (or none): " + fresh.ShownCommandLine);
+                if (fresh.UsesCode != (s.ServerModsEnabled && code != null)) fail("the plan says it uses a code: " + fresh.UsesCode);
                 if (fresh.Args.Any(a => a.StartsWith("-MapCycle=", StringComparison.Ordinal)) != s.ServerUseMapCycle) fail("-MapCycle does not follow the switch");
                 if (!fresh.GameIni.Contains("Password=" + s.ServerRconPassword) || !fresh.GameIni.Contains("ListenPort=" + s.ServerRconPort)) fail("the server's Game.ini has no RCON section with its port and password");
                 if (ServerPlanner.VoteKickOn(fresh.GameIni) != s.ServerVoteKick) fail("vote kick in the server's Game.ini does not follow the switch");
@@ -793,8 +830,10 @@ namespace SandstormModLauncher.Services
             // The mod status of a server that is not running says so (or nothing), never a verdict from an old log.
             if (!vm.ServerRunningHere && vm.ServerModKind != "Off") fail("the mod status says " + vm.ServerModKind + " but the server is not running: " + vm.ServerModText);
             // How players join follows the ports.
-            if (!vm.ServerPortsText.Contains(s.ServerPort.ToString(CultureInfo.InvariantCulture)) || !vm.ServerPortsText.Contains(s.ServerQueryPort.ToString(CultureInfo.InvariantCulture))) fail("the ports to forward are shown as " + vm.ServerPortsText);
-            if (vm.ServerJoinCommand.Length > 0 && !vm.ServerJoinCommand.EndsWith(":" + s.ServerPort.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) fail("the join command is " + vm.ServerJoinCommand);
+            bool ownPorts = fresh?.IsValid == true && fresh.OwnArgs != null;
+            int port = ownPorts ? fresh.GamePort : s.ServerPort, query = ownPorts ? fresh.QueryPort : s.ServerQueryPort;
+            if (!vm.ServerPortsText.Contains(port.ToString(CultureInfo.InvariantCulture)) || !vm.ServerPortsText.Contains(query.ToString(CultureInfo.InvariantCulture))) fail("the ports to forward are shown as " + vm.ServerPortsText);
+            if (vm.ServerJoinCommand.Length > 0 && !vm.ServerJoinCommand.EndsWith(":" + port.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)) fail("the join command is " + vm.ServerJoinCommand);
         }
 
         private static string TortureCycle;
