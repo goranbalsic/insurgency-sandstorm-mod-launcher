@@ -6,11 +6,11 @@ name: Release notes
 on:
   push:
     branches: [main]
-    paths: [packaging/release-notes.md]
+    paths: [packaging/release-notes.md, packaging/release-notes.ps1, .github/workflows/notes.yml]
   workflow_dispatch:
 
 concurrency:
-  group: release
+  group: release-notes
   cancel-in-progress: false
 
 permissions:
