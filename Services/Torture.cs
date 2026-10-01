@@ -638,6 +638,28 @@ namespace SandstormModLauncher.Services
                 if (!LaunchPlanner.Same(sent, shown, db.Prop("BotQuota"))) fail(m.Name + ": the bot count shown is " + shown + " but the launch sends " + sent);
             }
 
+            // 17. AI teammates on screen are the AI the game brings: FriendlyBotQuota is the team size, you included (owner,
+            //     2026-10-01: 2 on the screen gave one AI). The co-op squad presets bring the teammates their text promises.
+            for (int n = 0; n <= 32; n++)
+            {
+                int quota = SetupEngine.FriendlyBotQuotaFor(n);
+                if (quota != (n == 0 ? 0 : n + 1) || SetupEngine.AiTeammates(quota) != n)
+                    fail(n + " AI teammates are sent as FriendlyBotQuota=" + quota + " and shown as " + SetupEngine.AiTeammates(quota) + " (the game counts you too)");
+            }
+            foreach (var (name, ai) in new[] { ("Lone Wolf", 0), ("Fireteam", 2), ("Squad Leader", 6), ("Full Platoon", 10) })
+            {
+                var pr = SetupEngine.SquadPresets(db, true).FirstOrDefault(x => x.Name == name);
+                if (pr == null) { fail("co-op squad preset " + name + " is missing"); continue; }
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, pr);
+                var plan = LaunchPlanner.Build(p, state);
+                string sent = plan.Overrides.TryGetValue("FriendlyBotQuota", out var fq) ? fq : db.DefaultValue("INSCheckpointGameMode", "FriendlyBotQuota");
+                int got = int.TryParse(sent, out var sq) ? SetupEngine.AiTeammates(sq) : -1;
+                if (got != ai) fail(name + ": promises " + ai + " AI teammates, the game gets FriendlyBotQuota=" + sent + " (" + got + " AI)");
+                if (ai > 0 && !(plan.Overrides.TryGetValue("bBots", out var bb) && LaunchPlanner.IsTrue(bb))) fail(name + ": AI teammates without bBots");
+                if (plan.PlayerSlots < 1 + ai) fail(name + ": " + ai + " AI teammates but " + plan.PlayerSlots + " player slots");
+            }
+
             // 16. Server types (the admin guide's example servers): each one sets up a valid match of its mode with its
             //     preset, a map cycle of installed official scenarios of that mode, and a server plan that starts.
             string fakeServer = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-fake-server-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -886,7 +908,7 @@ namespace SandstormModLauncher.Services
                 var mode = plan.Mode;
                 if (mode != null && mode.Coop)
                 {
-                    int mates = int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var mt) ? mt : 0;
+                    int mates = int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var mt) ? SetupEngine.AiTeammates(mt) : 0;
                     if (mates > 0 && plan.PlayerSlots < 1 + mates) fail("co-op: " + mates + " AI teammates but only " + plan.PlayerSlots + " slots");
                 }
                 if (mode != null && !mode.Coop && plan.Overrides.TryGetValue("bBots", out var bb) && LaunchPlanner.IsTrue(bb))
