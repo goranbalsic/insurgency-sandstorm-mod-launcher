@@ -53,6 +53,7 @@ namespace SandstormModLauncher.ViewModels
             InitUpdateCommands();
             InitServerCommands();
             InitServerSetupCommands();
+            InitSupportCommands();
             InitLanguageCommands();
         }
 
@@ -103,7 +104,7 @@ namespace SandstormModLauncher.ViewModels
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
                 BuildLanguages();
-                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" || State.Settings.LastPage == "Live" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
+                Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" || State.Settings.LastPage == "Live" || State.Settings.LastPage == "Support" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 _ = RefreshRconStatus();

@@ -2,12 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ============================================================ palette -->
-    <Color x:Key="Bg0Color">#18181A</Color>
-    <Color x:Key="Bg1Color">#1A1A1C</Color>
-    <Color x:Key="Bg2Color">#26262A</Color>
-    <Color x:Key="Bg3Color">#2D2D32</Color>
-    <Color x:Key="Bg4Color">#38383E</Color>
-    <Color x:Key="LineColor">#3A3A40</Color>
+    <Color x:Key="Bg0Color">#151310</Color>
+    <Color x:Key="Bg1Color">#191612</Color>
+    <Color x:Key="Bg2Color">#23201B</Color>
+    <Color x:Key="Bg3Color">#2C2822</Color>
+    <Color x:Key="Bg4Color">#38332B</Color>
+    <Color x:Key="LineColor">#38332B</Color>
     <Color x:Key="AccentColor">#D9822B</Color>
 
     <SolidColorBrush x:Key="Bg0" Color="{StaticResource Bg0Color}" />
@@ -16,39 +16,43 @@
     <SolidColorBrush x:Key="Bg3" Color="{StaticResource Bg3Color}" />
     <SolidColorBrush x:Key="Bg4" Color="{StaticResource Bg4Color}" />
     <SolidColorBrush x:Key="Line" Color="{StaticResource LineColor}" />
-    <SolidColorBrush x:Key="LineStrong" Color="#4A4A51" />
-    <SolidColorBrush x:Key="LineHover" Color="#5C5C64" />
-    <SolidColorBrush x:Key="Text" Color="#E4E4E4" />
-    <SolidColorBrush x:Key="TextDim" Color="#B4B4B9" />
-    <SolidColorBrush x:Key="TextMute" Color="#8E8E95" />
-    <SolidColorBrush x:Key="TextFaint" Color="#6E6E75" />
+    <SolidColorBrush x:Key="LineStrong" Color="#4A443A" />
+    <SolidColorBrush x:Key="LineHover" Color="#61594B" />
+    <SolidColorBrush x:Key="Text" Color="#ECE6D9" />
+    <SolidColorBrush x:Key="TextDim" Color="#C0B8A8" />
+    <SolidColorBrush x:Key="TextMute" Color="#978F7F" />
+    <SolidColorBrush x:Key="TextFaint" Color="#766F62" />
     <SolidColorBrush x:Key="Accent" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="AccentHover" Color="#E8943D" />
     <SolidColorBrush x:Key="AccentText" Color="#1A1208" />
     <SolidColorBrush x:Key="AccentSoftBg" Color="#3A2C1C" />
     <SolidColorBrush x:Key="AccentSoftFg" Color="#F0C48E" />
     <SolidColorBrush x:Key="AccentBorder" Color="#8A5A26" />
-    <SolidColorBrush x:Key="SelectedBg" Color="#2E2A24" />
-    <SolidColorBrush x:Key="TextBright" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="SelectedBg" Color="#332D24" />
+    <SolidColorBrush x:Key="TextBright" Color="#F7F2E7" />
     <SolidColorBrush x:Key="Launch" Color="#D9822B" />
+    <LinearGradientBrush x:Key="LaunchFill" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#EA9A45" Offset="0" />
+        <GradientStop Color="#D57C22" Offset="1" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="LaunchHover" Color="#E8943D" />
     <SolidColorBrush x:Key="LaunchPressed" Color="#B86D1F" />
-    <SolidColorBrush x:Key="Good" Color="#57B36A" />
-    <SolidColorBrush x:Key="GoodBg" Color="#13201A" />
-    <SolidColorBrush x:Key="GoodBorder" Color="#24422F" />
-    <SolidColorBrush x:Key="GoodFg" Color="#9FD8AB" />
-    <SolidColorBrush x:Key="Info" Color="#5AA2E0" />
-    <SolidColorBrush x:Key="InfoBg" Color="#141C26" />
-    <SolidColorBrush x:Key="InfoBorder" Color="#27405C" />
-    <SolidColorBrush x:Key="InfoFg" Color="#A9CDF0" />
+    <SolidColorBrush x:Key="Good" Color="#7DB35A" />
+    <SolidColorBrush x:Key="GoodBg" Color="#171E15" />
+    <SolidColorBrush x:Key="GoodBorder" Color="#2F4527" />
+    <SolidColorBrush x:Key="GoodFg" Color="#B4D89A" />
+    <SolidColorBrush x:Key="Info" Color="#C9A96E" />
+    <SolidColorBrush x:Key="InfoBg" Color="#211D15" />
+    <SolidColorBrush x:Key="InfoBorder" Color="#4A4128" />
+    <SolidColorBrush x:Key="InfoFg" Color="#E3D3AE" />
     <SolidColorBrush x:Key="Warn" Color="#D99A2B" />
     <SolidColorBrush x:Key="Bad" Color="#E5534B" />
     <SolidColorBrush x:Key="BadBg" Color="#3A1C1A" />
     <SolidColorBrush x:Key="BadFg" Color="#F0A39C" />
     <SolidColorBrush x:Key="BadBorder" Color="#4A2623" />
-    <SolidColorBrush x:Key="Overlay" Color="#B0101012" />
+    <SolidColorBrush x:Key="Overlay" Color="#B00F0D0A" />
 
-    <FontFamily x:Key="Display">Segoe UI Semibold</FontFamily>
+    <FontFamily x:Key="Display">Bahnschrift SemiBold, Segoe UI Semibold</FontFamily>
     <FontFamily x:Key="Body">Segoe UI</FontFamily>
     <FontFamily x:Key="Mono">Cascadia Mono, Consolas</FontFamily>
     <FontFamily x:Key="Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
@@ -56,8 +60,8 @@
     <!-- Interface size (Settings > Text size, Ctrl +/-): replaced at run time by App.Resources["UiScaleTransform"] -->
     <ScaleTransform x:Key="UiScaleTransform" ScaleX="1" ScaleY="1" />
 
-    <CornerRadius x:Key="Radius">2</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">3</CornerRadius>
+    <CornerRadius x:Key="Radius">4</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">6</CornerRadius>
 
     <!-- ============================================================ text -->
     <Style x:Key="H1" TargetType="TextBlock">
@@ -99,7 +103,7 @@
     <!-- ============================================================ containers -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource Bg2}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Bg4}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Line}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
         <Setter Property="Padding" Value="14,12" />
@@ -144,7 +148,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2" SnapsToDevicePixels="True">
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" SnapsToDevicePixels="True">
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
                     </Border>
@@ -199,7 +203,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="2" SnapsToDevicePixels="True">
+                    <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4" SnapsToDevicePixels="True">
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -231,13 +235,13 @@
     <Style x:Key="LaunchButton" TargetType="Button">
         <Setter Property="Padding" Value="24,0" />
         <Setter Property="Foreground" Value="{StaticResource AccentText}" />
-        <Setter Property="Background" Value="{StaticResource Launch}" />
+        <Setter Property="Background" Value="{StaticResource LaunchFill}" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="#B86D1F" BorderThickness="1" CornerRadius="2" SnapsToDevicePixels="True">
+                    <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="#B86D1F" BorderThickness="1" CornerRadius="4" SnapsToDevicePixels="True">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -295,10 +299,10 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Grid x:Name="g" Background="Transparent">
-                        <Rectangle x:Name="bar" Width="2" HorizontalAlignment="Left" Fill="{StaticResource Accent}" Visibility="Collapsed" />
+                        <Rectangle x:Name="bar" Width="3" HorizontalAlignment="Left" Fill="{StaticResource Accent}" Visibility="Collapsed" />
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="{TemplateBinding Tag}" FontFamily="{StaticResource Icons}" FontSize="17" HorizontalAlignment="Center" />
-                            <TextBlock Text="{TemplateBinding Content}" FontSize="11.5" Margin="0,5,0,0" HorizontalAlignment="Center" />
+                            <TextBlock Text="{TemplateBinding Content}" FontFamily="{StaticResource Display}" FontSize="11.5" Margin="0,5,0,0" HorizontalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -357,7 +361,8 @@
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="MinHeight" Value="32" />
         <Setter Property="Padding" Value="14,0" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFamily" Value="{StaticResource Display}" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="Margin" Value="0,0,0,-1" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
         <Setter Property="Template">
@@ -399,7 +404,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="b" Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="2" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="b" Background="{StaticResource Bg3}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
                         <ContentPresenter VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -429,7 +434,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2">
+                    <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
                         <Grid>
                             <TextBlock x:Name="ph" Text="{TemplateBinding Tag}" Foreground="{StaticResource TextFaint}" Margin="{TemplateBinding Padding}" Padding="2,0,0,0"
                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Visibility="Collapsed" IsHitTestVisible="False" />
@@ -571,7 +576,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="b" Background="{StaticResource Bg1}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="2">
+                    <Border x:Name="b" Background="{StaticResource Bg1}" BorderBrush="{StaticResource LineStrong}" BorderThickness="1" CornerRadius="4">
                         <TextBlock Text="&#xE70D;" FontFamily="{StaticResource Icons}" FontSize="11" Foreground="{StaticResource TextMute}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
                     </Border>
                     <ControlTemplate.Triggers>

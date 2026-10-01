@@ -737,16 +737,17 @@
                                     <ImageBrush ImageSource="{Binding SelectedMap.Thumb, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                 </Border.Background>
                             </Border>
-                            <Border VerticalAlignment="Bottom" Height="56">
+                            <Border VerticalAlignment="Bottom" Height="84">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
-                                        <GradientStop Color="#F2080909" Offset="0" />
-                                        <GradientStop Color="#00080909" Offset="1" />
+                                        <GradientStop Color="#F5100E0A" Offset="0" />
+                                        <GradientStop Color="#B0100E0A" Offset="0.55" />
+                                        <GradientStop Color="#00100E0A" Offset="1" />
                                     </LinearGradientBrush>
                                 </Border.Background>
                             </Border>
                             <StackPanel VerticalAlignment="Bottom" Margin="14,0,14,8">
-                                <TextBlock Text="Your match" FontSize="11" Foreground="{StaticResource TextDim}" />
+                                <TextBlock Text="Your match" FontSize="11" Foreground="{StaticResource TextDim}" Margin="0,0,0,1" />
                                 <TextBlock Text="{Binding SelectedMapTitle}" FontFamily="{StaticResource Display}" FontSize="17" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Grid>

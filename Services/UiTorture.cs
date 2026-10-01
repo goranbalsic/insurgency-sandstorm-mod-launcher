@@ -392,7 +392,7 @@ namespace SandstormModLauncher.Services
                         case 19:
                         {
                             name = "navigate";
-                            vm.Page = Pick(new[] { "Play", "Settings", "Mods", "Playlists", "Server", "Live" });
+                            vm.Page = Pick(new[] { "Play", "Settings", "Mods", "Playlists", "Server", "Live", "Support" });
                             vm.PlayTab = Pick(new[] { "Map", "Squad", "Rules", "Mods", "Live", "Advanced", "Playlists", "" });
                             if (vm.RuleCategories.Count > 0) vm.RuleCategory = Pick(vm.RuleCategories);
                             vm.RuleSearch = Pick(new[] { "", "", "bot", "zzz", "?" });
@@ -562,7 +562,7 @@ namespace SandstormModLauncher.Services
                             var lang = Pick(vm.Languages.ToList());
                             name = "language " + (lang.Id.Length == 0 ? "English" : lang.Id);
                             // Every page is shown before and after the switch: lists made before it must follow too.
-                            string[] tour = { "Play Map", "Play Squad", "Play Rules", "Play Live", "Play Mods Mutators", "Play Mods Installed", "Play Advanced", "Server", "Settings" };
+                            string[] tour = { "Play Map", "Play Squad", "Play Rules", "Play Live", "Play Mods Mutators", "Play Mods Installed", "Play Advanced", "Server", "Support", "Settings" };
                             string keepPage = vm.Page, keepTab = vm.PlayTab, keepMods = vm.ModsTab;
                             async Task Show(string where)
                             {
