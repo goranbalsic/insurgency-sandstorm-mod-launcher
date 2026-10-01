@@ -280,6 +280,31 @@ namespace SandstormModLauncher.Services
                 if (parsed[3].Raw == null || parsed[3].Scenario != "Scenario_Refinery_Push_Security") fail("map cycle: an entry with unknown settings was not kept as written");
                 if (parsed[4].Raw != "not a scenario line") fail("map cycle: an unknown line was not kept");
             }
+            // An entry written over several lines (mod.io #1865932, exactly as posted) is one entry, kept as written, its
+            // mutators read; commas and brackets inside quotes split nothing; a bracket never closed stays a line of its own.
+            string dyn = "(Scenario=\"Scenario_Crossing_ZY_Checkpoint_Security\",\r\nLighting=\"Night\",Options=\"?Mutators=Fullkit,RandomSeason,RandomTime?\r\n Mapname=Crossing ZY?Label=CP Dyn Fullkit\")";
+            string cycleText = "Scenario_Farmhouse_Checkpoint_Security\r\n" + dyn + "\r\n(Scenario=\"Scenario_Town_Push_Insurgents\",Options=\"?a=(1,2),Scenario=Wrong?Mutators=Hardcore\")\r\n"
+                             + "(Scenario=\"Scenario_Bab_Survival\"\r\nScenario_Crossing_Skirmish\r\n";
+            var multi = MapCycle.Parse(cycleText);
+            if (multi.Count != 5 || multi.Count(e => e.IsEntry) != 4)
+                fail("map cycle with a multi-line entry: " + multi.Count + " items, " + multi.Count(e => e.IsEntry) + " scenarios (want 5 and 4): " + string.Join(" | ", multi.Select(e => e.Line)));
+            else
+            {
+                var d = multi[1];
+                if (d.Scenario != "Scenario_Crossing_ZY_Checkpoint_Security" || d.Lighting != "Night" || d.Raw != dyn)
+                    fail("map cycle: the multi-line entry was read as " + d.Scenario + " / " + d.Lighting + " / " + d.Raw);
+                if (string.Join(",", MapCycle.MutatorsOf(d)) != "Fullkit,RandomSeason,RandomTime") fail("map cycle: the entry's mutators read as " + string.Join(",", MapCycle.MutatorsOf(d)));
+                if (multi[2].Scenario != "Scenario_Town_Push_Insurgents" || string.Join(",", MapCycle.MutatorsOf(multi[2])) != "Hardcore")
+                    fail("map cycle: a comma or bracket in quotes split the entry (" + multi[2].Scenario + ", mutators " + string.Join(",", MapCycle.MutatorsOf(multi[2])) + ")");
+                if (multi[3].IsEntry || multi[3].Raw != "(Scenario=\"Scenario_Bab_Survival\"") fail("map cycle: a bracket never closed took other lines: " + multi[3].Line);
+                if (multi[4].Scenario != "Scenario_Crossing_Skirmish") fail("map cycle: the line after an unclosed bracket was not read");
+                if (MapCycle.Render(multi) != cycleText) fail("map cycle: written back differently:\n" + MapCycle.Render(multi));
+                // Moving the entry moves all of its lines.
+                var moved = new List<MapCycleEntry>(multi);
+                moved.RemoveAt(1); moved.Insert(0, d);
+                var again = MapCycle.Parse(MapCycle.Render(moved));
+                if (again.Count != 5 || again[0].Raw != dyn) fail("map cycle: a moved multi-line entry did not stay whole");
+            }
             string[] scenarios = { "Scenario_Farmhouse_Checkpoint_Security", "Scenario_Town_Push_Insurgents", "Scenario_Bab_Survival", "Scenario_Crossing_Skirmish" };
             for (int i = 0; i < 200; i++)
             {
