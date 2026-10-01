@@ -326,12 +326,13 @@ namespace SandstormModLauncher.ViewModels
             SetSquadValue(key, text, (m, v) => SetupEngine.LauncherDefault(State.Rules, m.Cls, key) == v ? null : v);
         }
 
-        public int Teammates { get => EffectiveInt("FriendlyBotQuota"); set => SetInt("FriendlyBotQuota", value, 0, 32); }
+        /// <summary>AI teammates; the game key counts you too (SetupEngine.AiTeammates).</summary>
+        public int Teammates { get => SetupEngine.AiTeammates(EffectiveInt("FriendlyBotQuota")); set => SetInt("FriendlyBotQuota", SetupEngine.FriendlyBotQuotaFor(Math.Min(32, value)), 0, 33); }
         public int SoloEnemies { get => EffectiveInt("SoloEnemies"); set => SetInt("SoloEnemies", value, 0, 64); }
         public int MinEnemies { get => EffectiveInt("MinimumEnemies"); set => SetInt("MinimumEnemies", value, 0, 64); }
         public int MaxEnemies { get => EffectiveInt("MaximumEnemies"); set => SetInt("MaximumEnemies", value, 0, 64); }
         public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 1, 32); }
-        public string TeammatesHint => F("FriendlyBotQuota · mode default {0}", DefaultInt("FriendlyBotQuota"));
+        public string TeammatesHint => F("FriendlyBotQuota {0} (you + AI) · mode default {1}", EffectiveInt("FriendlyBotQuota"), SetupEngine.AiTeammates(DefaultInt("FriendlyBotQuota")));
         public string SoloEnemiesHint => F("SoloEnemies · mode default {0}", DefaultInt("SoloEnemies"));
         public string MinEnemiesHint => F("MinimumEnemies · default {0}", DefaultInt("MinimumEnemies"));
         public string MaxEnemiesHint => F("MaximumEnemies · default {0}", DefaultInt("MaximumEnemies"));

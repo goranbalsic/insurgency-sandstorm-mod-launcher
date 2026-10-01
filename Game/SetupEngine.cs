@@ -95,6 +95,13 @@ namespace SandstormModLauncher.Game
         }
 
         /// <summary>
+        /// FriendlyBotQuota is the size of your team, you included (like BotQuota in versus): 3 gives you + 2 AI
+        /// (owner, 2026-10-01: 2 gave one AI). The screen counts AI teammates; these two convert, nothing else may.
+        /// </summary>
+        public static int AiTeammates(int friendlyBotQuota) => Math.Max(0, friendlyBotQuota - 1);
+        public static int FriendlyBotQuotaFor(int aiTeammates) => aiTeammates <= 0 ? 0 : aiTeammates + 1;
+
+        /// <summary>
         /// Match presets (styles, official rulesets, playlists) never turn versus bots off: the official online rulesets
         /// say bBots=False, which offline would leave an empty match. Bots are set on the Squad tab.
         /// </summary>
@@ -533,11 +540,11 @@ namespace SandstormModLauncher.Game
             {
                 list.Add(Squad(db, true, N("Lone Wolf"), N("Just you against the insurgency, default enemy numbers."), CoopSquad, ("FriendlyBotQuota", "0")));
                 list.Add(Squad(db, true, N("Lone Wolf: Hardened"), N("No teammates, more and sharper enemies."), CoopSquad, ("FriendlyBotQuota", "0"), ("SoloEnemies", "10"), ("AIDifficulty", "0.75")));
-                list.Add(Squad(db, true, N("Fireteam"), N("You plus two AI riflemen against a slightly larger force."), CoopSquad, ("FriendlyBotQuota", "2"), ("SoloEnemies", "8")));
+                list.Add(Squad(db, true, N("Fireteam"), N("You plus two AI riflemen against a slightly larger force."), CoopSquad, ("FriendlyBotQuota", "3"), ("SoloEnemies", "8")));
                 list.Add(Squad(db, true, N("Squad Leader"), N("Lead six AI teammates into heavier resistance."), CoopSquad,
-                    ("FriendlyBotQuota", "6"), ("SoloEnemies", "12"), ("MinimumEnemies", "6"), ("MaximumEnemies", "16")));
+                    ("FriendlyBotQuota", "7"), ("SoloEnemies", "12"), ("MinimumEnemies", "6"), ("MaximumEnemies", "16")));
                 list.Add(Squad(db, true, N("Full Platoon"), N("Ten teammates, big enemy waves, a war-sized fight."), CoopSquad,
-                    ("FriendlyBotQuota", "10"), ("SoloEnemies", "18"), ("MinimumEnemies", "10"), ("MaximumEnemies", "24"), ("AIDifficulty", "0.6")));
+                    ("FriendlyBotQuota", "11"), ("SoloEnemies", "18"), ("MinimumEnemies", "10"), ("MaximumEnemies", "24"), ("AIDifficulty", "0.6")));
                 list.Add(Squad(db, true, N("Relaxed"), N("Fewer, slower-reacting enemies. Good for learning maps."), CoopSquad, ("AIDifficulty", "0.25"), ("SoloEnemies", "4")));
                 list.Add(Squad(db, true, N("Mode defaults"), N("Bots and enemies as the game mode has them."), CoopSquad));
             }

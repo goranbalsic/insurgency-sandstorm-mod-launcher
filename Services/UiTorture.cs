@@ -243,6 +243,28 @@ namespace SandstormModLauncher.Services
                     Check(vm, state, Fail);
                 }
                 vm.PresetSearch = "";
+
+                // AI teammates: 2 on the screen is FriendlyBotQuota=3 in the launch (the game counts you; 2 gave one AI, 2026-10-01).
+                step = "AI teammates";
+                var cpMap = vm.Maps.FirstOrDefault(m => m.Custom == null && m.Info.Scenarios.Any(s => s.GameModeClass == "INSCheckpointGameMode"));
+                if (cpMap == null) Fail("no map with a checkpoint scenario");
+                else
+                {
+                    await Do(vm.SelectMapCommand, cpMap);
+                    var cp = vm.Scenarios.First(s => s.Info.GameModeClass == "INSCheckpointGameMode");
+                    await Do(vm.SelectScenarioCommand, cp);
+                    foreach (int n in new[] { 2, 0, 1, 32 })
+                    {
+                        vm.Teammates = n;
+                        await Pump();
+                        string sent = LaunchPlanner.Build(vm.Profile, state).Overrides.TryGetValue("FriendlyBotQuota", out var fq) ? fq : db.DefaultValue("INSCheckpointGameMode", "FriendlyBotQuota");
+                        string want = n == 0 ? "0" : (n + 1).ToString(CultureInfo.InvariantCulture);
+                        if (vm.Teammates != n || sent != want) Fail(n + " AI teammates set: the screen shows " + vm.Teammates + ", the launch sends FriendlyBotQuota=" + sent + " (want " + want + ")");
+                    }
+                    await Do(vm.StepCommand, "Teammates:-1");
+                    if (vm.Teammates != 31) Fail("one less than 32 AI teammates shows " + vm.Teammates);
+                    Check(vm, state, Fail);
+                }
                 step = "start";
             }
 
@@ -866,7 +888,8 @@ namespace SandstormModLauncher.Services
                 int Eff(string key) => int.TryParse(SetupEngine.Effective(p, db, mode.Cls, key), out var v) ? v : 0;
                 if (mode.Coop)
                 {
-                    if (mode.Defaults.ContainsKey("FriendlyBotQuota") && vm.Teammates != Eff("FriendlyBotQuota")) fail("teammates shown " + vm.Teammates + ", stored " + Eff("FriendlyBotQuota"));
+                    if (mode.Defaults.ContainsKey("FriendlyBotQuota") && vm.Teammates != SetupEngine.AiTeammates(Eff("FriendlyBotQuota")))
+                        fail("AI teammates shown " + vm.Teammates + ", stored FriendlyBotQuota " + Eff("FriendlyBotQuota") + " (counts you)");
                     if (mode.Defaults.ContainsKey("SoloEnemies") && vm.SoloEnemies != Eff("SoloEnemies")) fail("solo enemies shown " + vm.SoloEnemies + ", stored " + Eff("SoloEnemies"));
                     string ai = SetupEngine.Effective(p, db, mode.Cls, "AIDifficulty");
                     if (ai != null && Math.Abs(vm.AiDifficulty - double.Parse(ai, CultureInfo.InvariantCulture)) > 0.001) fail("AI difficulty shown " + vm.AiDifficulty + ", stored " + ai);

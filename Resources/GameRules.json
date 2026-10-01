@@ -1303,10 +1303,10 @@
    "key": "FriendlyBotQuota",
    "label": "AI teammates",
    "cat": "Bots & AI",
-   "desc": "Friendly bots that join your team. 0 plays Lone Wolf.",
+   "desc": "Size of your team with bots, you included: 3 is you + 2 AI. 0 plays Lone Wolf.",
    "type": "int",
    "min": 0,
-   "max": 32,
+   "max": 33,
    "step": 1
   },
   {
