@@ -17,7 +17,9 @@ namespace SandstormModLauncher.Game
         public string Scenario;
         public string Lighting;
         public string Mode;
-        /// <summary>A line kept exactly as it was: a comment, or an entry with settings the launcher does not know.</summary>
+        /// <summary>Options="?Mutators=..?.." of the entry (only shown; the entry is then kept as written).</summary>
+        public string Options;
+        /// <summary>Text kept exactly as it was: a comment, or an entry with settings the launcher does not know (one or more lines).</summary>
         public string Raw;
 
         public bool IsEntry => !string.IsNullOrEmpty(Scenario);
@@ -37,46 +39,96 @@ namespace SandstormModLauncher.Game
     }
 
     /// <summary>
-    /// MapCycle.txt of a dedicated server: one scenario per line, or (Scenario="...",Lighting="Night",Mode="...").
-    /// Comments and lines the launcher does not understand are kept as they are.
+    /// MapCycle.txt of a dedicated server: one scenario per line, or (Scenario="...",Lighting="Night",Mode="...",Options="..."),
+    /// which may run over several lines. Comments and lines the launcher does not understand are kept as they are.
     /// </summary>
     public static class MapCycle
     {
-        private static readonly Regex Struct = new Regex(@"^\((?<body>.*)\)$", RegexOptions.Compiled);
         private static readonly Regex Field = new Regex(@"^\s*(?<k>\w+)\s*=\s*[""“”]?(?<v>[^""“”]*?)[""“”]?\s*$", RegexOptions.Compiled);
         private static readonly Regex Plain = new Regex(@"^[A-Za-z0-9_\-]+$", RegexOptions.Compiled);
 
         public static List<MapCycleEntry> Parse(string text)
         {
             var list = new List<MapCycleEntry>();
-            foreach (var raw in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+            var lines = (text ?? "").Replace("\r\n", "\n").Split('\n');
+            for (int i = 0; i < lines.Length; i++)
             {
-                string t = raw.Trim().TrimStart('﻿');
+                string line = lines[i].TrimStart('﻿'), t = line.Trim();
                 if (t.Length == 0) continue;
                 if (Plain.IsMatch(t)) { list.Add(new MapCycleEntry { Scenario = t }); continue; }
-                var m = Struct.Match(t);
-                if (m.Success)
+                if (t[0] == '(')
                 {
-                    var e = new MapCycleEntry();
-                    bool known = true;
-                    foreach (var part in m.Groups["body"].Value.Split(','))
+                    // An entry ends where its bracket closes, which can be lines later (Options="..." written in parts,
+                    // mod.io #1865932). Never closed: only this line is kept as written.
+                    string whole = line.TrimStart();
+                    int last = i;
+                    while (Close(whole) < 0 && last + 1 < lines.Length) whole += "\n" + lines[++last];
+                    int close = Close(whole);
+                    if (close >= 0 && whole.Substring(close + 1).Trim().Length == 0)
                     {
-                        var f = Field.Match(part);
-                        if (!f.Success) { known = false; continue; }
-                        string k = f.Groups["k"].Value, v = f.Groups["v"].Value.Trim();
-                        if (k.Equals("Scenario", StringComparison.OrdinalIgnoreCase)) e.Scenario = v;
-                        else if (k.Equals("Lighting", StringComparison.OrdinalIgnoreCase)) e.Lighting = v;
-                        else if (k.Equals("Mode", StringComparison.OrdinalIgnoreCase)) e.Mode = v;
-                        else known = false;
+                        var e = new MapCycleEntry();
+                        bool known = true;
+                        foreach (var part in Fields(whole.Substring(1, close - 1)))
+                        {
+                            var f = Field.Match(part);
+                            if (!f.Success) { known = false; continue; }
+                            string k = f.Groups["k"].Value, v = f.Groups["v"].Value.Trim();
+                            if (k.Equals("Scenario", StringComparison.OrdinalIgnoreCase)) e.Scenario = v;
+                            else if (k.Equals("Lighting", StringComparison.OrdinalIgnoreCase)) e.Lighting = v;
+                            else if (k.Equals("Mode", StringComparison.OrdinalIgnoreCase)) e.Mode = v;
+                            else { known = false; if (k.Equals("Options", StringComparison.OrdinalIgnoreCase)) e.Options = v; }
+                        }
+                        // Settings the launcher does not know stay exactly as they were written, line breaks too.
+                        if (!known || !e.IsEntry) e.Raw = whole.TrimEnd().Replace("\n", "\r\n");
+                        list.Add(e);
+                        i = last;
+                        continue;
                     }
-                    // Settings the launcher does not know stay exactly as they were written.
-                    if (!known || !e.IsEntry) e.Raw = t;
-                    list.Add(e);
-                    continue;
                 }
                 list.Add(new MapCycleEntry { Raw = t });
             }
             return list;
+        }
+
+        private static bool IsQuote(char c) => c == '"' || c == '“' || c == '”';
+
+        /// <summary>Where the bracket that opens <paramref name="s"/> closes; -1 while it is open. Brackets in quotes do not count.</summary>
+        private static int Close(string s)
+        {
+            int depth = 0;
+            bool quoted = false;
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (IsQuote(c)) quoted = !quoted;
+                else if (quoted) continue;
+                else if (c == '(') depth++;
+                else if (c == ')' && --depth == 0) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>The fields of an entry: split at the commas outside quotes (Options="?Mutators=A,B" is one field).</summary>
+        private static List<string> Fields(string body)
+        {
+            var parts = new List<string>();
+            var sb = new StringBuilder();
+            bool quoted = false;
+            foreach (char c in body)
+            {
+                if (IsQuote(c)) quoted = !quoted;
+                if (c == ',' && !quoted) { parts.Add(sb.ToString()); sb.Clear(); }
+                else sb.Append(c);
+            }
+            parts.Add(sb.ToString());
+            return parts;
+        }
+
+        /// <summary>The mutators an entry sets for its map (Options="?Mutators=A,B"); they replace the start URL's on that map.</summary>
+        public static List<string> MutatorsOf(MapCycleEntry e)
+        {
+            var m = Regex.Match(e?.Options ?? "", @"(?:^|\?)\s*Mutators\s*=(?<v>[^?]*)", RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups["v"].Value.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToList() : new List<string>();
         }
 
         public static string Render(IEnumerable<MapCycleEntry> entries) =>
@@ -319,7 +371,11 @@ namespace SandstormModLauncher.Game
                 }
                 if (!isThere) plan.MapCycleCopyFrom = file;
                 plan.MapCycleName = cycle;
-                if (!MapCycle.Parse(File.ReadAllText(file)).Any(e => e.IsEntry)) plan.Warnings.Add(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."));
+                var entries = MapCycle.Parse(File.ReadAllText(file));
+                if (!entries.Any(e => e.IsEntry)) plan.Warnings.Add(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."));
+                // Mutators in the start URL are per map: an entry with its own ?Mutators= has only those (mod.io #1865932).
+                if (match.Mutators.Count > 0 && entries.Any(e => e.IsEntry && MapCycle.MutatorsOf(e).Count > 0))
+                    plan.Warnings.Add(F("Map cycle entries with their own mutators use only those; the match's mutators ({0}) are not on those maps.", string.Join(", ", match.Mutators)));
                 plan.Args.Add("-MapCycle=" + cycle);
             }
 

@@ -419,6 +419,8 @@ namespace SandstormModLauncher.ViewModels
                     item.Title = sc == null ? e.Scenario : (map?.DisplayName ?? sc.MapKey) + " · " + T(sc.GameModeName) + (string.IsNullOrEmpty(sc.Side) ? "" : " (" + sc.Side + ")");
                     var bits = new List<string> { string.IsNullOrEmpty(e.Lighting) ? "Day" : e.Lighting };
                     if (!string.IsNullOrEmpty(e.Mode)) bits.Add(e.Mode.Equals("CheckpointHardcore", StringComparison.OrdinalIgnoreCase) ? "Hardcore" : e.Mode);
+                    var own = MapCycle.MutatorsOf(e);
+                    if (own.Count > 0) bits.Add(F("mutators {0}", string.Join(", ", own)));
                     if (sc == null) bits.Add(T("not installed here"));
                     if (e.Raw != null) bits.Add(T("kept as written"));
                     item.Detail = string.Join(" · ", bits);

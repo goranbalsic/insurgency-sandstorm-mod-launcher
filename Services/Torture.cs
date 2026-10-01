@@ -825,6 +825,28 @@ namespace SandstormModLauncher.Services
                     set.ServerUseOwnArgs = false;
                     if (ServerPlanner.RconFor(set, theirs).Own) fail("the launcher's own start used the player's RCON");
                 }
+                // A map cycle entry with its own mutators (written over several lines, mod.io #1865932) counts as a scenario,
+                // and the plan says the match's mutators are not on that map; an entry without mutators says nothing.
+                {
+                    var p = Fresh(checkpoint);
+                    p.Mutators.Add(own ?? "Hardcore");
+                    var match = LaunchPlanner.Build(p, state);
+                    string cycleFile = System.IO.Path.Combine(fakeServer, "dyn-cycle.txt");
+                    var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerUseMapCycle = true, ServerMapCycleFile = cycleFile };
+                    System.IO.File.WriteAllText(cycleFile, "(Scenario=\"Scenario_Farmhouse_Checkpoint_Security\",\r\nLighting=\"Night\")\r\n");
+                    var plain = ServerPlanner.Build(match, set, inst, db, "");
+                    System.IO.File.WriteAllText(cycleFile, "(Scenario=\"Scenario_Farmhouse_Checkpoint_Security\",\r\nLighting=\"Night\",Options=\"?Mutators=AllYouCanEat,\r\nHardcore\")\r\n");
+                    var dyn = ServerPlanner.Build(match, set, inst, db, "");
+                    if (!plain.IsValid || !dyn.IsValid) fail("map cycle with a multi-line entry: " + (plain.Error ?? dyn.Error));
+                    else if (match.Mutators.Count == 0) fail("map cycle mutators: the match has no mutators to check with");
+                    else
+                    {
+                        var extra = dyn.Warnings.Except(plain.Warnings).ToList();
+                        if (extra.Count != 1 || !extra[0].Contains(string.Join(", ", match.Mutators)))
+                            fail("map cycle entry with its own mutators: the plan's notes " + (extra.Count == 0 ? "do not say the match's mutators are not on that map" : "are " + string.Join(" / ", extra)));
+                        if (plain.Warnings.Concat(dyn.Warnings).Contains(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."))) fail("a map cycle of one multi-line entry counts as having no scenarios");
+                    }
+                }
                 // Official rules and the match's own ruleset: one ruleset, official, with a note.
                 {
                     var p = Fresh(checkpoint);
