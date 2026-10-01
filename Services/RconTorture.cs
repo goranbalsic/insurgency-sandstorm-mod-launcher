@@ -283,7 +283,7 @@ namespace SandstormModLauncher.Services
             // An entry written over several lines (mod.io #1865932, exactly as posted) is one entry, kept as written, its
             // mutators read; commas and brackets inside quotes split nothing; a bracket never closed stays a line of its own.
             string dyn = "(Scenario=\"Scenario_Crossing_ZY_Checkpoint_Security\",\r\nLighting=\"Night\",Options=\"?Mutators=Fullkit,RandomSeason,RandomTime?\r\n Mapname=Crossing ZY?Label=CP Dyn Fullkit\")";
-            string cycleText = "Scenario_Farmhouse_Checkpoint_Security\r\n" + dyn + "\r\n(Scenario=\"Scenario_Town_Push_Insurgents\",Options=\"?a=(1,2),Scenario=Wrong?Mutators=Hardcore\")\r\n"
+            string cycleText = "Scenario_Farmhouse_Checkpoint_Security\r\n" + dyn + "\r\n(Scenario=\"Scenario_Town_Push_Insurgents\",Options=\"?a=(1,2),Scenario=Wrong?Label=x)?Mutators=Hardcore\")\r\n"
                              + "(Scenario=\"Scenario_Bab_Survival\"\r\nScenario_Crossing_Skirmish\r\n";
             var multi = MapCycle.Parse(cycleText);
             if (multi.Count != 5 || multi.Count(e => e.IsEntry) != 4)
