@@ -146,6 +146,9 @@ namespace SandstormModLauncher.ViewModels
         public bool LaunchSucceeded { get => launchSucceeded; set => Set(ref launchSucceeded, value); }
         public string LaunchResult { get => launchResult; set => Set(ref launchResult, value); }
         public string LaunchHeadline { get => launchHeadline; set => Set(ref launchHeadline, value); }
+        /// <summary>Squad and mutators of the match being launched (not the setup on screen, which can change meanwhile).</summary>
+        public string LaunchDetail { get => launchDetail; set => Set(ref launchDetail, value); }
+        private string launchDetail;
         public double LaunchProgress { get => launchProgress; set => Set(ref launchProgress, value); }
         public bool LaunchFailed => !launchRunning && !launchSucceeded && launchResult != null;
 
@@ -172,6 +175,7 @@ namespace SandstormModLauncher.ViewModels
             UpdatePlan();
             var plan = currentPlan;
             if (plan == null || !plan.IsValid) { await ShowMessage("Nothing to launch yet", plan?.Error ?? "Pick a map and a scenario first."); return; }
+            string pressed = SetupEngine.Fingerprint(Profile);
             if (!State.Install.IsValid) { Page = "Settings"; await ShowMessage("Game not found", "Set the Insurgency: Sandstorm folder in Settings first."); return; }
             SaveNow();
 
@@ -206,13 +210,17 @@ namespace SandstormModLauncher.ViewModels
                     case "Never": break;
                     default:
                         string answer = await Ask("Restart the game?",
-                            T("The game was started with a different number of AI teammates (or a different official ruleset). The game only reads that when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart."),
+                            T("The game was started with a different number of AI teammates, official ruleset or own Game.ini lines. The game only reads those when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart."),
                             "Restart and launch", "Launch without restart", "Cancel");
                         if (answer == null || answer == "Cancel") return;
                         options.RestartIfNeeded = answer == "Restart and launch";
                         break;
                 }
             }
+
+            // The setup changed while the game was checked (up to ~10 s, the page stays usable): launch what is on screen now,
+            // with the checks done again for it (the plan of the press ran while the screen showed the new setup, 2026-10-02 audit).
+            if (SetupEngine.Fingerprint(Profile) != pressed) { await LaunchCore(forceRestart); return; }
 
             LaunchSteps.Clear();
             foreach (var t in LaunchService.Steps) LaunchSteps.Add(new LaunchStepItem { Title = T(t), State = StepState.Pending });
@@ -221,6 +229,7 @@ namespace SandstormModLauncher.ViewModels
             LaunchSucceeded = false;
             LaunchProgress = 0;
             LaunchHeadline = plan.Title;
+            LaunchDetail = SquadSummary + "  ·  " + MutatorSummary;
             LaunchOverlayOpen = true;
             LaunchRunning = true;
             SetLaunchPreparing(false);

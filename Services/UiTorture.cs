@@ -89,12 +89,12 @@ namespace SandstormModLauncher.Services
             "ActiveMutatorCount", "LaunchRuleset", "CustomIniMode", "CustomIniText", "ExtraUrlOptions", "GameModeOverride", "AfterLoadCommands",
             "EnableCheatsAfterLoad", "SelectedSetup", "SetupState", "SetupChanged", "PresetFilter", "PresetSearch", "PresetCountText", "PlayTab", "Page",
             "ServerName", "ServerJoinPassword", "ServerMaxPlayersText", "ServerPortText", "ServerQueryPortText", "ServerRconPortText",
-            "ServerRconFromNetwork", "ServerShowLog", "ServerCheats", "ServerGslt", "ServerGameStats", "ServerExtraArgs", "ServerAdmins",
+            "ServerRconFromNetwork", "ServerShowLog", "ServerCheats", "ServerGslt", "ServerGameStats", "ServerGameStatsToken", "ServerExtraArgs", "ServerAdmins",
             "ServerModsEnabled", "ServerModIds", "ServerUseMapCycle", "ServerRemote", "ServerLocal", "ServerRemoteHost", "ServerRemotePortText",
             "ServerCommandLine", "ServerPlanError", "ServerMatchSummary", "ServerMatchMods", "MapCycleFile", "MapCycleIsDefault", "MapCycleCount",
             "ServerRconAddress", "CanStartServer", "PlayTarget", "PlaysOnServer", "MainActionTitle", "MainActionTip", "CanMainAction",
             "ServerUseOwnArgs", "ServerUsesLauncherArgs", "ServerOwnArgs", "ServerModsOn", "ServerModioEmail", "ServerModioCode", "ModioCodeHint",
-            "ModioAccountText", "ModioAccountKind", "ServerModsListText", "HasOtherSubs", "ModSyncText", "ModioText", "OwnArgsNote"
+            "ModioAccountText", "ModioAccountKind", "ServerModsListText", "HasOtherSubs", "ModSyncText", "ModioText", "OwnArgsNote", "ServerOwnRules"
         };
 
         private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120), "Settings" };   // (a name that is also a text of the launcher)
@@ -187,6 +187,14 @@ namespace SandstormModLauncher.Services
             TortureCycle = Path.Combine(AppPaths.DataDir, "torture-MapCycle.txt");
             if (File.Exists(TortureCycle)) File.Delete(TortureCycle);
             vm.UseMapCycleFile(TortureCycle);
+            // A server of its own (an empty exe in the data folder): the server checks run alike on every PC and on CI
+            // (with no server installed they had nothing to check), and never look at a real server install.
+            string fakeServer = Path.Combine(AppPaths.DataDir, "torture-server");
+            Directory.CreateDirectory(fakeServer);
+            File.WriteAllText(Path.Combine(fakeServer, "InsurgencyServer.exe"), "");
+            vm.State.Settings.ServerDirOverride = fakeServer;
+            vm.ReloadServerInstall();
+            vm.UseMapCycleFile(TortureCycle);
             for (int k = 0; k < 600 && vm.Loading; k++) await Task.Delay(100);
             if (vm.DialogOpen) vm.DialogCommand.Execute(vm.DialogPrimary);
             await Pump();
@@ -265,6 +273,129 @@ namespace SandstormModLauncher.Services
                     if (vm.Teammates != 31) Fail("one less than 32 AI teammates shows " + vm.Teammates);
                     Check(vm, state, Fail);
                 }
+
+                // Text typed but not confirmed (the box still has the focus) is taken before F5 launches and before the
+                // window closes: text boxes and steppers (F5 launched without it, closing lost it, 2026-10-02 audit).
+                step = "typed text before F5";
+                IEnumerable<T> All<T>(DependencyObject d) where T : DependencyObject
+                {
+                    for (int k = 0; k < System.Windows.Media.VisualTreeHelper.GetChildrenCount(d); k++)
+                    {
+                        var c = System.Windows.Media.VisualTreeHelper.GetChild(d, k);
+                        if (c is T t) yield return t;
+                        foreach (var x in All<T>(c)) yield return x;
+                    }
+                }
+                vm.Page = "Play";
+                vm.PlayTab = "Advanced";
+                await Pump(); Layout(); await Pump();
+                var afterBox = All<TextBox>(root).FirstOrDefault(b => b.GetBindingExpression(TextBox.TextProperty)?.ParentBinding.Path.Path == "AfterLoadCommands");
+                if (afterBox == null) Fail("no box for the commands after the map loads");
+                else
+                {
+                    string before = vm.AfterLoadCommands;
+                    afterBox.Text = "slomo 0.5";
+                    Views.MainWindow.CommitText(afterBox);
+                    if (vm.AfterLoadCommands != "slomo 0.5") Fail("typed after-load commands are not taken before F5: " + vm.AfterLoadCommands);
+                    afterBox.Text = before ?? "";
+                    Views.MainWindow.CommitText(afterBox);
+                }
+                vm.PlayTab = "Squad";
+                await Pump(); Layout(); await Pump();
+                var stepperBox = All<Views.Controls.Stepper>(root).Where(x => x.GetBindingExpression(Views.Controls.Stepper.ValueProperty)?.ParentBinding.Path.Path == "Teammates")
+                                                                 .SelectMany(x => All<TextBox>(x)).FirstOrDefault();
+                if (stepperBox == null) Fail("no stepper box for AI teammates");
+                else
+                {
+                    int was = vm.Teammates;
+                    stepperBox.Text = was == 4 ? "5" : "4";
+                    Views.MainWindow.CommitText(stepperBox);
+                    if (vm.Teammates != (was == 4 ? 5 : 4)) Fail("a number typed in a stepper is not taken before F5: " + vm.Teammates);
+                    vm.Teammates = was;
+                }
+                Check(vm, state, Fail);
+
+                // The mutator picked in the list stays picked when the list is built again (a rescan, a preset): the details
+                // card jumped to another one, its mod folder button too.
+                step = "mutator selection kept";
+                vm.Page = "Mods";
+                vm.MutatorFilter = "All";
+                await Pump(); Layout(); await Pump();
+                var keepMutator = vm.MutatorItems.Skip(3).FirstOrDefault(x => !x.IsActive);
+                if (keepMutator == null) Fail("no mutator to pick");
+                else
+                {
+                    vm.SelectedMutator = keepMutator;
+                    await vm.RescanMods(true);
+                    await Pump();
+                    if (vm.SelectedMutator?.Id != keepMutator.Id) Fail("after a rescan the picked mutator is " + vm.SelectedMutator?.Id + " (was " + keepMutator.Id + ")");
+                }
+
+                // A custom map entry with no known game mode: no rules to edit, also after a rescan (the Rules tab kept, or got
+                // back, another mode's rules that the launch would not send).
+                step = "map with no known mode";
+                var anySc = state.AllScenarios.First(s => s.GameModeClass == "INSCheckpointGameMode");
+                vm.AddCustomMapCommand.Execute(null);
+                vm.EditMapLabel = "No mode map"; vm.EditMapLevel = anySc.Level; vm.EditMapScenario = "Scenario_NoMode_Test"; vm.EditMapMode = "";
+                vm.SaveCustomMapCommand.Execute(null);
+                await Pump();
+                vm.Page = "Play"; vm.PlayTab = "Rules";
+                await Pump(); Layout(); await Pump();
+                if (vm.CurrentMode != null) Fail("the test map has a known mode: " + vm.CurrentMode.Cls);
+                else
+                {
+                    if (vm.RuleItems.Count > 0) Fail("a map with no known mode lists " + vm.RuleItems.Count + " rules of another mode");
+                    await vm.RescanMods(true);
+                    await Pump();
+                    if (vm.RuleItems.Count > 0) Fail("after a rescan, a map with no known mode lists " + vm.RuleItems.Count + " rules of another mode");
+                }
+                Check(vm, state, Fail);
+                if (vm.SelectedMap?.Custom != null) await Do(vm.DeleteCustomMapCommand, vm.SelectedMap);
+                await Pump();
+
+                // "Save first" under the name of the setup being loaded: that save is what loads (the old copy loaded instead).
+                step = "save first under the same name";
+                await Do(vm.SaveSetupAsCommand, null, null, "Same name check");
+                await Do(vm.NewSetupCommand, null, "Discard");
+                vm.Night = !vm.Night;
+                vm.MutatorsEnabled = !vm.MutatorsEnabled;
+                await Pump();
+                if (vm.SavedSetupNames.Contains("Same name check") && vm.SetupChanged)
+                {
+                    var screen = SetupEngine.Fingerprint(vm.Profile);
+                    vm.SelectedSetup = "Same name check";
+                    await Answer("Save first", "Same name check");
+                    if (SetupEngine.Fingerprint(vm.Profile) != screen) Fail("saved first under the same name, but the old copy was loaded");
+                    if (vm.SetupChanged) Fail("saved first under the same name and loaded, but shown as changed");
+                    await Do(vm.DeleteSetupCommand, null);
+                }
+                else Fail("the setup for the check was not saved, or the new setup does not count as changed");
+
+                // The map cycle file changed outside the launcher after the list was read: the next edit never writes over it.
+                step = "map cycle edited outside";
+                await Do(vm.AddMatchToCycleCommand, null);
+                File.AppendAllText(TortureCycle, "Scenario_Outside_Fixed\r\n");
+                var firstItem = vm.MapCycleItems.FirstOrDefault();
+                if (firstItem == null) Fail("no map cycle entry to edit");
+                else await Do(vm.RemoveCycleItemCommand, firstItem);
+                if (!File.ReadAllText(TortureCycle).Contains("Scenario_Outside_Fixed")) Fail("the edit made outside the launcher was written over");
+                CheckServer(vm, state, Fail);
+
+                // Game stats with a token, and the server's own rules: fixed once, the random steps rarely line them up.
+                step = "server game stats token, own rules";
+                vm.ServerGslt = "ABCDEF0123456789";
+                vm.ServerJoinPassword = "";
+                vm.ServerGameStats = true;
+                vm.ServerGameStatsToken = "1417264D1C6549CC95E10CA1E9BE8F09";
+                vm.ServerOwnRules = true;
+                await Pump();
+                CheckServer(vm, state, Fail);
+                var statsPlan = ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, db, "");
+                if (!statsPlan.IsValid || statsPlan.OwnArgs != null) Fail("the server checks have no plan to check: " + statsPlan.Error);
+                vm.ServerOwnRules = false;
+                vm.ServerGameStats = false;
+                await Pump();
+                CheckServer(vm, state, Fail);
                 step = "start";
             }
 
@@ -480,9 +611,10 @@ namespace SandstormModLauncher.Services
                         case 31:
                         {
                             // Server types (never the install, update or firewall buttons: those change the PC).
-                            int k = rnd.Next(4);
+                            int k = rnd.Next(5);
                             if (k == 0) { name = "server vote kick"; vm.ServerVoteKick = !vm.ServerVoteKick; break; }
                             if (k == 1) { name = "server official rules"; vm.ServerOfficialRules = !vm.ServerOfficialRules; break; }
+                            if (k == 2) { name = "server own rules"; vm.ServerOwnRules = !vm.ServerOwnRules; break; }
                             var item = Pick(vm.ServerTypeItems.ToList());
                             vm.ServerTypeNight = rnd.Next(2) == 0;
                             string answer = Pick(new[] { "Set it up", "Replace", "Keep mine", "Cancel" });
@@ -639,7 +771,7 @@ namespace SandstormModLauncher.Services
                                 case 1: name = "server numbers"; vm.ServerMaxPlayersText = Pick(Texts); vm.ServerPortText = Pick(Texts); vm.ServerQueryPortText = Pick(new[] { "27131", "27102", "abc", "70000" }); vm.ServerRconPortText = Pick(new[] { "27015", "80", "65535", "x" }); break;
                                 case 2: name = "server password"; vm.ServerJoinPassword = Pick(new[] { "", "secret1", "a b", "p?w", "\u017e" }); break;
                                 case 3: name = "server switches"; vm.ServerShowLog = !vm.ServerShowLog; vm.ServerCheats = rnd.Next(2) == 0; vm.ServerGameStats = rnd.Next(2) == 0; vm.ServerRconFromNetwork = rnd.Next(2) == 0; break;
-                                case 4: name = "server token"; vm.ServerGslt = Pick(new[] { "", "ABCDEF0123456789", "bad token!" }); vm.ServerExtraArgs = Pick(new[] { "", "-nosteam", "-MOTD=Hi" }); break;
+                                case 4: name = "server token"; vm.ServerGslt = Pick(new[] { "", "ABCDEF0123456789", "bad token!" }); vm.ServerGameStatsToken = Pick(new[] { "", "1417264D1C6549CC95E10CA1E9BE8F09", "bad token!" }); vm.ServerExtraArgs = Pick(new[] { "", "-nosteam", "-MOTD=Hi" }); break;
                                 case 5: name = "server admins"; vm.ServerAdmins = Pick(ids); break;
                                 case 6: name = "server mods"; vm.ServerModsEnabled = rnd.Next(2) == 0; vm.ServerModIds = Pick(new[] { "", "1457355", "12\nabc", "98685, 4858240" }); if (rnd.Next(2) == 0) await Do(vm.AddMatchModsCommand, null); break;
                                 case 7: name = "server remote"; vm.ServerRemote = !vm.ServerRemote; vm.ServerRemoteHost = Pick(new[] { "", "203.0.113.5", "server.example" }); vm.ServerRemotePortText = Pick(new[] { "27015", "0", "abc" }); break;
@@ -666,11 +798,23 @@ namespace SandstormModLauncher.Services
                                     break;
                                 default:
                                 {
-                                    if (vm.MapCycleItems.Count == 0) { name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); break; }
-                                    var item = Pick(vm.MapCycleItems.ToList());
-                                    int how = rnd.Next(4);
-                                    name = "map cycle " + new[] { "remove", "up", "down", "lighting" }[how];
-                                    await Do(new[] { vm.RemoveCycleItemCommand, vm.MoveCycleItemUpCommand, vm.MoveCycleItemDownCommand, vm.ToggleCycleLightingCommand }[how], item);
+                                    // Sometimes the file is changed outside the launcher first (its "open the file" button):
+                                    // that change must survive the edit pressed next.
+                                    string outside = null;
+                                    if (rnd.Next(5) == 0 && File.Exists(TortureCycle)) { outside = "Scenario_Outside_" + i; File.AppendAllText(TortureCycle, outside + "\r\n"); }
+                                    if (vm.MapCycleItems.Count == 0) { name = "map cycle add"; await Do(vm.AddMatchToCycleCommand, null); }
+                                    else
+                                    {
+                                        var item = Pick(vm.MapCycleItems.ToList());
+                                        int how = rnd.Next(4);
+                                        name = "map cycle " + new[] { "remove", "up", "down", "lighting" }[how];
+                                        await Do(new[] { vm.RemoveCycleItemCommand, vm.MoveCycleItemUpCommand, vm.MoveCycleItemDownCommand, vm.ToggleCycleLightingCommand }[how], item);
+                                    }
+                                    if (outside != null)
+                                    {
+                                        name += " after an outside edit";
+                                        if (!File.ReadAllText(TortureCycle).Contains(outside)) Fail(name + ": the edit made outside the launcher was written over");
+                                    }
                                     break;
                                 }
                             }
@@ -709,6 +853,9 @@ namespace SandstormModLauncher.Services
                             vm.SelectedSetup = pick;
                             await Answer(answer, Pick(Names));
                             var p = vm.Profile;
+                            // "Save first" under the name of the one being loaded replaced it: that save is what loads (the
+                            // old copy loaded and showed as unchanged, 2026-10-02 audit).
+                            rp = state.Settings.RulesPresets.FirstOrDefault(r => r.Name == pick) ?? rp;
                             if (pick == shownBefore)
                             {
                                 // The one already selected: picking it again changes nothing (the list does not reload it).
@@ -808,7 +955,7 @@ namespace SandstormModLauncher.Services
             var s = state.Settings;
             if (!string.Equals(s.ServerMapCycleFile, TortureCycle, StringComparison.OrdinalIgnoreCase)) fail("the map cycle file moved to " + s.ServerMapCycleFile);
             var fresh = vm.CurrentPlan == null && !(s.ServerUseOwnArgs && !s.ServerRemote) ? null : ServerPlanner.Build(vm.CurrentPlan, s, vm.ServerInstall, state.Rules, "");
-            string want = fresh?.IsValid == true ? "InsurgencyServer.exe " + fresh.ShownCommandLine : "";
+            string want = fresh?.IsValid == true && !s.ServerRemote ? "InsurgencyServer.exe " + fresh.ShownCommandLine : "";
             if (vm.ServerCommandLine != want) fail("server command line on screen is stale:\n  shown " + vm.ServerCommandLine + "\n  fresh " + want);
             string code = ServerModio.CleanCode(s.ServerModioCode);
             if (code != null && vm.ServerCommandLine.Contains(code)) fail("the command line on screen shows the security code: " + vm.ServerCommandLine);
@@ -823,6 +970,12 @@ namespace SandstormModLauncher.Services
                 if (fresh.CommandLine != (withCode ? ServerModio.WithSecurityCode(own, code) : own)) fail("own options changed:\n  " + fresh.CommandLine + "\n  " + own);
                 if (!ServerPlanner.RconFor(s, "").Own && (!fresh.GameIni.Contains("Password=" + s.ServerRconPassword) || !fresh.GameIni.Contains("ListenPort=" + s.ServerRconPort)))
                     fail("own options without RCON: the launcher's RCON is not in Game.ini");
+            }
+            else if (fresh?.IsValid == true && s.ServerRemote)
+            {
+                // A server on another PC: the match only (over RCON); its own player count and join password stay.
+                if (fresh.Args.Count > 0 || fresh.Url.Contains("?MaxPlayers=") || fresh.Url.Contains("?Password=") || fresh.Url.Contains("bSoloGame"))
+                    fail("a server on another PC gets more than the match: " + fresh.Url + " " + string.Join(" ", fresh.Args));
             }
             else if (fresh?.IsValid == true)
             {
@@ -843,6 +996,16 @@ namespace SandstormModLauncher.Services
                 if (ServerPlanner.VoteKickOn(fresh.GameIni) != s.ServerVoteKick) fail("vote kick in the server's Game.ini does not follow the switch");
                 if (fresh.Args.Contains("-ruleset=OfficialRules") != s.ServerOfficialRules) fail("official rules do not follow the switch: " + fresh.ShownCommandLine);
                 if (fresh.Args.Count(a => a.StartsWith("-ruleset=", StringComparison.Ordinal)) > 1) fail("two rulesets on the server's command line");
+                // The server's own rules: no rule option of the match in the URL or a map load, no match rules in its Game.ini.
+                if (fresh.OwnRules != s.ServerOwnRules) fail("own rules do not follow the switch");
+                string travel = ServerService.TravelUrl(fresh);
+                if (s.ServerOwnRules && LaunchPlanner.UrlOptions.Any(k => travel.IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0 && !vm.CurrentPlan.ExtraOptionKeys.Contains(k)))
+                    fail("own rules, but a map load sends the match's rules: " + travel);
+                if (s.ServerOwnRules && UeIni.Parse(fresh.GameIni).Any(x => x.Name.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) >= 0 && x.Values.Count > 0))
+                    fail("own rules, but the match's rules go into the server's Game.ini:\n" + fresh.GameIni);
+                bool statsToken = s.ServerGameStats && (s.ServerGameStatsToken ?? "").Length > 0;
+                if (fresh.Args.Contains("-GameStatsToken=" + s.ServerGameStatsToken) != statsToken) fail("-GameStatsToken does not follow the switch and token: " + fresh.ShownCommandLine);
+                if (statsToken && fresh.ShownCommandLine.Contains(s.ServerGameStatsToken)) fail("the command line on screen shows the game stats token");
             }
             // The list on screen is the file.
             var onDisk = File.Exists(TortureCycle) ? MapCycle.Parse(File.ReadAllText(TortureCycle)) : new List<MapCycleEntry>();
@@ -883,6 +1046,8 @@ namespace SandstormModLauncher.Services
 
             var mode = SetupEngine.CurrentMode(p, state);
             if ((vm.CurrentMode?.Cls) != (mode?.Cls)) fail("screen mode " + vm.CurrentMode?.Cls + " but the profile's scenario is " + mode?.Cls);
+            // No known game mode: no rules to edit (the tab kept the mode before, whose changes would not be sent).
+            if (mode == null && vm.RuleItems.Count > 0) fail("the scenario's mode has no known rules, but the Rules tab lists " + vm.RuleItems.Count + " rules of another mode");
             if (mode != null)
             {
                 int Eff(string key) => int.TryParse(SetupEngine.Effective(p, db, mode.Cls, key), out var v) ? v : 0;

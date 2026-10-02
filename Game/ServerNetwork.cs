@@ -90,7 +90,8 @@ namespace SandstormModLauncher.Game
                         + "netsh advfirewall firewall add rule name=\"Insurgency Sandstorm dedicated server\" dir=in action=allow enable=yes profile=any program=\"" + exe + "\"";
             try
             {
-                using (var p = Process.Start(new ProcessStartInfo("cmd.exe", args) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden }))
+                // The full path: a bare "cmd.exe" is looked for in the current folder first, and this one runs as administrator.
+                using (var p = Process.Start(new ProcessStartInfo(System.IO.Path.Combine(Environment.SystemDirectory, "cmd.exe"), args) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden }))
                 {
                     p.WaitForExit(30000);
                     AppLog.Info("Firewall rule for the server: " + (p.HasExited ? "exit " + p.ExitCode : "still running"));

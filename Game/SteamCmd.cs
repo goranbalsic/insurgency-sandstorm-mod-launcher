@@ -352,6 +352,8 @@ namespace SandstormModLauncher.Game
             return null;
         }
 
+        public static readonly HashSet<string> ValveNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Valve Corp.", "Valve Corporation", "Valve" };
+
         /// <summary>Null when the file carries a valid signature by Valve, else why not.</summary>
         public static string ValveSigned(string path)
         {
@@ -360,7 +362,8 @@ namespace SandstormModLauncher.Game
             {
                 var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
                 string name = cert.GetNameInfo(X509NameType.SimpleName, false) ?? "";
-                if (name.IndexOf("Valve", StringComparison.OrdinalIgnoreCase) < 0) return F("The SteamCMD download is signed by {0}, not Valve, so it was not used.", name);
+                // Valve's own name only (steam.exe: "Valve Corp."): any certificate with "Valve" somewhere in it passed before.
+                if (!ValveNames.Contains(name.Trim())) return F("The SteamCMD download is signed by {0}, not Valve, so it was not used.", name);
             }
             catch (Exception ex) { return F("The signature of the SteamCMD download could not be read: {0}", ex.Message); }
             return null;

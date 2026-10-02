@@ -303,16 +303,18 @@ namespace SandstormModLauncher.Game
                 if (Skip.IsMatch(t)) continue;
                 var set = SetLine.Match(t);
                 if (set.Success) { vars[set.Groups["k"].Value.Trim()] = Expand(set.Groups["v"].Value, vars, null); continue; }
-                var m = ExeAt(t);
+                // Variables first: "%SERVER%" can be the program (set SERVER=...\InsurgencyServer.exe, 2026-10-02 audit).
+                string line = Expand(t, vars, null);
+                var m = ExeAt(line);
                 if (m == null) continue;
-                string args = Expand(t.Substring(m.Index + m.Length), vars, notes);
-                return Cut(args).Trim();
+                Expand(t, vars, notes);
+                return Cut(line.Substring(m.Index + m.Length)).Trim();
             }
             return null;
         }
 
         /// <summary>Lines that name the server without starting it (comments, messages, labels, stopping it).</summary>
-        private static readonly Regex Skip = new Regex(@"^(rem(\s|$)|::|:\w|echo[\s.]|title\s|taskkill\s|tasklist|find(str)?\s|timeout\s|goto\s)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex Skip = new Regex(@"^(rem(\s|$)|::|:\w|echo[\s.]|title\s|taskkill\s|tasklist|find(str)?\s|timeout\s|goto\s|cd(\s|/|\\|$)|chdir\s|pushd\s|popd)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         /// <summary>The program in a line, when it comes before the options (not a hostname or path inside them).</summary>
         private static Match ExeAt(string line)

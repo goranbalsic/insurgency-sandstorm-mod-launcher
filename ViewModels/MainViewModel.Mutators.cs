@@ -44,6 +44,9 @@ namespace SandstormModLauncher.ViewModels
 
         private void BuildMutatorList()
         {
+            // Kept before the list is cleared: clearing makes the list box write "nothing selected" back, and the details
+            // card jumped to another mutator after every rescan or preset (2026-10-02 audit).
+            string keepId = selectedMutator?.Id;
             MutatorItems.Clear();
             var active = new HashSet<string>(Profile.Mutators, StringComparer.OrdinalIgnoreCase);
             // Official mutators are grouped by the official playlists that use them.
@@ -88,9 +91,9 @@ namespace SandstormModLauncher.ViewModels
                 return m.Name.IndexOf(mutatorSearch, StringComparison.OrdinalIgnoreCase) >= 0 || m.Id.IndexOf(mutatorSearch, StringComparison.OrdinalIgnoreCase) >= 0
                        || m.Group.IndexOf(mutatorSearch, StringComparison.OrdinalIgnoreCase) >= 0 || (m.Info.Description ?? "").IndexOf(mutatorSearch, StringComparison.OrdinalIgnoreCase) >= 0;
             };
-            if (selectedMutator != null) selectedMutator = MutatorItems.FirstOrDefault(x => x.Id == selectedMutator.Id);
-            if (selectedMutator == null) selectedMutator = MutatorItems.FirstOrDefault(x => x.IsActive) ?? MutatorItems.FirstOrDefault();
-            RaiseMany(nameof(MutatorsView), nameof(SelectedMutator), nameof(OfficialMutatorCount), nameof(ModMutatorCount), nameof(CustomMutatorCount), nameof(TotalMutatorCount));
+            selectedMutator = (keepId == null ? null : MutatorItems.FirstOrDefault(x => x.Id == keepId))
+                              ?? MutatorItems.FirstOrDefault(x => x.IsActive) ?? MutatorItems.FirstOrDefault();
+            RaiseMany(nameof(MutatorsView), nameof(SelectedMutator), nameof(SelectedMutatorMod), nameof(OfficialMutatorCount), nameof(ModMutatorCount), nameof(CustomMutatorCount), nameof(TotalMutatorCount));
         }
 
         public int TotalMutatorCount => MutatorItems.Count(m => !m.IsBase && !m.NotRegistered);

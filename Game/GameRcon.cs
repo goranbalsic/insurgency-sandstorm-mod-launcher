@@ -143,8 +143,8 @@ namespace SandstormModLauncher.Game
             try
             {
                 string text = UeIni.ReadText(GameInstall.GameIniPath);
-                var sec = UeIni.Parse(text).LastOrDefault(x => x.Name.Equals(Section, StringComparison.OrdinalIgnoreCase));
-                return sec != null && IniSection(s).Values.All(v => sec.Values.Any(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase) && x.Value == v.Value));
+                // What the game reads: the first value of each key over every [Rcon] section.
+                return IniSection(s).Values.All(v => UeIni.FirstValue(text, Section, v.Key) == v.Value);
             }
             catch { return false; }
         }

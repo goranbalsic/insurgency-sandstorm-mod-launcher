@@ -140,7 +140,7 @@ namespace SandstormModLauncher.ViewModels
             OnServerStateChanged();
         }
 
-        private void ReloadServerInstall()
+        internal void ReloadServerInstall()
         {
             ServerInstall = ServerInstall.Detect(State.Settings.ServerDirOverride);
             SaveSettingsSoon();
@@ -154,7 +154,7 @@ namespace SandstormModLauncher.ViewModels
         {
             RaiseMany(nameof(ServerFound), nameof(ServerDir), nameof(ServerBuild), nameof(ServerRemote), nameof(ServerLocal), nameof(ServerName), nameof(ServerJoinPassword),
                       nameof(ServerMaxPlayersText), nameof(ServerPortText), nameof(ServerQueryPortText), nameof(ServerRconPortText), nameof(ServerRconFromNetwork),
-                      nameof(ServerShowLog), nameof(ServerCheats), nameof(ServerGslt), nameof(ServerGameStats), nameof(ServerExtraArgs), nameof(ServerRemoteHost),
+                      nameof(ServerShowLog), nameof(ServerCheats), nameof(ServerGslt), nameof(ServerGameStats), nameof(ServerGameStatsToken), nameof(ServerExtraArgs), nameof(ServerRemoteHost),
                       nameof(ServerRemotePortText), nameof(ServerRemotePassword), nameof(ServerUseMapCycle), nameof(MapCycleFile), nameof(MapCycleIsDefault),
                       nameof(ServerAdmins), nameof(ServerModsEnabled), nameof(ServerModIds), nameof(ServerRconAddress), nameof(ServerUseOwnArgs),
                       nameof(ServerUsesLauncherArgs), nameof(ServerOwnArgs), nameof(ServerModioEmail), nameof(ServerModioCode), nameof(ModioCodeHint));
@@ -244,6 +244,7 @@ namespace SandstormModLauncher.ViewModels
         public bool ServerCheats { get => State.Settings.ServerCheats; set => SetServerSetting(() => State.Settings.ServerCheats = value); }
         public string ServerGslt { get => State.Settings.ServerGslt; set => SetServerSetting(() => State.Settings.ServerGslt = (value ?? "").Trim()); }
         public bool ServerGameStats { get => State.Settings.ServerGameStats; set => SetServerSetting(() => State.Settings.ServerGameStats = value); }
+        public string ServerGameStatsToken { get => State.Settings.ServerGameStatsToken; set => SetServerSetting(() => State.Settings.ServerGameStatsToken = (value ?? "").Trim()); }
         public string ServerExtraArgs { get => State.Settings.ServerExtraArgs; set => SetServerSetting(() => State.Settings.ServerExtraArgs = value ?? ""); }
         public string ServerRemoteHost
         {
@@ -277,10 +278,10 @@ namespace SandstormModLauncher.ViewModels
             RaiseMainAction();
         }
 
-        public string ServerCommandLine => serverPlan?.IsValid == true ? "InsurgencyServer.exe " + serverPlan.ShownCommandLine : "";
+        public string ServerCommandLine => serverPlan?.IsValid == true && !ServerRemote ? "InsurgencyServer.exe " + serverPlan.ShownCommandLine : "";
         public string ServerPlanError => ServerRemote ? null : serverPlan == null ? T("Pick a map and scenario in Play first.") : serverPlan.Error;
         public string ServerMatchSummary => CurrentPlan?.IsValid != true ? T("No match set up in Play yet")
-            : MapSummary + " · " + ModeSummary + " · " + RulesSummary + " · " + MutatorSummary;
+            : MapSummary + " · " + ModeSummary + " · " + (serverPlan?.OwnRules == true ? T("the server's own rules") : RulesSummary) + " · " + MutatorSummary;
         public string ServerMatchMods => serverPlan == null || serverPlan.MatchModIds.Count == 0 ? "" : F("This match uses mods {0}.", string.Join(", ", serverPlan.MatchModIds));
 
         // ------------------------------------------------------------------ start / stop
@@ -449,9 +450,27 @@ namespace SandstormModLauncher.ViewModels
             UpdateServerPlan();
         }
 
+        /// <summary>
+        /// True when the list on screen is still what the file says. An edit made outside the launcher since the list was
+        /// read (the page's own "open the file" button) is never written over: the list is read again and nothing changes
+        /// (Move/Remove wrote the old list back over the admin's new lines, 2026-10-02 audit).
+        /// </summary>
+        private bool CycleUnchangedOnDisk()
+        {
+            string file = MapCycleFile;
+            string disk;
+            try { disk = file != null && File.Exists(file) ? MapCycle.Render(MapCycle.Parse(File.ReadAllText(file))) : ""; }
+            catch (Exception ex) { AppLog.Warn("Map cycle: " + ex.Message); disk = null; }
+            if (disk == MapCycle.Render(MapCycleItems.Select(i => i.Entry))) return true;
+            LoadMapCycle();
+            UpdateServerPlan();
+            ShowToast("The map cycle file was changed outside the launcher: it was read again, nothing was changed");
+            return false;
+        }
+
         private void EditCycle(MapCycleItem item, Action<List<MapCycleEntry>, int> change)
         {
-            if (item == null) return;
+            if (item == null || !CycleUnchangedOnDisk()) return;
             var entries = MapCycleItems.Select(i => i.Entry).ToList();
             int at = entries.IndexOf(item.Entry);
             if (at < 0) return;
@@ -461,7 +480,7 @@ namespace SandstormModLauncher.ViewModels
 
         private void AddMatchToCycle()
         {
-            if (CurrentPlan?.IsValid != true) return;
+            if (CurrentPlan?.IsValid != true || !CycleUnchangedOnDisk()) return;
             var entries = MapCycleItems.Select(i => i.Entry).ToList();
             entries.Add(MapCycle.For(CurrentPlan));
             SaveMapCycle(entries);
@@ -565,6 +584,9 @@ namespace SandstormModLauncher.ViewModels
             if (plan.Match == null || plan.Url == null) { ShowToast("Pick a map and scenario in Play first."); return; }
             var r = await Task.Run(() => Server.Travel(plan));
             ServerOutput = r.Ok ? F("Loading {0} on the server.", MapSummary) : r.Delivered ? T("Sent; the server is busy loading.") : F("Not loaded: {0}", r.Error);
+            // Mutators the server was started with stay on every map until it restarts.
+            var stuck = ServerService.StuckMutators(plan, Server.RunningMutators(plan));
+            if ((r.Ok || r.Delivered) && stuck.Count > 0) ServerOutput += " " + F("{0} stay on until the server restarts (they are on its command line).", string.Join(", ", stuck));
             ShowToast(r.Ok || r.Delivered ? "Loading the match on the server" : "The server did not take the match");
         }
 

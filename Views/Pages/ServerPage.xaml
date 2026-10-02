@@ -242,6 +242,10 @@
                                     <TextBlock Text="Players earn XP and stats here (needs the token and no join password)." Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
+                            <StackPanel Visibility="{Binding ServerGameStats, Converter={StaticResource Vis}}">
+                                <TextBlock Text="Game stats token" Style="{StaticResource Label}" />
+                                <TextBox Text="{Binding ServerGameStatsToken, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="from gamestats.sandstorm.game, sign in with Steam" />
+                            </StackPanel>
                             <TextBlock Text="Extra command-line options" Style="{StaticResource Label}" />
                             <TextBox Text="{Binding ServerExtraArgs, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="added to the end of the server's command line" />
                         </StackPanel>
@@ -425,6 +429,13 @@
                             <Border Style="{StaticResource Well}" Padding="10,8">
                                 <TextBlock Text="{Binding ServerMatchSummary}" FontSize="13" TextWrapping="Wrap" />
                             </Border>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerOwnRules}" Margin="0,10,0,0"
+                                      Visibility="{Binding ServerUsesLauncherArgs, Converter={StaticResource Vis}}">
+                                <StackPanel>
+                                    <TextBlock Text="Use the rules in the server's Game.ini" FontSize="13.5" />
+                                    <TextBlock Text="Rules, bots and AI teammates stay as you set them in the server's Game.ini. Play gives only the map, scenario, lighting and mutators." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
                             <ItemsControl ItemsSource="{Binding ServerWarnings}" Margin="0,6,0,0" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>

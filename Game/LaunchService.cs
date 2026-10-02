@@ -99,13 +99,45 @@ namespace SandstormModLauncher.Game
         }
 
         /// <summary>Restart fingerprint the running game was started with.</summary>
-        public string ActiveRestartKey()
+        public string ActiveRestartKey() => ActiveRestartKey(state.Settings, monitor.ProcessStartUtc, state.Rules);
+
+        /// <summary>"Mode|Key" of the rules the running game read from Game.ini at its start.</summary>
+        public List<string> ActiveRuleKeys() => ActiveRuleKeys(state.Settings, monitor.ProcessStartUtc);
+
+        public static string ActiveRestartKey(AppSettings s, DateTime? processStartUtc, RulesDb db)
+        {
+            // Started by the launcher: with its rules and its official ruleset (a start argument).
+            if (StartedByLauncher(s, processStartUtc) && s.GameStartedWithRulesHash != null) return s.GameStartedWithRulesHash;
+            // Started some other way after the last write (Steam, a shortcut): Game.ini's rules, but no ruleset
+            // (the ruleset of an earlier launcher start was taken for active, 2026-10-02 audit).
+            if (processStartUtc.HasValue && s.LastRulesWriteUtc != default && s.LastRulesWriteUtc <= processStartUtc.Value)
+                return s.LastWrittenIniPart != null ? LaunchPlanner.CombineRestartKey(s.LastWrittenIniPart, "") : s.LastWrittenRulesHash;
+            if (s.LastRulesWriteUtc == default) return LaunchPlanner.RestartKeyFor(new Profile(), db);
+            return s.GameStartedWithRulesHash ?? "unknown";
+        }
+
+        public static List<string> ActiveRuleKeys(AppSettings s, DateTime? processStartUtc)
+        {
+            if (StartedByLauncher(s, processStartUtc) && s.GameStartedWithRuleKeys != null) return s.GameStartedWithRuleKeys;
+            if (processStartUtc.HasValue && s.LastRulesWriteUtc != default && s.LastRulesWriteUtc <= processStartUtc.Value)
+                return s.LastWrittenRuleKeys ?? new List<string>();
+            return s.GameStartedWithRuleKeys ?? new List<string>();
+        }
+
+        /// <summary>The running game is the one the launcher started last (its process began within the start wait).</summary>
+        public static bool StartedByLauncher(AppSettings s, DateTime? processStartUtc)
+        {
+            if (!processStartUtc.HasValue || s.GameStartedAtUtc == default) return false;
+            return processStartUtc.Value >= s.GameStartedAtUtc.AddSeconds(-5) && processStartUtc.Value <= s.GameStartedAtUtc.AddSeconds(Math.Max(120, s.StartTimeoutSec));
+        }
+
+        /// <summary>Remembers what the game the launcher starts now reads at its start.</summary>
+        private void NoteGameStart(LaunchPlan plan)
         {
             var s = state.Settings;
-            if (monitor.ProcessStartUtc.HasValue && s.LastRulesWriteUtc != default && s.LastRulesWriteUtc <= monitor.ProcessStartUtc.Value)
-                return s.LastWrittenRulesHash;
-            if (s.LastRulesWriteUtc == default) return LaunchPlanner.RestartKeyFor(new Profile(), state.Rules);
-            return s.GameStartedWithRulesHash ?? "unknown";
+            s.GameStartedWithRulesHash = plan?.RestartKey ?? LaunchPlanner.RestartKeyFor(new Profile(), state.Rules);
+            s.GameStartedWithRuleKeys = new List<string>(s.LastWrittenRuleKeys ?? new List<string>());
+            s.GameStartedAtUtc = DateTime.UtcNow;
         }
 
         public async Task<LaunchReport> Run(LaunchPlan plan, LaunchOptions options, IProgress<LaunchUpdate> progress, CancellationToken ct)
@@ -156,7 +188,7 @@ namespace SandstormModLauncher.Game
                 bool restart = monitor.IsRunning && (options.ForceRestart || (options.RestartIfNeeded && NeedsRestart(plan)));
                 if (restart)
                 {
-                    Report(2, StepState.Active, T("Restarting so the new AI teammate count applies"));
+                    Report(2, StepState.Active, T("Restarting so the settings read at game start apply"));
                     await StopGame(ct);
                 }
                 if (!monitor.IsRunning)
@@ -172,7 +204,7 @@ namespace SandstormModLauncher.Game
                     PrepareConsoleKey();
                     StartGame(plan);
                     startedNow = true;
-                    state.Settings.GameStartedWithRulesHash = plan.RestartKey;
+                    NoteGameStart(plan);
                     var sw = Stopwatch.StartNew();
                     while (!monitor.IsRunning && sw.Elapsed < TimeSpan.FromSeconds(Math.Max(120, state.Settings.StartTimeoutSec)))
                     {
@@ -289,7 +321,9 @@ namespace SandstormModLauncher.Game
                 // from Game.ini), then the console commands (cheats, the versus AI difficulty, the player's own), run
                 // by the game as the player's own, also over RCON.
                 current = 6;
-                var props = startedNow ? new List<KeyValuePair<string, string>>() : plan.LiveProperties;
+                // A game that was already running: also the rules its Game.ini set at start that this match leaves at the default.
+                var props = startedNow ? new List<KeyValuePair<string, string>>()
+                          : plan.LiveProperties.Concat(state.Settings.ApplyLiveRules ? LaunchPlanner.LiveResets(plan, state.Rules, ActiveRuleKeys()) : Enumerable.Empty<KeyValuePair<string, string>>()).ToList();
                 var done = new List<string>();
                 var problems = new List<string>();
                 if (props.Count > 0)
@@ -461,8 +495,11 @@ namespace SandstormModLauncher.Game
         /// </summary>
         public static string TravelResets(LaunchPlan plan) => TravelResets(plan, plan.TravelUrl);
 
-        /// <summary>The same for another URL of the plan's match (a dedicated server's).</summary>
-        public static string TravelResets(LaunchPlan plan, string url)
+        /// <summary>
+        /// The same for another URL of the plan's match (a dedicated server's). <paramref name="rules"/> false = the rules are the
+        /// server's own (its Game.ini): no rule option is reset, or the URL would override them with the game's defaults.
+        /// </summary>
+        public static string TravelResets(LaunchPlan plan, string url, bool rules = true)
         {
             var have = new HashSet<string>(url.Split('?').Skip(1).Select(o => o.Split('=')[0]), StringComparer.OrdinalIgnoreCase);
             var sb = new System.Text.StringBuilder();
@@ -470,10 +507,15 @@ namespace SandstormModLauncher.Game
             Reset("game", "");
             Reset("Mutators", "");
             Reset("bSoloGame", "0");
-            if (plan.Mode != null)
+            string UrlValue(string v) => LaunchPlanner.IsTrue(v) ? "1" : v.Equals("False", StringComparison.OrdinalIgnoreCase) ? "0" : v;
+            if (plan.Mode != null && rules)
                 foreach (var key in LaunchPlanner.UrlOptions)
-                    if (plan.Mode.Defaults.TryGetValue(key, out var def) && def != null)
-                        Reset(key, LaunchPlanner.IsTrue(def) ? "1" : def.Equals("False", StringComparison.OrdinalIgnoreCase) ? "0" : def);
+                {
+                    // A switch the match turns off is not in its URL (only "on" is written): the reset must say 0, not the
+                    // mode's default (kill feed and death camera came back on with Realism, 2026-10-02 audit).
+                    if (plan.Overrides.TryGetValue(key, out var own) && own != null) Reset(key, UrlValue(own));
+                    else if (plan.Mode.Defaults.TryGetValue(key, out var def) && def != null) Reset(key, UrlValue(def));
+                }
             return sb.ToString();
         }
 
@@ -550,6 +592,8 @@ namespace SandstormModLauncher.Game
             }
             state.Settings.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(plan, db);
             state.Settings.LastWrittenRulesHash = plan.RestartKey;
+            state.Settings.LastWrittenIniPart = LaunchPlanner.IniRestartPart(plan.Profile, db);
+            state.Settings.LastWrittenRuleKeys = LaunchPlanner.WrittenRuleKeys(plan, db);
             state.Settings.LastRulesWriteUtc = DateTime.UtcNow;
             return plan.Overrides.Count == 0 && sections == 0 ? T("Game defaults") : plan.Overrides.Count == 1 ? F("1 change for {0}", T(plan.ModeTitle)) : F("{0} changes for {1}", plan.Overrides.Count, T(plan.ModeTitle));
         }
@@ -563,7 +607,7 @@ namespace SandstormModLauncher.Game
             if (plan != null && plan.IsValid) WriteGameIni(plan);
             PrepareConsoleKey();
             StartGame(plan);
-            state.Settings.GameStartedWithRulesHash = plan?.RestartKey ?? LaunchPlanner.RestartKeyFor(new Profile(), state.Rules);
+            NoteGameStart(plan);
         }
 
         /// <summary>Makes sure a function key opens the console before the game starts (the ` key is missing on many layouts).</summary>
@@ -603,9 +647,19 @@ namespace SandstormModLauncher.Game
                 try
                 {
                     string dir = Path.IsPathRooted(file) ? Path.GetDirectoryName(file) : null;
-                    // A command that runs the game's exe needs its Steam app id too; programs it starts inherit it.
-                    if (install.Store != "Epic") { Environment.SetEnvironmentVariable("SteamAppId", GameInstall.SteamAppId); Environment.SetEnvironmentVariable("SteamGameId", GameInstall.SteamAppId); }
-                    Process.Start(new ProcessStartInfo(file, cmdArgs) { UseShellExecute = true, WorkingDirectory = dir ?? "" });
+                    // A command that runs the game's exe needs its Steam app id too; programs it starts inherit it. Only for
+                    // this start: a dedicated server or SteamCMD started later must not run as the game (app 581320).
+                    string oldApp = Environment.GetEnvironmentVariable("SteamAppId"), oldGame = Environment.GetEnvironmentVariable("SteamGameId");
+                    try
+                    {
+                        if (install.Store != "Epic") { Environment.SetEnvironmentVariable("SteamAppId", GameInstall.SteamAppId); Environment.SetEnvironmentVariable("SteamGameId", GameInstall.SteamAppId); }
+                        Process.Start(new ProcessStartInfo(file, cmdArgs) { UseShellExecute = true, WorkingDirectory = dir ?? "" });
+                    }
+                    finally
+                    {
+                        Environment.SetEnvironmentVariable("SteamAppId", oldApp);
+                        Environment.SetEnvironmentVariable("SteamGameId", oldGame);
+                    }
                 }
                 catch (Exception ex) { throw new LaunchException(F("Your start command could not run ({0}). Check it in Settings > Launching.", ex.Message)); }
                 return;

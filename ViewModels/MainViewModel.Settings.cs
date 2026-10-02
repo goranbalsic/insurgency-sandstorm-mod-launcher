@@ -588,6 +588,11 @@ namespace SandstormModLauncher.ViewModels
         {
             string level = editMapLevel.Trim(), scenario = editMapScenario.Trim();
             if (level.Length == 0 || scenario.Length == 0) return;
+            if (!GameCatalog.SafeId(level) || !GameCatalog.SafeId(scenario))
+            {
+                ShowToast("The level and scenario can only have letters, digits and _ - . /");
+                return;
+            }
             var entry = editingMap ?? new CustomMapEntry();
             entry.Label = string.IsNullOrWhiteSpace(editMapLabel) ? level.Substring(level.LastIndexOf('/') + 1) : editMapLabel.Trim();
             entry.Level = level;

@@ -305,6 +305,21 @@ namespace SandstormModLauncher.Services
                 var again = MapCycle.Parse(MapCycle.Render(moved));
                 if (again.Count != 5 || again[0].Raw != dyn) fail("map cycle: a moved multi-line entry did not stay whole");
             }
+            // A comment after the closing bracket of a multi-line entry: still one entry, kept whole when another is removed.
+            string plainCommented = "(Scenario=\"Scenario_Crossing_Checkpoint_Security\",\r\nLighting=\"Night\") // night one";
+            var plainEntry = MapCycle.Parse(plainCommented + "\r\n");
+            if (plainEntry.Count != 1 || plainEntry[0].Line != plainCommented || plainEntry[0].Scenario != "Scenario_Crossing_Checkpoint_Security")
+                fail("map cycle: an entry with a comment after it is not kept as written: " + string.Join(" | ", plainEntry.Select(e => e.Line)));
+            string commented = "(Scenario=\"Scenario_Crossing_Checkpoint_Security\",\r\nOptions=\"?Mutators=Fullkit?Label=CP\") // dynamic";
+            var withComment = MapCycle.Parse(commented + "\r\nScenario_Farmhouse_Checkpoint_Security\r\n");
+            if (withComment.Count != 2 || withComment[0].Raw != commented || withComment[0].Scenario != "Scenario_Crossing_Checkpoint_Security")
+                fail("map cycle: an entry with a comment after it was split: " + string.Join(" | ", withComment.Select(e => e.Line)));
+            else
+            {
+                withComment.RemoveAt(1);
+                var left = MapCycle.Parse(MapCycle.Render(withComment));
+                if (left.Count != 1 || left[0].Raw != commented) fail("map cycle: removing another entry left half of the commented one: " + string.Join(" | ", left.Select(e => e.Line)));
+            }
             string[] scenarios = { "Scenario_Farmhouse_Checkpoint_Security", "Scenario_Town_Push_Insurgents", "Scenario_Bab_Survival", "Scenario_Crossing_Skirmish" };
             for (int i = 0; i < 200; i++)
             {
@@ -504,6 +519,11 @@ namespace SandstormModLauncher.Services
             ServerArgs.FromBatch("InsurgencyServer-Win64-Shipping.exe Map -Port=%GAMEPORT%", notes);
             if (notes.Count != 1 || !notes[0].Contains("GAMEPORT")) fail(".bat: an unset variable is not noted");
             if (ServerArgs.FromBatch("@echo off\r\necho Starting InsurgencyServer\r\ntaskkill /im InsurgencyServer.exe\r\npause") != null) fail(".bat: a file that does not start the server gave options");
+            // The program in a variable, and a cd into a folder named after the server (both refused before, 2026-10-02 audit).
+            string viaVar = ServerArgs.FromBatch("@echo off\r\nset SERVER=D:\\Games\\sandstorm_server\\InsurgencyServer.exe\r\n\"%SERVER%\" Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security -Port=27102 -log\r\n");
+            if (viaVar != "Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security -Port=27102 -log") fail(".bat: the program in a variable gave " + (viaVar ?? "nothing"));
+            string afterCd = ServerArgs.FromBatch("cd /d \"D:\\Games\\InsurgencyServer\"\r\nstart InsurgencyServer.exe Town?Scenario=Scenario_Hideout_Checkpoint_Security -log\r\n");
+            if (afterCd != "Town?Scenario=Scenario_Hideout_Checkpoint_Security -log") fail(".bat: a cd into the server's folder gave " + (afterCd ?? "nothing"));
             if (ServerArgs.Clean("start InsurgencyServer.exe Oilfield -log") != "Oilfield -log" || ServerArgs.Clean("Oilfield\r\n-log ^\r\n-Mods") != "Oilfield -log -Mods") fail(".bat: a pasted line not cleaned");
             if (ServerArgs.Clean("Oilfield -hostname=MyInsurgencyServer -log") != "Oilfield -hostname=MyInsurgencyServer -log") fail("a server name with InsurgencyServer in it was cut: " + ServerArgs.Clean("Oilfield -hostname=MyInsurgencyServer -log"));
             if (ServerArgs.FirstMap("-Mods -log") != null) fail("a line without a map has a first map");
@@ -538,17 +558,27 @@ namespace SandstormModLauncher.Services
             }
             finally { try { System.IO.Directory.Delete(fake, true); } catch { } }
 
-            // Vote kick: on writes the guide's two lines once; off takes only the launcher's own lines out again.
-            string on = ServerPlanner.ApplyVoteKick("[Rcon]\r\nbEnabled=True\r\n", true);
-            if (!ServerPlanner.VoteKickOn(on)) fail("vote kick: switched on but not in Game.ini:\n" + on);
-            if (ServerPlanner.ApplyVoteKick(on, true) != on) fail("vote kick: switching it on twice changed Game.ini");
+            // Vote kick: on writes the guide's two lines once (next to the admin's own vote issues); off takes out only what
+            // the launcher added (2026-10-02 audit: the guide's lines written by hand went, and so did other issues).
+            string on = ServerPlanner.ApplyVoteKick("[Rcon]\r\nbEnabled=True\r\n", true, null, out bool ours1);
+            if (!ServerPlanner.VoteKickOn(on) || !ours1) fail("vote kick: switched on but not in Game.ini, or not taken for the launcher's:\n" + on);
+            if (ServerPlanner.ApplyVoteKick(on, true, true, out _) != on) fail("vote kick: switching it on twice changed Game.ini");
             if (on.Split('\n').Count(l => l.Trim().StartsWith("bVotingEnabled")) != 1) fail("vote kick: bVotingEnabled is not there exactly once");
-            string off = ServerPlanner.ApplyVoteKick(on, false);
-            if (ServerPlanner.VoteKickOn(off) || off.Contains("TeamInfo") || !off.Contains("[Rcon]")) fail("vote kick: switched off but Game.ini is:\n" + off);
+            string off = ServerPlanner.ApplyVoteKick(on, false, true, out bool ours2);
+            if (ServerPlanner.VoteKickOn(off) || off.Contains("TeamInfo") || !off.Contains("[Rcon]") || ours2) fail("vote kick: switched off but Game.ini is:\n" + off);
             string was = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=False\r\n";
-            if (!ServerPlanner.VoteKickOn(ServerPlanner.ApplyVoteKick(was, true))) fail("vote kick: an old bVotingEnabled=False was not replaced");
+            if (!ServerPlanner.VoteKickOn(ServerPlanner.ApplyVoteKick(was, true, null, out _))) fail("vote kick: an old bVotingEnabled=False was not replaced");
             string own = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=True\r\n+TeamVoteIssues=/Script/Insurgency.VoteIssueKick\r\n+TeamVoteIssues=/Script/Insurgency.VoteIssueOther\r\n";
-            if (ServerPlanner.ApplyVoteKick(own, false) != own) fail("vote kick: switching it off removed voting set up by hand with another issue");
+            foreach (bool? o in new bool?[] { null, false })
+                if (ServerPlanner.ApplyVoteKick(own, false, o, out _) != own) fail("vote kick: switching it off removed voting set up by hand with another issue");
+            string guide = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=True\r\nTeamVoteIssues=/Script/Insurgency.VoteIssueKick\r\n";
+            if (ServerPlanner.ApplyVoteKick(guide, false, false, out _) != guide) fail("vote kick: switching it off removed the guide's lines the admin wrote by hand");
+            string surrender = "[/Script/Insurgency.TeamInfo]\r\nbVotingEnabled=False\r\n+TeamVoteIssues=/Script/Insurgency.VoteIssueSurrender\r\n";
+            string both = ServerPlanner.ApplyVoteKick(surrender, true, false, out bool ours3);
+            if (!ServerPlanner.VoteKickOn(both) || !ours3 || !UeIni.ReadArray(both, ServerPlanner.TeamInfoSection, "TeamVoteIssues").Contains("/Script/Insurgency.VoteIssueSurrender"))
+                fail("vote kick: switched on, the admin's other vote issue went:\n" + both);
+            string back = ServerPlanner.ApplyVoteKick(both, false, true, out _);
+            if (ServerPlanner.VoteKickOn(back) || !back.Contains("+TeamVoteIssues=/Script/Insurgency.VoteIssueSurrender")) fail("vote kick: switched off again, the admin's other vote issue went or the kick stayed:\n" + back);
         }
 
         /// <summary>The player's own start command: program and arguments, and where the launcher's options go.</summary>

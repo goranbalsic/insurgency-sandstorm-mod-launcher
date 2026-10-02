@@ -65,8 +65,10 @@ namespace SandstormModLauncher.ViewModels
 
         private void BuildRules()
         {
-            rulesMode = CurrentMode ?? State.Rules.Modes.First();
+            // No known mode for the scenario: no rules (a rescan put the first mode's rules back, 2026-10-02 audit).
+            rulesMode = CurrentMode;
             BuildRuleItems();
+            UpdateCategoryCounts();
             BuildPresets();
         }
 
@@ -76,10 +78,13 @@ namespace SandstormModLauncher.ViewModels
             // The preset lists follow co-op or versus even for a scenario without known rules (a custom map entry).
             PresetsFollowScenario();
             var m = CurrentMode;
-            if (m == null) return;
             if (m == rulesMode) return;
+            // A scenario whose game mode has no known rules (a custom map entry, a mod's own mode): no rules to edit; the
+            // tab kept the mode picked before, whose changes this launch would not send (2026-10-02 audit).
             rulesMode = m;
             BuildRuleItems();
+            UpdateCategoryCounts();
+            Raise(nameof(RulesModeTitle));
         }
 
         public string RulesModeTitle => rulesMode == null ? "" : T(rulesMode.Name);
@@ -87,11 +92,20 @@ namespace SandstormModLauncher.ViewModels
         private void BuildRuleItems()
         {
             RuleItems.Clear();
-            if (rulesMode == null) return;
+            if (rulesMode == null)
+            {
+                // No rules to list: no categories either (they stayed, in the language picked before, 2026-10-02 audit).
+                RuleCategories.Clear();
+                ruleCategory = null;
+                Raise(nameof(RuleCategory));
+                UpdateCategoryCounts();
+                return;
+            }
             foreach (var p in State.Rules.Properties)
             {
                 if (SquadKeys.Contains(p.Key) || !rulesMode.Defaults.TryGetValue(p.Key, out var def)) continue;
-                RuleItems.Add(new RuleItem(p, rulesMode.Cls, def, RuleGet, (cls, key, v) => { RuleSet(cls, key, v); OnRuleEdited(); }));
+                // The default the launch uses (the game's, or the launcher's where it differs: what the screen shows is sent).
+                RuleItems.Add(new RuleItem(p, rulesMode.Cls, SetupEngine.LauncherDefault(State.Rules, rulesMode.Cls, p.Key) ?? def, RuleGet, (cls, key, v) => { RuleSet(cls, key, v); OnRuleEdited(); }));
             }
             // Settings other modes have: listed read-only so every mode shows the full picture.
             foreach (var p in State.Rules.Properties)

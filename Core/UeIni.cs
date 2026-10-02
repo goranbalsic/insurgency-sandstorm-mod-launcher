@@ -178,7 +178,7 @@ namespace SandstormModLauncher.Core
             }
             foreach (var s in ours)
             {
-                if (s.Values.Count == 0) continue;
+                if (s.Values.Count == 0 || !SafeSectionName(s.Name)) continue;
                 var target = blocks.FirstOrDefault(b => string.Equals(b.Name, s.Name, StringComparison.OrdinalIgnoreCase));
                 if (target.Lines == null) { target = (s.Name, new List<string> { "[" + s.Name + "]" }); blocks.Add(target); }
                 int at = target.Lines.Count;
@@ -199,16 +199,31 @@ namespace SandstormModLauncher.Core
             return sb.ToString().TrimEnd('\r', '\n') + "\r\n";
         }
 
+        /// <summary>A section name that stays one header line (a name from a mod's file could carry a line break and more sections).</summary>
+        public static bool SafeSectionName(string name) => name != null && name.IndexOfAny(new[] { '\r', '\n', '[', ']' }) < 0;
+
         public static string Render(IEnumerable<Section> sections)
         {
             var sb = new StringBuilder();
-            foreach (var s in sections.Where(s => s.Values.Count > 0))
+            foreach (var s in sections.Where(s => s.Values.Count > 0 && SafeSectionName(s.Name)))
             {
                 sb.Append('[').Append(s.Name).Append("]\r\n");
                 foreach (var v in s.Values) sb.Append(v.Key).Append('=').Append(v.Value).Append("\r\n");
                 sb.Append("\r\n");
             }
             return sb.ToString().TrimEnd('\r', '\n');
+        }
+
+        /// <summary>
+        /// The value the game uses for a key: sections of the same name count as one, and the first value wins (a reader that
+        /// took the last section or value logged in to RCON with a password the game did not use, 2026-10-02 audit).
+        /// </summary>
+        public static string FirstValue(string text, string section, string key)
+        {
+            foreach (var s in Parse(text).Where(x => x.Name.Equals(section, StringComparison.OrdinalIgnoreCase)))
+                foreach (var v in s.Values)
+                    if (KeyOf(v.Key + "=").Equals(key, StringComparison.OrdinalIgnoreCase)) return v.Value.Trim();
+            return null;
         }
 
         /// <summary>Values of a key inside a section, following Unreal array operators (+ - . !).</summary>

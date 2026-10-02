@@ -1,3 +1,11 @@
+**1.11.0**
+
+- Server: keep the rules in its own Game.ini, game stats token, match mutators on the command line.
+- AI teammates: the number shown is the AI you get (the game counts you too).
+- Rules put back to default reach a running game; switched-off rules stay off on map loads.
+- Hand edits to the map cycle, vote kick lines and Admins.txt are kept.
+- Problem reports hide the server token and mod.io code; names from mod files are checked.
+
 **1.10.0**
 
 - Server mods work again. Since game update 1.20 the server logs in to mod.io with an e-mailed security code and loads the mods its own account is subscribed to.

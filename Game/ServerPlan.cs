@@ -64,7 +64,7 @@ namespace SandstormModLauncher.Game
                     int last = i;
                     while (Close(whole) < 0 && last + 1 < lines.Length) whole += "\n" + lines[++last];
                     int close = Close(whole);
-                    if (close >= 0 && whole.Substring(close + 1).Trim().Length == 0)
+                    if (close >= 0)
                     {
                         var e = new MapCycleEntry();
                         bool known = true;
@@ -78,8 +78,9 @@ namespace SandstormModLauncher.Game
                             else if (k.Equals("Mode", StringComparison.OrdinalIgnoreCase)) e.Mode = v;
                             else { known = false; if (k.Equals("Options", StringComparison.OrdinalIgnoreCase)) e.Options = v; }
                         }
-                        // Settings the launcher does not know stay exactly as they were written, line breaks too.
-                        if (!known || !e.IsEntry) e.Raw = whole.TrimEnd().Replace("\n", "\r\n");
+                        // Settings the launcher does not know, or text after the bracket (a comment), stay exactly as they were
+                        // written, line breaks too (with a comment after it, Remove left half an entry behind, 2026-10-02 audit).
+                        if (!known || !e.IsEntry || whole.Substring(close + 1).Trim().Length > 0) e.Raw = whole.TrimEnd().Replace("\n", "\r\n");
                         list.Add(e);
                         i = last;
                         continue;
@@ -173,19 +174,30 @@ namespace SandstormModLauncher.Game
         public int GamePort, QueryPort, RconPort;
         /// <summary>The first map, for the progress text.</summary>
         public string StartMap;
+        /// <summary>The rules come from the server's own Game.ini: the URL and map loads carry no rule options.</summary>
+        public bool OwnRules;
+        /// <summary>The vote kick lines in GameIni are the launcher's (null = Game.ini's voting was not touched).</summary>
+        public bool? VoteKickOurs;
+        /// <summary>The match's mutators, on the command line (-mutators=): they stay on every map while the server runs.</summary>
+        public List<string> StartMutators = new List<string>();
+        /// <summary>The match to load on a running server, when the server starts on another map first (a mod's map).</summary>
+        public string MatchUrl;
 
         public bool IsValid => Error == null;
         public string CommandLine => OwnArgs ?? (Url == null ? "" : Url + (Args.Count > 0 ? " " + string.Join(" ", Args) : ""));
 
         /// <summary>The command line to show and log: the Steam server token, the join password and a security code hidden.</summary>
-        public string ShownCommandLine => ServerModio.HideCode(Regex.Replace(Regex.Replace(Regex.Replace(CommandLine, @"(-GSLTToken=)\S+", "$1<your token>", RegexOptions.IgnoreCase),
-                                                        @"(\?Password=)[^?\s]+", "$1<password>", RegexOptions.IgnoreCase),
-                                                        @"(-(?:RconPassword|GameStatsToken)=)\S+", "$1<hidden>", RegexOptions.IgnoreCase));
+        // A quoted value is hidden whole (-RconPassword="open sesame" showed "sesame", 2026-10-02 audit).
+        public string ShownCommandLine => ServerModio.HideCode(Regex.Replace(Regex.Replace(Regex.Replace(CommandLine, @"(-GSLTToken=)(?:""[^""]*""?|[^\s""]+)", "$1<your token>", RegexOptions.IgnoreCase),
+                                                        @"(\?Password=)(?:""[^""]*""?|[^?\s""]+)", "$1<password>", RegexOptions.IgnoreCase),
+                                                        @"(-(?:RconPassword|GameStatsToken)=)(?:""[^""]*""?|[^\s""]+)", "$1<hidden>", RegexOptions.IgnoreCase));
     }
 
     public static class ServerPlanner
     {
         public const string AdminsName = "Admins";
+        /// <summary>Name start of a map cycle file the launcher copies into the server's Config\Server folder.</summary>
+        public const string CopyPrefix = "Launcher_";
         private static readonly Regex SafePassword = new Regex(@"^[A-Za-z0-9_\-\.!@#\$%\^\*\+~]*$", RegexOptions.Compiled);
         private static readonly Regex SafeCycleName = new Regex(@"^[A-Za-z0-9_\-\.]+$", RegexOptions.Compiled);
 
@@ -197,35 +209,50 @@ namespace SandstormModLauncher.Game
             string.Equals(ruleset, "OfficialRules", StringComparison.OrdinalIgnoreCase) || string.Equals(ruleset, "RS_OfficialRules", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Player voting with the vote kick (the admin guide's [/Script/Insurgency.TeamInfo] lines). Switched off, only the
-        /// launcher's own lines go again: voting set up by hand with other vote issues stays as it is.
+        /// Player voting with the vote kick (the admin guide's [/Script/Insurgency.TeamInfo] lines). On: added to what is
+        /// there, the admin's other vote issues stay. Off: only lines the launcher added go again (<paramref name="ours"/>);
+        /// voting the admin set up by hand stays (switched off, the guide's lines written by hand were removed, and switched
+        /// on, the admin's other issues went, 2026-10-02 audit). <paramref name="ours"/> null = not known (settings from
+        /// 1.10.0 or older): then only a section with nothing but the launcher's two lines is taken for the launcher's.
+        /// <paramref name="oursAfter"/> = the vote kick in the result is the launcher's, remembered for the next start.
         /// </summary>
-        public static string ApplyVoteKick(string gameIni, bool on)
+        public static string ApplyVoteKick(string gameIni, bool on, bool? ours, out bool oursAfter)
         {
-            bool Ours(string section, string key) => section.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase)
-                                                     && (key.Equals("bVotingEnabled", StringComparison.OrdinalIgnoreCase) || key.Equals("TeamVoteIssues", StringComparison.OrdinalIgnoreCase));
+            string ini = gameIni ?? "";
+            const StringComparison ic = StringComparison.OrdinalIgnoreCase;
+            var lines = UeIni.Parse(ini).Where(x => x.Name.Equals(TeamInfoSection, ic)).SelectMany(x => x.Values).ToList();
             if (on)
-                return UeIni.MergeSections(gameIni ?? "", new[]
-                {
-                    new UeIni.Section(TeamInfoSection) { Values = new List<KeyValuePair<string, string>>
-                    {
-                        new KeyValuePair<string, string>("bVotingEnabled", "True"),
-                        new KeyValuePair<string, string>("TeamVoteIssues", VoteKickIssue),
-                    } }
-                }, (sec, key) => false);
-            var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase));
-            if (sec == null) return gameIni ?? "";
-            var issues = UeIni.ReadArray(gameIni ?? "", TeamInfoSection, "TeamVoteIssues");
-            bool onlyOurs = issues.All(i => i.Equals(VoteKickIssue, StringComparison.OrdinalIgnoreCase));
-            return onlyOurs ? UeIni.MergeSections(gameIni ?? "", new UeIni.Section[0], Ours) : gameIni ?? "";
+            {
+                // Already on (set up by hand, or by an earlier start): left as it is.
+                if (VoteKickOn(ini)) { oursAfter = ours ?? true; return ini; }
+                bool otherIssues = lines.Any(v => UeIni.KeyOf(v.Key + "=").Equals("TeamVoteIssues", ic));
+                ini = UeIni.MergeSections(ini, new[] { new UeIni.Section(TeamInfoSection) { Values = { new KeyValuePair<string, string>("bVotingEnabled", "True") } } }, (sec, key) => false);
+                ini = UeIni.EnsureLine(ini, TeamInfoSection, (otherIssues ? "+" : "") + "TeamVoteIssues=" + VoteKickIssue).TrimEnd('\r', '\n') + "\r\n";
+                oursAfter = true;
+                return ini;
+            }
+            oursAfter = false;
+            bool Kick(string text) => text.Equals("TeamVoteIssues=" + VoteKickIssue, ic) || text.Equals("+TeamVoteIssues=" + VoteKickIssue, ic);
+            bool onlyOurs = lines.Count > 0 && lines.All(v => Kick(v.Key + "=" + v.Value) || (v.Key.Equals("bVotingEnabled", ic) && LaunchPlanner.IsTrue(v.Value)));
+            if (!(ours ?? onlyOurs)) return ini;
+            // The launcher's own two lines out; a section left with nothing goes.
+            var kept = new List<string>();
+            string current = null;
+            foreach (var line in UeIni.Split(ini))
+            {
+                string t = line.Trim();
+                if (t.StartsWith("[") && t.EndsWith("]")) current = t.Substring(1, t.Length - 2);
+                else if (current != null && current.Equals(TeamInfoSection, ic) && (Kick(t) || t.Equals("bVotingEnabled=True", ic))) continue;
+                kept.Add(line);
+            }
+            return UeIni.MergeSections(string.Join("\r\n", kept), new UeIni.Section[0], (sec, key) => false);
         }
 
         /// <summary>True when the server's Game.ini has the vote kick switched on.</summary>
         public static bool VoteKickOn(string gameIni)
         {
-            var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(TeamInfoSection, StringComparison.OrdinalIgnoreCase));
-            return sec != null && sec.Values.Any(v => UeIni.KeyOf(v.Key + "=").Equals("bVotingEnabled", StringComparison.OrdinalIgnoreCase) && LaunchPlanner.IsTrue(v.Value.Trim()))
-                   && UeIni.ReadArray(gameIni, TeamInfoSection, "TeamVoteIssues").Any(i => i.Equals(VoteKickIssue, StringComparison.OrdinalIgnoreCase));
+            return LaunchPlanner.IsTrue(UeIni.FirstValue(gameIni ?? "", TeamInfoSection, "bVotingEnabled") ?? "")
+                   && UeIni.ReadArray(gameIni ?? "", TeamInfoSection, "TeamVoteIssues").Any(i => i.Equals(VoteKickIssue, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>Steam IDs (64-bit) from free text, one per line; anything else is reported.</summary>
@@ -261,12 +288,22 @@ namespace SandstormModLauncher.Game
         }
 
         /// <summary>The map cycle file in use: the chosen one, or MapCycle.txt in the server's Config\Server folder.</summary>
-        public static string MapCyclePath(AppSettings s, ServerInstall inst) =>
-            !string.IsNullOrWhiteSpace(s.ServerMapCycleFile) ? s.ServerMapCycleFile.Trim()
-            : inst?.ServerConfigDir == null ? null : Path.Combine(inst.ServerConfigDir, "MapCycle.txt");
+        public static string MapCyclePath(AppSettings s, ServerInstall inst)
+        {
+            if (!string.IsNullOrWhiteSpace(s.ServerMapCycleFile)) return s.ServerMapCycleFile.Trim();
+            if (inst?.ServerConfigDir == null) return null;
+            // Own options name their map cycle (-MapCycle=Name): that is the file the page shows and edits (it edited
+            // MapCycle.txt, which their server never read, 2026-10-02 audit).
+            string own = s.ServerUseOwnArgs && !s.ServerRemote ? ServerArgs.Value(ServerArgs.Clean(s.ServerOwnArgs), "MapCycle") : null;
+            return Path.Combine(inst.ServerConfigDir, (!string.IsNullOrEmpty(own) && SafeCycleName.IsMatch(own) ? own : "MapCycle") + ".txt");
+        }
 
-        /// <summary>The Play match as the server's first map: its own player count and join password instead of the offline ones.</summary>
-        private static string ServerUrl(LaunchPlan match, int maxPlayers, string password)
+        /// <summary>
+        /// The match's URL for the server: no offline-only options. <paramref name="maxPlayers"/> null = the server keeps its
+        /// own player count and join password (a server on another PC). <paramref name="mutators"/> false = the match's
+        /// mutators go on the command line instead (-mutators= stays for every map of the cycle, ?Mutators= only for one).
+        /// </summary>
+        private static string ServerUrl(LaunchPlan match, int? maxPlayers, string password, bool ownRules, bool mutators = true)
         {
             var parts = match.TravelUrl.Split('?');
             var url = new StringBuilder(parts[0]);
@@ -275,10 +312,16 @@ namespace SandstormModLauncher.Game
                 string key = opt.Split('=')[0];
                 if (key.Equals("bSoloGame", StringComparison.OrdinalIgnoreCase) || key.Equals("MaxPlayers", StringComparison.OrdinalIgnoreCase)
                     || key.Equals("Password", StringComparison.OrdinalIgnoreCase)) continue;
+                // URL options beat Game.ini: with the server's own rules, the match's rule options stay out (the admin's extra options stay).
+                if (ownRules && LaunchPlanner.UrlOptions.Contains(key) && !match.ExtraOptionKeys.Contains(key)) continue;
+                if (!mutators && key.Equals("Mutators", StringComparison.OrdinalIgnoreCase) && !match.ExtraOptionKeys.Contains(key)) continue;
                 url.Append('?').Append(opt);
             }
-            url.Append("?MaxPlayers=").Append(maxPlayers.ToString(CultureInfo.InvariantCulture));
-            if (password.Length > 0) url.Append("?Password=").Append(password);
+            if (maxPlayers.HasValue)
+            {
+                url.Append("?MaxPlayers=").Append(maxPlayers.Value.ToString(CultureInfo.InvariantCulture));
+                if (password.Length > 0) url.Append("?Password=").Append(password);
+            }
             return url.ToString();
         }
 
@@ -294,10 +337,10 @@ namespace SandstormModLauncher.Game
                 string args = ServerArgs.Clean(s.ServerOwnArgs);
                 string pw = ServerArgs.Value(args, "RconPassword");
                 int port = int.TryParse(ServerArgs.Value(args, "RconListenPort"), NumberStyles.None, CultureInfo.InvariantCulture, out int p) && p > 0 && p < 65536 ? p : 0;
-                if (!string.IsNullOrEmpty(pw)) return (port > 0 ? port : s.ServerRconPort, pw, true);
-                var sec = UeIni.Parse(gameIni ?? "").LastOrDefault(x => x.Name.Equals(RconSetup.Section, StringComparison.OrdinalIgnoreCase));
-                string Val(string key) => sec?.Values.LastOrDefault(v => v.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value?.Trim();
-                if (sec != null && LaunchPlanner.IsTrue(Val("bEnabled") ?? "") && !string.IsNullOrEmpty(Val("Password")))
+                // No port in the options: the server's own default (27015), not the launcher's setting for its servers.
+                if (!string.IsNullOrEmpty(pw)) return (port > 0 ? port : 27015, pw, true);
+                string Val(string key) => UeIni.FirstValue(gameIni ?? "", RconSetup.Section, key);
+                if (LaunchPlanner.IsTrue(Val("bEnabled") ?? "") && !string.IsNullOrEmpty(Val("Password")))
                     return (int.TryParse(Val("ListenPort"), NumberStyles.None, CultureInfo.InvariantCulture, out int ip) && ip > 0 && ip < 65536 ? ip : 27015, Val("Password"), true);
             }
             return (s.ServerRconPort, s.ServerRconPassword, false);
@@ -326,6 +369,18 @@ namespace SandstormModLauncher.Game
             // Own options start the server on this PC; a server on another PC is only reached over RCON.
             if (s.ServerUseOwnArgs && !s.ServerRemote) return BuildOwn(plan, match, s, inst, currentGameIni, account);
             if (match == null || !match.IsValid) { plan.Error = match?.Error ?? T("Pick a map and scenario in Play first."); return plan; }
+            if (s.ServerRemote)
+            {
+                // A server on another PC only gets the match over RCON: nothing here is installed, written or started
+                // (a server install on this PC was required, and missing or unfinished blocked the match, 2026-10-02 audit).
+                plan.OwnRules = s.ServerOwnRules;
+                plan.Url = ServerUrl(match, null, "", plan.OwnRules);
+                plan.StartMap = match.Map?.DisplayName ?? match.Level;
+                plan.Warnings.AddRange(match.Warnings);
+                if (match.Scenario.Source == ContentSource.Mod || match.MutatorInfos.Any(m => m.Source == ContentSource.Mod))
+                    plan.Warnings.Add(T("This match uses mods: the server must have them (its mod.io account subscribed to them)."));
+                return plan;
+            }
             if (inst == null || !inst.Found) { plan.Error = T("The dedicated server is not installed yet: install it on the Server page, or pick its folder there."); return plan; }
             if (inst.Unfinished) { plan.Error = T("The server's install did not finish: press Update the server to finish it."); return plan; }
             plan.Warnings.AddRange(match.Warnings);
@@ -334,7 +389,12 @@ namespace SandstormModLauncher.Game
             int maxPlayers = Math.Max(1, Math.Min(100, s.ServerMaxPlayers));
             string password = (s.ServerPassword ?? "").Trim();
             if (!SafePassword.IsMatch(password)) { plan.Error = T("The join password can only use letters, digits and - _ . ! @ # $ % ^ * + ~ (no spaces)."); return plan; }
-            plan.Url = ServerUrl(match, maxPlayers, password);
+            plan.OwnRules = s.ServerOwnRules;
+            // The match's mutators go on the command line: there they stay for every map, and a map cycle entry's own
+            // ?Mutators= adds to them; in the URL, an entry's list replaced them (verified on the server 2026-10-02,
+            // mod.io #1865932). Both at once loads one twice ("Cannot use mutator").
+            plan.StartMutators = new List<string>(match.Mutators);
+            plan.Url = ServerUrl(match, maxPlayers, password, plan.OwnRules, false);
             plan.StartMap = match.Map?.DisplayName ?? match.Level;
 
             // Mods the match needs: its map's and its mutators'.
@@ -369,13 +429,15 @@ namespace SandstormModLauncher.Game
                     cycle = Regex.Replace(cycle, @"[^A-Za-z0-9_\-\.]", "_");
                     isThere = false;
                 }
-                if (!isThere) plan.MapCycleCopyFrom = file;
+                if (!isThere)
+                {
+                    // Copied under a name of the launcher's: a chosen MapCycle.txt from elsewhere went over the server's own.
+                    plan.MapCycleCopyFrom = file;
+                    if (!cycle.StartsWith(CopyPrefix, StringComparison.OrdinalIgnoreCase)) cycle = CopyPrefix + cycle;
+                }
                 plan.MapCycleName = cycle;
                 var entries = MapCycle.Parse(File.ReadAllText(file));
                 if (!entries.Any(e => e.IsEntry)) plan.Warnings.Add(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."));
-                // Mutators in the start URL are per map: an entry with its own ?Mutators= has only those (mod.io #1865932).
-                if (match.Mutators.Count > 0 && entries.Any(e => e.IsEntry && MapCycle.MutatorsOf(e).Count > 0))
-                    plan.Warnings.Add(F("Map cycle entries with their own mutators use only those; the match's mutators ({0}) are not on those maps.", string.Join(", ", match.Mutators)));
                 plan.Args.Add("-MapCycle=" + cycle);
             }
 
@@ -383,11 +445,23 @@ namespace SandstormModLauncher.Game
             var badIds = new List<string>();
             var admins = SteamIds(s.ServerAdmins, badIds);
             foreach (var b in badIds) plan.Warnings.Add(F("Not a Steam ID (the 17-digit number starting with 7656119), left out of the admins: {0}", b));
+            // The server's Admins.txt as it is: with no admins typed here it is used as it is (it was not used at all), and
+            // admins only in the file are named before the list here replaces it (they went without a word, 2026-10-02 audit).
+            var inFile = new List<string>();
+            try
+            {
+                string adminsFile = inst.ServerConfigDir == null ? null : Path.Combine(inst.ServerConfigDir, AdminsName + ".txt");
+                if (adminsFile != null && File.Exists(adminsFile)) inFile = SteamIds(File.ReadAllText(adminsFile), new List<string>());
+            }
+            catch (Exception ex) { AppLog.Warn("Admins.txt: " + ex.Message); }
             if (admins.Count > 0)
             {
                 plan.AdminsText = string.Concat(admins.Select(a => a + "\r\n"));
                 plan.Args.Add("-AdminList=" + AdminsName);
+                var dropped = inFile.Where(a => !admins.Contains(a)).ToList();
+                if (dropped.Count > 0) plan.Warnings.Add(F("The server's Admins.txt also lists {0} admin(s) that are not in your list here: your list replaces the file (a copy is kept).", dropped.Count));
             }
+            else if (inFile.Count > 0) plan.Args.Add("-AdminList=" + AdminsName);
 
             // Mods
             var badMods = new List<string>();
@@ -408,7 +482,9 @@ namespace SandstormModLauncher.Game
                 plan.Args.Add("-ModDownloadTravelTo=" + plan.Url);
                 if (match.Scenario.Source == ContentSource.Mod)
                 {
-                    // A map from a mod does not exist until the download is done: start on an official map first.
+                    // A map from a mod does not exist until the download is done: start on an official map first. Loading
+                    // the match on the running server still loads the match (it loaded Farmhouse, 2026-10-02 audit).
+                    plan.MatchUrl = plan.Url;
                     plan.Url = "Farmhouse?Scenario=Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=" + maxPlayers.ToString(CultureInfo.InvariantCulture)
                                + (password.Length > 0 ? "?Password=" + password : "");
                 }
@@ -422,7 +498,10 @@ namespace SandstormModLauncher.Game
             else if (plan.MatchModIds.Count > 0)
                 plan.Warnings.Add(F("This match uses mods ({0}). Turn on mods for the server, or players and the server will not have them.", string.Join(", ", plan.MatchModIds)));
 
-            string ruleset = (match.Profile.LaunchRuleset ?? "").Trim();
+            if (plan.StartMutators.Count > 0) plan.Args.Add("-mutators=" + string.Join(",", plan.StartMutators));
+
+            // The server's own rules: no ruleset of the match either (it would set the rules again); official rules stay a choice.
+            string ruleset = plan.OwnRules ? "" : (match.Profile.LaunchRuleset ?? "").Trim();
             if (s.ServerOfficialRules)
             {
                 // One ruleset per server: official rules win over the match's own (the admin guide's opt-in).
@@ -443,16 +522,35 @@ namespace SandstormModLauncher.Game
                 if (gslt.Length == 0) plan.Warnings.Add(T("Game stats need a Steam server token (GSLT)."));
                 if (password.Length > 0) plan.Warnings.Add(T("Game stats only work on servers without a join password."));
                 plan.Args.Add("-GameStats");
+                // Without a token the server logs "-GameStatsToken= required for statistics collection" and gives no XP.
+                string statsToken = (s.ServerGameStatsToken ?? "").Trim();
+                if (statsToken.Length == 0) plan.Warnings.Add(T("Players earn XP only with a game stats token (from gamestats.sandstorm.game)."));
+                else if (!Regex.IsMatch(statsToken, @"^[A-Za-z0-9]+$")) { plan.Error = T("The game stats token can only have letters and digits."); return plan; }
+                else plan.Args.Add("-GameStatsToken=" + statsToken);
             }
             if (s.ServerCheats) plan.Args.Add("-EnableCheats");
             string extra = (s.ServerExtraArgs ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
             if (extra.Length > 0) plan.Args.Add(extra);
 
-            // Game.ini: the match rules as for local play, and the server's own RCON section.
+            // Game.ini: the match rules as for local play (or the admin's own rules, left as they are), and the server's own RCON section.
             RconSetup.EnsureServerSettings(s);
-            string merged = LaunchPlanner.MergeGameIni(currentGameIni ?? "", match, db, s.ServerManagedIniKeys);
-            plan.GameIni = ApplyVoteKick(RconSetup.Apply(merged, RconSetup.IniSection(s.ServerRconPort, s.ServerRconPassword, s.ServerRconFromNetwork)), s.ServerVoteKick);
-            plan.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(match, db);
+            string rules = currentGameIni ?? "";
+            if (plan.OwnRules)
+            {
+                if (match.Overrides.Count > 0 || match.IniSections.Count > 0)
+                    plan.Warnings.Add(T("The server keeps the rules in its own Game.ini: rule, bot and AI teammate changes from Play are not used there."));
+            }
+            else
+            {
+                // "Replace Game.ini" is for the player's game: the server's file keeps its other sections (it was cut down to
+                // the match's lines, 2026-10-02 audit).
+                if (string.Equals(match.Profile?.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase))
+                    plan.Warnings.Add(T("Replace Game.ini is for your game only: the server's Game.ini keeps its other lines."));
+                rules = LaunchPlanner.MergeGameIni(rules, match, db, s.ServerManagedIniKeys, false);
+            }
+            plan.GameIni = ApplyVoteKick(RconSetup.Apply(rules, RconSetup.IniSection(s.ServerRconPort, s.ServerRconPassword, s.ServerRconFromNetwork)), s.ServerVoteKick, s.ServerVoteKickOurs, out bool voteKickOurs);
+            plan.VoteKickOurs = voteKickOurs;
+            plan.ManagedIniKeys = plan.OwnRules ? s.ServerManagedIniKeys ?? new List<string>() : LaunchPlanner.PlayerIniKeys(match, db);
             if (s.ServerRconPort == s.ServerPort || s.ServerRconPort == s.ServerQueryPort)
                 plan.Warnings.Add(T("The RCON port is the same as a game port; pick another one."));
             return plan;
@@ -476,6 +574,8 @@ namespace SandstormModLauncher.Game
             if (!plan.UsesCode && theirs != null && !theirs.Equals("none", StringComparison.OrdinalIgnoreCase))
                 plan.Warnings.Add(T("Your options pass a security code. A code works only once: after the first start, change it to -SecurityCode=none."));
             plan.OwnArgs = own;
+            // Own options leave Game.ini (and so the rules) to the admin.
+            plan.OwnRules = true;
             if (plan.ModsOn)
                 ModWarnings(plan, account, ModIds(s.ServerMods, null), plan.UsesCode,
                             theirs != null && !theirs.Equals("none", StringComparison.OrdinalIgnoreCase));
@@ -494,7 +594,7 @@ namespace SandstormModLauncher.Game
             if (match != null && match.IsValid)
             {
                 string password = (s.ServerPassword ?? "").Trim();
-                plan.Url = ServerUrl(match, Math.Max(1, Math.Min(100, s.ServerMaxPlayers)), SafePassword.IsMatch(password) ? password : "");
+                plan.Url = ServerUrl(match, Math.Max(1, Math.Min(100, s.ServerMaxPlayers)), SafePassword.IsMatch(password) ? password : "", true);
             }
             else plan.Match = null;
             return plan;

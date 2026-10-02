@@ -82,6 +82,8 @@ namespace SandstormModLauncher.Game
                 AppLog.Info("Server Game.ini updated (" + UeIni.Split(plan.GameIni).Count + " lines)");
             }
             settings().ServerManagedIniKeys = plan.ManagedIniKeys;
+            settings().ServerStartedMutators = new List<string>(plan.StartMutators);
+            if (plan.VoteKickOurs.HasValue) settings().ServerVoteKickOurs = plan.VoteKickOurs;
             if (plan.ModsOn) ServerModio.RemoveObsoleteToken(inst);
             Directory.CreateDirectory(inst.ServerConfigDir);
             if (plan.AdminsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, ServerPlanner.AdminsName + ".txt"), plan.AdminsText);
@@ -265,6 +267,27 @@ namespace SandstormModLauncher.Game
         public string Say(string message) => Rcon.Run("say " + Reason(message))[0].Trim();
 
         /// <summary>Loads a match on the running server (RCON's travel, with every option of the map before reset).</summary>
-        public RconReply Travel(ServerPlan plan) => Rcon.Travel(plan.Url + LaunchService.TravelResets(plan.Match, plan.Url));
+        public RconReply Travel(ServerPlan plan) => Rcon.Travel(TravelUrl(plan, RunningMutators(plan)));
+
+        /// <summary>Mutators the running server was started with by the launcher (none known for own options or a server elsewhere).</summary>
+        public List<string> RunningMutators(ServerPlan plan) => plan.OwnArgs != null || settings().ServerRemote ? new List<string>() : settings().ServerStartedMutators ?? new List<string>();
+
+        /// <summary>
+        /// The URL a map load on the running server sends: the match, the mutators it needs on top of the ones the server
+        /// was started with (those stay; naming one again loads it twice), and resets of what the last map left behind.
+        /// <paramref name="running"/> = the mutators the server was started with (null = the plan's own).
+        /// </summary>
+        public static string TravelUrl(ServerPlan plan, IEnumerable<string> running = null)
+        {
+            string url = plan.MatchUrl ?? plan.Url;
+            var started = new HashSet<string>(running ?? plan.StartMutators, StringComparer.OrdinalIgnoreCase);
+            var more = plan.Match.Mutators.Where(m => !started.Contains(m)).ToList();
+            if (more.Count > 0 && url.IndexOf("?Mutators=", StringComparison.OrdinalIgnoreCase) < 0) url += "?Mutators=" + string.Join(",", more);
+            return url + LaunchService.TravelResets(plan.Match, url, !plan.OwnRules);
+        }
+
+        /// <summary>Mutators the running server keeps although the match does not have them (only a restart takes them off).</summary>
+        public static List<string> StuckMutators(ServerPlan plan, IEnumerable<string> running) =>
+            (running ?? Enumerable.Empty<string>()).Where(m => plan.Match != null && !plan.Match.Mutators.Contains(m, StringComparer.OrdinalIgnoreCase)).ToList();
     }
 }
