@@ -37,13 +37,28 @@ namespace SandstormModLauncher.Game
 
         /// <summary>Installed with SteamCMD into its own folder (it keeps its manifest there): SteamCMD also updates it.
         /// A server in a Steam library is kept up to date by Steam instead.</summary>
-        public bool ManagedBySteamCmd => Root != null && File.Exists(OwnManifest(Root));
+        public bool ManagedBySteamCmd => Root != null && (File.Exists(OwnManifest(Root)) || SteamCmdLibraryManifest(Root) != null);
 
         /// <summary>A SteamCMD install that was stopped or failed before the end (its manifest is not "fully installed"):
         /// the server's files are not all there yet.</summary>
         public bool Unfinished { get; private set; }
 
         private static string OwnManifest(string root) => Path.Combine(root, "steamapps", "appmanifest_" + SteamAppId + ".acf");
+
+        /// <summary>
+        /// The manifest of a server SteamCMD installed into its own steamapps folder (steamcmd\steamapps\common\sandstorm_server,
+        /// a layout Detect looks in): SteamCMD updates it, not Steam (it was shown as kept up to date by Steam, 2026-10-02 audit).
+        /// </summary>
+        private static string SteamCmdLibraryManifest(string root)
+        {
+            try
+            {
+                var steamapps = Directory.GetParent(Directory.GetParent(root)?.FullName ?? "");
+                string manifest = steamapps == null ? null : Path.Combine(steamapps.FullName, "appmanifest_" + SteamAppId + ".acf");
+                return manifest != null && steamapps.Parent != null && File.Exists(Path.Combine(steamapps.Parent.FullName, "steamcmd.exe")) && File.Exists(manifest) ? manifest : null;
+            }
+            catch { return null; }
+        }
 
         /// <summary>The Microsoft Visual C++ runtime files the server needs (the admin guide's prerequisite) that are missing.</summary>
         public static List<string> MissingRuntime()
@@ -199,7 +214,8 @@ namespace SandstormModLauncher.Game
                     if (m.Success) BuildId = m.Groups[1].Value;
                     // StateFlags 4 = fully installed (seen in Steam's and SteamCMD's manifests); without it an install stopped half way.
                     var f = Regex.Match(text, "\"StateFlags\"\\s+\"(\\d+)\"");
-                    if (manifest == OwnManifest(Root) && f.Success && int.TryParse(f.Groups[1].Value, out int flags) && (flags & 4) == 0) Unfinished = true;
+                    bool steamCmd = manifest == OwnManifest(Root) || manifest == SteamCmdLibraryManifest(Root);
+                    if (steamCmd && f.Success && int.TryParse(f.Groups[1].Value, out int flags) && (flags & 4) == 0) Unfinished = true;
                 }
             }
             catch { }

@@ -151,9 +151,14 @@ namespace SandstormModLauncher.ViewModels
             catch (Exception ex) { AppLog.Warn("Mod watcher: " + ex.Message); }
         }
 
+        private bool rescanning;
+
         public async Task RescanMods(bool quiet)
         {
-            if (Loading) return;
+            // One scan at a time: a background scan (a mod downloaded) took the cover off a Rescan pressed meanwhile, and the
+            // two rebuilt the lists under each other (2026-10-02 audit).
+            if (Loading || rescanning) return;
+            rescanning = true;
             try
             {
                 if (!quiet) { Loading = true; LoadingText = T("Rescanning mods..."); }
@@ -166,7 +171,11 @@ namespace SandstormModLauncher.ViewModels
                 RefreshCatalogUi();
                 ShowToast(F("Found {0} mods and {1} mutators", State.Mods.Count, State.AllMutators.Count));
             }
-            finally { Loading = false; }
+            finally
+            {
+                rescanning = false;
+                if (!quiet) Loading = false;
+            }
         }
 
         private void RefreshCatalogUi()

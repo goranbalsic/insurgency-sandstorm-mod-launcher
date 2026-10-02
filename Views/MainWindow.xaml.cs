@@ -50,8 +50,23 @@ namespace SandstormModLauncher.Views
             if (s.WindowMaximized || !fits) WindowState = WindowState.Maximized;
         }
 
+        /// <summary>
+        /// Text boxes hand their text over when they lose the focus; F5 and closing the window do not move it, so the text
+        /// typed last is taken here first (or the launch ran, and the window closed, without it).
+        /// </summary>
+        public static void CommitFocusedText() => CommitText(Keyboard.FocusedElement);
+
+        public static void CommitText(IInputElement focused)
+        {
+            if (!(focused is TextBox box)) return;
+            for (DependencyObject d = box; d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                if (d is Controls.Stepper stepper) { stepper.CommitTyped(); return; }
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        }
+
         private void OnClosing(object sender, CancelEventArgs e)
         {
+            CommitFocusedText();
             var s = vm.State.Settings;
             var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
             if (!bounds.IsEmpty && bounds.Width > 0) { s.WindowWidth = bounds.Width; s.WindowHeight = bounds.Height; }
@@ -99,6 +114,7 @@ namespace SandstormModLauncher.Views
             }
             bool overlay = vm.DialogOpen || vm.MapEditorOpen || vm.LaunchOverlayOpen;
             if (e.Key == Key.F5 && overlay) { e.Handled = true; return; }
+            if (e.Key == Key.F5) CommitFocusedText();
             if (vm.DialogOpen)
             {
                 if (e.Key == Key.Escape) { vm.DialogCommand.Execute(null); e.Handled = true; }

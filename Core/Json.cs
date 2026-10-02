@@ -33,6 +33,7 @@ namespace SandstormModLauncher.Core
         {
             private readonly string s;
             private int i;
+            private int depth;
             public Parser(string s) { this.s = s; if (s.Length > 0 && s[0] == '﻿') i = 1; }
 
             public void SkipWs()
@@ -58,8 +59,10 @@ namespace SandstormModLauncher.Core
                 char c = s[i];
                 switch (c)
                 {
-                    case '{': return ReadObject();
-                    case '[': return ReadArray();
+                    // A file nested this deep is not one of ours (state.json in %PUBLIC% can be written by anyone): a clean
+                    // error instead of a stack overflow that ends the launcher.
+                    case '{': if (++depth > 256) throw Error("nested too deep"); try { return ReadObject(); } finally { depth--; }
+                    case '[': if (++depth > 256) throw Error("nested too deep"); try { return ReadArray(); } finally { depth--; }
                     case '"': return ReadString();
                     case 't': Expect("true"); return true;
                     case 'f': Expect("false"); return false;

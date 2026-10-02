@@ -83,7 +83,8 @@ namespace SandstormModLauncher.Services
                     case "save":
                         state.Settings.RulesPresets.RemoveAll(r => r.Name.Equals(A(1) ?? "", StringComparison.OrdinalIgnoreCase));
                         state.Settings.RulesPresets.Add(SetupEngine.Capture(p, A(1) ?? "Saved setup"));
-                        SetupEngine.MarkPreset(p, A(1), true);
+                        // As the Save button does: the setup on screen is now that saved setup.
+                        SetupEngine.MarkSetup(p, A(1) ?? "Saved setup");
                         print("Saved \"" + A(1) + "\"");
                         return 0;
                     case "delete-saved":
@@ -475,6 +476,7 @@ namespace SandstormModLauncher.Services
                 case "modids": s.ServerMods = value.Replace(",", "\n"); return true;
                 case "gslt": s.ServerGslt = value; return true;
                 case "gamestats": if (on == null) return false; s.ServerGameStats = on.Value; return true;
+                case "gamestatstoken": s.ServerGameStatsToken = value; return true;
                 case "cheats": if (on == null) return false; s.ServerCheats = on.Value; return true;
                 case "log": if (on == null) return false; s.ServerShowLog = on.Value; return true;
                 case "extra": s.ServerExtraArgs = value; return true;
@@ -485,6 +487,7 @@ namespace SandstormModLauncher.Services
                 case "remotepassword": s.ServerRemoteRconPassword = value; return true;
                 case "votekick": if (on == null) return false; s.ServerVoteKick = on.Value; return true;
                 case "officialrules": if (on == null) return false; s.ServerOfficialRules = on.Value; return true;
+                case "ownrules": if (on == null) return false; s.ServerOwnRules = on.Value; return true;
                 case "installdir": s.ServerInstallDir = value; return true;
                 case "useownargs": if (on == null) return false; s.ServerUseOwnArgs = on.Value; return true;
                 case "ownargs": s.ServerOwnArgs = value; return true;

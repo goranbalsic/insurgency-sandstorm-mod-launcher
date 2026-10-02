@@ -189,11 +189,26 @@ namespace SandstormModLauncher.Game
             return data;
         }
 
+        private static readonly Regex SafeIdText = new Regex(@"^[A-Za-z0-9_\-\./]+$", RegexOptions.Compiled);
+        private static readonly Regex SafeModePath = new Regex(@"^/[A-Za-z0-9_/]+\.[A-Za-z0-9_]+$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// A name from a .pak that goes into the open command, the server's command line, RCON or a Game.ini section:
+        /// letters, digits and _ - . / only. A mod could put " -RconPassword=..", "|exit" or a line break there.
+        /// </summary>
+        public static bool SafeId(string text) => text != null && SafeIdText.IsMatch(text);
+
+        /// <summary>A game mode class path fit for a Game.ini section name.</summary>
+        public static bool SafeModePathText(string path) => path != null && SafeModePath.IsMatch(path);
+
+        private static string Cut(string text) => text == null ? "" : text.Length > 60 ? text.Substring(0, 60) + "..." : text;
+
         public static ScenarioInfo ScenarioFromAsset(AssetData a, ContentSource source, string modName, long modId, Func<string, string, string> lookup)
         {
             string id = a.Tag("PrimaryAssetName") ?? a.AssetName;
             string level = a.Tag("Level") ?? "";
             if (string.IsNullOrEmpty(level) || level == "None") return null;
+            if (!SafeId(id) || !SafeId(level.Replace("'", ""))) { AppLog.Warn("Scenario with a name the launcher cannot pass on skipped: " + Cut(id) + " / " + Cut(level)); return null; }
             if (a.ObjectPath.IndexOf("/Development/", StringComparison.OrdinalIgnoreCase) >= 0) return null;
             int dot = level.LastIndexOf('.');
             string levelPkg = dot > 0 ? level.Substring(0, dot) : level;
@@ -203,6 +218,8 @@ namespace SandstormModLauncher.Game
             string cls = mm.Success ? mm.Groups[1].Value : modeClass;
             var mp = Regex.Match(modeClass, "'\"?([^'\"]+)\"?'");
             string modePath = mp.Success ? mp.Groups[1].Value : modeClass;
+            // The mode's path becomes a Game.ini section name (blueprint modes read their own): nothing else may get in.
+            if (!SafeModePathText(modePath)) modePath = null;
             string side = UnrealText.Resolve(a.Tag("ScenarioName") ?? "", lookup).Trim();
             string category = a.ObjectPath.IndexOf("/Coop/", StringComparison.OrdinalIgnoreCase) >= 0 ? "Co-op"
                 : a.ObjectPath.IndexOf("/Versus/", StringComparison.OrdinalIgnoreCase) >= 0 ? "Versus"

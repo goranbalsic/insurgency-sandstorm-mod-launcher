@@ -46,6 +46,8 @@ namespace SandstormModLauncher.Game
     /// </summary>
     public static class SetupEngine
     {
+        private const string HardcoreCheckpointCls = "INSCheckpointHardcoreGameMode";
+
         public static readonly HashSet<string> SquadKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty", "bBots", "BotQuota" };
         private static readonly string[] CoopSquad = { "FriendlyBotQuota", "SoloEnemies", "MinimumEnemies", "MaximumEnemies", "AIDifficulty" };
@@ -90,6 +92,13 @@ namespace SandstormModLauncher.Game
             {
                 var m = db.Mode(cls);
                 if (m != null && !m.Coop && m.Defaults.ContainsKey("bBots") && int.TryParse(db.DefaultValue(cls, key), out int q) && q <= 0) return "5";
+            }
+            // Ambush and Free For All wait for 2 players: the launch starts them with 1 (LaunchPlanner), so the screen shows 1,
+            // and 2 can be kept to wait for a second player (it showed 2, sent 1, and 2 could not be kept, 2026-10-02 audit).
+            if (key.Equals("MinimumPlayers", StringComparison.OrdinalIgnoreCase) || key.Equals("MinimumPlayersInProgress", StringComparison.OrdinalIgnoreCase))
+            {
+                var m = db.Mode(cls);
+                if (m != null && !m.Coop && m.Defaults.ContainsKey("bBots") && int.TryParse(db.DefaultValue(cls, key), out int min) && min > 1) return "1";
             }
             return db.DefaultValue(cls, key);
         }
@@ -255,6 +264,8 @@ namespace SandstormModLauncher.Game
                 {
                     var modes = db.Modes.Where(m => m.Coop == preset.Coop).Select(m => m.Cls).ToList();
                     ClearRules(p, (cls, key) => preset.Owns.Contains(key) && (modes.Contains(cls) || (cls == "*" && !preset.Coop)));
+                    foreach (var key in preset.Owns)
+                        foreach (var cls in preset.Coop ? modes : modes.Concat(new[] { "*" })) OwnSquadValue(p, cls, key);
                     foreach (var mode in preset.Rules) foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
                     return preset.Coop ? F("{0} applied to co-op bots and enemies", T(preset.Name)) : F("{0} applied to versus bots and enemies", T(preset.Name));
                 }
@@ -358,6 +369,12 @@ namespace SandstormModLauncher.Game
                     }
                     else
                     {
+                        // A setup saved before 1.8.0 holds rules and mutators (and the match, when FullSetup): everything else
+                        // is as in a new setup, not left over from the setup on screen before (its Advanced options stayed,
+                        // and the next Save wrote them into this one, 2026-10-02 audit).
+                        var match = (p.MapKey, p.ScenarioId, p.CustomMapId, p.Lighting, p.Hardcore, p.MaxPlayers, p.MutatorsEnabled);
+                        CopySetup(new Profile(), p);
+                        (p.MapKey, p.ScenarioId, p.CustomMapId, p.Lighting, p.Hardcore, p.MaxPlayers, p.MutatorsEnabled) = match;
                         foreach (var mode in saved.Rules) foreach (var kv in mode.Value) SetRule(p, db, mode.Key, kv.Key, kv.Value);
                         SetMutators(p, s, saved.Mutators, missing);
                         if (saved.FullSetup)
@@ -378,6 +395,24 @@ namespace SandstormModLauncher.Game
                     return F("{0} loaded", saved.Name) + (missing.Count > 0 ? ". " + F("Not installed: {0}", string.Join(", ", missing)) : "");
                 }
             }
+        }
+
+        /// <summary>
+        /// The player set a squad value (squad card or squad preset): the last match preset no longer takes it back, even
+        /// when the new value happens to be the one that preset left (it put the old value back, 2026-10-02 audit).
+        /// </summary>
+        public static void SetSquadRule(Profile p, RulesDb db, string cls, string key, string value)
+        {
+            OwnSquadValue(p, cls, key);
+            SetRule(p, db, cls, key, value);
+        }
+
+        public static void OwnSquadValue(Profile p, string cls, string key)
+        {
+            string id = cls + "|" + key;
+            p.PresetChanges?.RulesBefore?.Remove(id);
+            p.PresetChanges?.RulesAfter?.Remove(id);
+            p.PresetKeys?.RemoveAll(x => x.Equals(id, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -627,24 +662,28 @@ namespace SandstormModLauncher.Game
                     var p = new Preset { Name = pl.Title, Kind = PresetKind.Match, Group = "Playlist", Source = pl, Tag = pl.IsCoop ? "Co-op" : "Versus",
                                          Mutators = new List<string>(pl.Mutators), ForModes = new List<string>(pl.Modes),
                                          Night = pl.Lighting == "Night", HardcoreCheckpoint = pl.GameAlias == "CheckpointHardcore" };
-                    var targets = pl.Modes.Count > 0 ? pl.Modes : db.Modes.Where(m => m.Coop == pl.IsCoop).Select(m => m.Cls).ToList();
-                    foreach (var cls in targets)
-                        foreach (var kv in pl.CoopRules)
-                        {
-                            if (!p.Rules.TryGetValue(cls, out var map)) p.Rules[cls] = map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                            map[kv.Key] = kv.Value;
-                        }
+                    void Put(string cls, string key, string value)
+                    {
+                        if (!p.Rules.TryGetValue(cls, out var map)) p.Rules[cls] = map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        map[key] = value;
+                    }
+                    // The ruleset first, then the playlist's own values: those are what makes the playlist (the ruleset's
+                    // went over them, e.g. Chad Team666's enemy counts, 2026-10-02 audit).
                     if (!string.IsNullOrEmpty(pl.Ruleset))
                     {
                         var rs = db.Rulesets.FirstOrDefault(r => r.Id == pl.Ruleset);
                         if (rs != null)
                             foreach (var mode in rs.Rules)
-                                foreach (var kv in mode.Value)
-                                {
-                                    if (!p.Rules.TryGetValue(mode.Key, out var map)) p.Rules[mode.Key] = map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                                    map[kv.Key] = kv.Value;
-                                }
+                                foreach (var kv in mode.Value) Put(mode.Key, kv.Key, kv.Value);
                     }
+                    var targets = pl.Modes.Count > 0 ? pl.Modes : db.Modes.Where(m => m.Coop == pl.IsCoop).Select(m => m.Cls).ToList();
+                    foreach (var cls in targets)
+                        foreach (var kv in pl.CoopRules) Put(cls, kv.Key, kv.Value);
+                    // A hardcore playlist is played as Hardcore Checkpoint: its Checkpoint rules are that mode's too (they were
+                    // only on Checkpoint, and the squad card and the launch showed none of them, 2026-10-02 audit).
+                    if (p.HardcoreCheckpoint && db.Mode(HardcoreCheckpointCls) != null && p.Rules.TryGetValue("INSCheckpointGameMode", out var checkpointRules))
+                        foreach (var kv in checkpointRules.ToList())
+                            if (!(p.Rules.TryGetValue(HardcoreCheckpointCls, out var hc) && hc.ContainsKey(kv.Key))) Put(HardcoreCheckpointCls, kv.Key, kv.Value);
                     string modes = string.Join(", ", pl.Modes.Select(m => T(db.Mode(m)?.Name ?? m)).Distinct());
                     string what = pl.Mutators.Count > 0 ? string.Join(", ", pl.Mutators.Select(id => s.FindMutator(id)?.DisplayName ?? id)) : T("rules only");
                     p.Description = (string.IsNullOrWhiteSpace(pl.Description) ? "" : T(pl.Description.Trim()) + " ") + F("Mutators: {0}.", what);
@@ -680,7 +719,8 @@ namespace SandstormModLauncher.Game
             foreach (var cls in rules.Keys.ToList())
             {
                 var map = rules[cls];
-                if (map == null) { rules.Remove(cls); changed++; continue; }
+                // Rules for a mode the game does not have (a hand-edited file, a mode gone in a game update) are never sent.
+                if (map == null || (cls != "*" && db.Mode(cls) == null)) { rules.Remove(cls); changed++; continue; }
                 foreach (var key in map.Keys.ToList())
                 {
                     string clean = string.IsNullOrEmpty(key) || key.IndexOfAny(new[] { ' ', '?', '=', '&' }) >= 0 ? null : NormalizeValue(db.Prop(key), map[key]);
@@ -689,6 +729,7 @@ namespace SandstormModLauncher.Game
                         string def = LauncherDefault(db, cls, key);
                         if (def != null && LaunchPlanner.Same(def, clean, db.Prop(key))) clean = null;
                     }
+                    if (cls == "*" && !string.Equals(key, "AIDifficulty", StringComparison.OrdinalIgnoreCase)) clean = null;
                     if (clean != null && cls == "*" && key == "AIDifficulty" && double.TryParse(clean, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ai) && Math.Abs(ai - 0.5) < 0.001)
                         clean = null;
                     if (clean == null) { map.Remove(key); changed++; }
@@ -752,6 +793,13 @@ namespace SandstormModLauncher.Game
             foreach (var mp in s.Settings.MutatorPresets.Where(x => x != null && !string.IsNullOrWhiteSpace(x.Name)).ToList())
             {
                 var setup = active.Clone(active.Name);
+                // The mutator preset's own list, not the preset tracking of the setup it was cloned from (a later preset
+                // took the player's mutators out as its own, 2026-10-02 audit).
+                setup.RulesPresetName = null;
+                setup.PresetCheck = null;
+                setup.PresetKeys = new List<string>();
+                setup.PresetChanges = null;
+                setup.MutatorPreset = null;
                 setup.Mutators = new List<string>(mp.Mutators ?? new List<string>());
                 setup.MutatorsEnabled = true;
                 string name = UniqueSetupName(s, mp.Name);
@@ -778,7 +826,12 @@ namespace SandstormModLauncher.Game
                 if (n > 0) { AppLog.Warn("Profile " + p.Name + ": " + n + " stored values were not valid and were fixed"); s.Store.SaveProfile(p); }
             }
             int saved = 0;
-            foreach (var r in s.Settings.RulesPresets) saved += CleanRules(r.Rules, s.Rules);
+            foreach (var r in s.Settings.RulesPresets)
+            {
+                saved += CleanRules(r.Rules, s.Rules);
+                // The whole setup a 1.8.0+ save keeps was never cleaned.
+                if (r.Setup != null) saved += CleanRules(r.Setup.Rules, s.Rules);
+            }
             saved += s.Settings.CustomMutators.RemoveAll(m => !IsValidMutatorId(m));
             foreach (var mp in s.Settings.MutatorPresets.Where(x => x != null))
             {

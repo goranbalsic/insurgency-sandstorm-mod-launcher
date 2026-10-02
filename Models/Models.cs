@@ -200,7 +200,11 @@ namespace SandstormModLauncher.Models
         public bool ApplyLiveRules { get; set; } = true;
         public string LaunchArgs { get; set; } = "";
         public string LastWrittenRulesHash { get; set; } = "";
+        public string LastWrittenIniPart { get; set; }                  // its Game.ini part (no ruleset); null = written by 1.10.0 or older
+        public List<string> LastWrittenRuleKeys { get; set; } = new List<string>();   // "Mode|Key" of the rules Game.ini got
         public string GameStartedWithRulesHash { get; set; }
+        public List<string> GameStartedWithRuleKeys { get; set; }
+        public DateTime GameStartedAtUtc { get; set; }                  // when the launcher last started the game
         public DateTime LastRulesWriteUtc { get; set; }
         public double WindowWidth { get; set; } = 1360;
         public double WindowHeight { get; set; } = 860;
@@ -241,11 +245,15 @@ namespace SandstormModLauncher.Models
         public string ServerOwnArgs { get; set; } = "";
         public string ServerGslt { get; set; } = "";              // Steam game server login token
         public bool ServerGameStats { get; set; }
+        public string ServerGameStatsToken { get; set; } = "";    // from gamestats.sandstorm.game: without it the server gives no XP
         public bool ServerCheats { get; set; }
         public bool ServerShowLog { get; set; } = true;           // -log: the server's own log window
         public string ServerExtraArgs { get; set; } = "";
         public bool ServerVoteKick { get; set; }                  // players can vote to kick someone ([/Script/Insurgency.TeamInfo])
+        public bool? ServerVoteKickOurs { get; set; }             // the vote kick lines in the server's Game.ini are the launcher's (null = not known)
+        public List<string> ServerStartedMutators { get; set; } = new List<string>();   // -mutators= of the last server start
         public bool ServerOfficialRules { get; set; }             // -ruleset=OfficialRules: listed under the official rules filter
+        public bool ServerOwnRules { get; set; }                  // the rules in the server's own Game.ini; Play gives only map, lighting, mutators
         public string ServerInstallDir { get; set; } = "";        // where SteamCMD installs the server (empty = C:\SandstormServer)
         public List<string> ServerManagedIniKeys { get; set; } = new List<string>();
     }

@@ -155,9 +155,10 @@ namespace SandstormModLauncher.Services
             if (state?.Store?.IsLoaded == true)
             {
                 full.AppendLine().AppendLine("== settings");
-                full.AppendLine(string.Join(Environment.NewLine, Clean(Json.Serialize(state.Settings, true).Split('\n'))));
+                // Values first (the server's Steam token and a mod.io code went out as they were, 2026-10-02 audit), then lines.
+                full.AppendLine(string.Join(Environment.NewLine, Clean(HidePasswords(Json.Serialize(state.Settings, true)).Split('\n'))));
                 full.AppendLine().AppendLine("== active profile");
-                full.AppendLine(string.Join(Environment.NewLine, Clean(Json.Serialize(state.Store.Active, true).Split('\n'))));
+                full.AppendLine(string.Join(Environment.NewLine, Clean(HidePasswords(Json.Serialize(state.Store.Active, true)).Split('\n'))));
             }
             full.AppendLine().AppendLine("== launcher log, this run (last 300 lines)");
             foreach (var l in launcherLines.Skip(Math.Max(0, launcherLines.Count - 300))) full.AppendLine(Cut(l, 600));
@@ -296,7 +297,7 @@ namespace SandstormModLauncher.Services
         }
 
         private static readonly System.Text.RegularExpressions.Regex PasswordValue =
-            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*(?:Password|Gslt|Token|Email|SecurityCode|ModioCode)""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
+            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*(?:Password|Gslt|Token|Email|SecurityCode|ModioCode|RemoteHost)""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
         private static readonly System.Text.RegularExpressions.Regex SteamId64 =
             new System.Text.RegularExpressions.Regex(@"\b7656119\d{10}\b", System.Text.RegularExpressions.RegexOptions.Compiled);
 

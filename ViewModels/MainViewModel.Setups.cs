@@ -78,10 +78,13 @@ namespace SandstormModLauncher.ViewModels
         /// <summary>"Not saved", "Changed" or nothing, next to the setup name.</summary>
         public string SetupState => LoadedSetup == null ? T("Not saved") : setupChangedSinceSave ? T("Changed") : "";
 
-        /// <summary>A setup nobody has changed yet (game defaults, no mutators): nothing to lose when another one is loaded.</summary>
-        private bool IsFreshSetup() => Profile.Rules.Count == 0 && Profile.Mutators.Count == 0 && string.IsNullOrWhiteSpace(Profile.CustomIniText)
-                                       && string.IsNullOrWhiteSpace(Profile.ExtraUrlOptions) && string.IsNullOrWhiteSpace(Profile.AfterLoadCommands)
-                                       && string.IsNullOrWhiteSpace(Profile.GameModeOverride);
+        /// <summary>
+        /// A setup nobody has changed yet: everything as in a new setup but the map picked, nothing to lose when another one
+        /// is loaded. (Only rules, mutators and the Advanced texts were compared: a ruleset, night, hardcore, slots or the
+        /// switches set went without a question, 2026-10-02 audit.)
+        /// </summary>
+        private bool IsFreshSetup() =>
+            SetupEngine.Fingerprint(Profile) == SetupEngine.Fingerprint(new Profile { MapKey = Profile.MapKey, ScenarioId = Profile.ScenarioId, CustomMapId = Profile.CustomMapId });
 
         public async Task LoadSetupAsync(string name)
         {
@@ -93,7 +96,14 @@ namespace SandstormModLauncher.ViewModels
                     LoadedSetup == null ? "The setup on screen was never saved. Load the other one anyway (the one on screen is replaced)?"
                                         : F("\"{0}\" has changes that are not saved. Load the other one anyway (the changes are lost)?", LoadedSetup.Name),
                     "Load", "Cancel", "Save first");
-                if (answer == "Save first") { if (!await SaveSetup()) { RaiseSetup(); return; } }
+                if (answer == "Save first")
+                {
+                    if (!await SaveSetup()) { RaiseSetup(); return; }
+                    // Saved under the name of the one being loaded: that one is the new save now (the old copy was loaded
+                    // and shown as unchanged, 2026-10-02 audit).
+                    saved = State.Settings.RulesPresets.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+                    if (saved == null) { RaiseSetup(); return; }
+                }
                 else if (answer != "Load") { RaiseSetup(); return; }
             }
             string message = SetupEngine.Apply(Profile, State, new Preset { Name = saved.Name, Kind = PresetKind.Saved, Saved = saved });

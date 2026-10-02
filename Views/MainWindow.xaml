@@ -246,9 +246,7 @@
                             </TextBlock.Style>
                         </TextBlock>
                         <TextBlock Text="{Binding LaunchHeadline}" Style="{StaticResource H1}" FontSize="18" Margin="0,6,0,0" TextWrapping="Wrap" />
-                        <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0">
-                            <Run Text="{Binding SquadSummary, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding MutatorSummary, Mode=OneWay}" />
-                        </TextBlock>
+                        <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0" Text="{Binding LaunchDetail}" />
                         <ProgressBar Value="{Binding LaunchProgress, Mode=OneWay}" Maximum="1" Margin="0,16,0,10" />
                         <ItemsControl ItemsSource="{Binding LaunchSteps}" Focusable="False">
                             <ItemsControl.ItemTemplate>

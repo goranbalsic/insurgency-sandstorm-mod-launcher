@@ -331,6 +331,8 @@ namespace SandstormModLauncher.Game
                 {
                     if ((ParseInt(a.Tag("ClassFlags")) & 1) != 0) continue;
                     string id = a.Tag("PrimaryAssetName") ?? a.AssetName;
+                    // The id goes into the open command and the server's command line: a mod's odd name is left out.
+                    if (!GameCatalog.SafeId(id)) { scan.Warnings.Add(Path.GetFileName(path) + ": " + T("a mutator with a name the launcher cannot pass on was skipped")); continue; }
                     string generated = a.PackageName + "." + a.AssetName + "_C";
                     bool registered = mutatorDirs.Count == 0 || mutatorDirs.Any(d => (a.PackagePath + "/").StartsWith(d, StringComparison.OrdinalIgnoreCase));
                     var mi = new MutatorInfo
@@ -339,7 +341,7 @@ namespace SandstormModLauncher.Game
                         DisplayName = UnrealText.Resolve(a.Tag("DisplayName") ?? ""),
                         Source = ContentSource.Mod,
                         AssetPath = a.ObjectPath,
-                        ConfigSection = "[" + generated + "]",
+                        ConfigSection = GameCatalog.SafeId(generated) ? "[" + generated + "]" : null,
                         IsBaseClass = parents.Any(p => p.IndexOf(generated, StringComparison.OrdinalIgnoreCase) >= 0)
                                       && (id.IndexOf("base", StringComparison.OrdinalIgnoreCase) >= 0 || string.IsNullOrWhiteSpace(a.Tag("DisplayName"))),
                         Registered = registered,
@@ -375,6 +377,7 @@ namespace SandstormModLauncher.Game
                     foreach (var e in pak.Entries.Keys.Where(k => k.EndsWith(".uasset", StringComparison.OrdinalIgnoreCase) && k.IndexOf("/Mutators/", StringComparison.OrdinalIgnoreCase) >= 0))
                     {
                         string name = Path.GetFileNameWithoutExtension(e);
+                        if (!GameCatalog.SafeId(name)) continue;
                         if (scan.Mutators.Any(m => m.Id.Equals(name, StringComparison.OrdinalIgnoreCase))) continue;
                         scan.Mutators.Add(new MutatorInfo
                         {

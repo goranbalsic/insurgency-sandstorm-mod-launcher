@@ -144,12 +144,17 @@ namespace SandstormModLauncher.Services
                             // Two different match presets in a row: the result must be the second one alone (no leftovers of the first).
                             var list = SetupEngine.StylePresets(db).Concat(SetupEngine.OfficialPresets(db)).Concat(SetupEngine.PlaylistPresets(state, coop)).ToList();
                             var a = Pick(list); var b = Pick(list);
-                            name = "match " + a.Name + " then " + b.Name;
+                            // Sometimes a squad preset in between: its values are the player's, the second preset must not
+                            // take them back to what was there before the first (2026-10-02 audit).
+                            var squad = rnd.Next(2) == 0 ? Pick(SetupEngine.SquadPresets(db, coop)) : null;
+                            name = "match " + a.Name + (squad != null ? ", squad " + squad.Name : "") + " then " + b.Name;
                             var copy = Json.Deserialize<Profile>(Json.Serialize(p));
                             SetupEngine.Apply(p, state, a);
+                            if (squad != null) SetupEngine.Apply(p, state, squad);
                             SetupEngine.Apply(p, state, b);
+                            if (squad != null) SetupEngine.Apply(copy, state, squad);
                             SetupEngine.Apply(copy, state, b);
-                            if (NonSquad(p.Rules) != NonSquad(copy.Rules)) Fail(name + ": rules differ from applying only the second\n  " + NonSquad(p.Rules) + "\n  " + NonSquad(copy.Rules));
+                            if (Full(p) != Full(copy)) Fail(name + ": the setup differs from applying only " + (squad != null ? "the squad preset and " : "") + "the second\n" + Diff(Full(p), Full(copy)));
                             break;
                         }
                         case 14:
@@ -660,6 +665,323 @@ namespace SandstormModLauncher.Services
                 if (plan.PlayerSlots < 1 + ai) fail(name + ": " + ai + " AI teammates but " + plan.PlayerSlots + " player slots");
             }
 
+            // 19. (2026-10-02 audit) A squad value the player picked after a match preset stays when the next match preset
+            //     comes: Frenzy, then Fireteam, then Realism put Frenzy's "before" values back (SoloEnemies 6 came back), and
+            //     Squad Leader, Official Rules, Mode defaults, Realism brought 6 AI teammates back.
+            //     And FriendlyBotQuota=1 (no AI: it counts you) launches like 0: solo, no bots forced on.
+            {
+                var squads = SetupEngine.SquadPresets(db, true);
+                var matches = all.Where(x => x.ForModes.Count == 0 || x.ForModes.Contains("INSCheckpointGameMode")).ToList();
+                foreach (var first in matches.Where(x => x.Rules != null && x.Rules.Values.Any(r => r.Keys.Any(SetupEngine.IsSquadKey))).Concat(matches.Take(3)))
+                    foreach (var sq in squads)
+                    {
+                        var p = Fresh(checkpoint);
+                        SetupEngine.Apply(p, state, first);
+                        SetupEngine.Apply(p, state, sq);
+                        SetupEngine.Apply(p, state, realism);
+                        var q = Fresh(checkpoint);
+                        SetupEngine.Apply(q, state, sq);
+                        SetupEngine.Apply(q, state, realism);
+                        if (Canon(p.Rules) != Canon(q.Rules))
+                        {
+                            fail(first.Name + ", " + sq.Name + ", Realism is not " + sq.Name + ", Realism:\n" + Diff(Canon(p.Rules), Canon(q.Rules)));
+                            break;
+                        }
+                    }
+                // The same for a value set on the squad card that happens to be the one the match preset left.
+                var leader = squads.FirstOrDefault(x => x.Name == "Squad Leader");
+                foreach (var first in matches.Where(x => x.Rules != null && x.Rules.Values.Any(r => r.Keys.Any(SetupEngine.IsSquadKey))))
+                {
+                    if (leader == null) { fail("no Squad Leader squad preset"); break; }
+                    var p = Fresh(checkpoint);
+                    SetupEngine.Apply(p, state, leader);
+                    SetupEngine.Apply(p, state, first);
+                    var kept = new List<(string cls, string key, string value)>();
+                    foreach (var mode in db.Modes.Where(m => m.Coop))
+                        foreach (var key in mode.Defaults.Keys.Where(SetupEngine.IsSquadKey))
+                        {
+                            string v = SetupEngine.GetRule(p, mode.Cls, key);
+                            SetupEngine.SetSquadRule(p, db, mode.Cls, key, v);
+                            kept.Add((mode.Cls, key, SetupEngine.GetRule(p, mode.Cls, key)));
+                        }
+                    SetupEngine.Apply(p, state, realism);
+                    // The same squad values set on the card with no match preset before: Realism must leave both alike.
+                    var q = Fresh(checkpoint);
+                    SetupEngine.Apply(q, state, leader);
+                    foreach (var k in kept) SetupEngine.SetSquadRule(q, db, k.cls, k.key, k.value);
+                    SetupEngine.Apply(q, state, realism);
+                    var lost = kept.FirstOrDefault(k => SetupEngine.GetRule(p, k.cls, k.key) != SetupEngine.GetRule(q, k.cls, k.key));
+                    if (lost.key != null) { fail("Squad Leader, " + first.Name + ", " + lost.key + " set on the squad card to " + (lost.value ?? "default") + ", Realism: it is " + (SetupEngine.GetRule(p, lost.cls, lost.key) ?? "default") + " (should be " + (SetupEngine.GetRule(q, lost.cls, lost.key) ?? "default") + ")"); break; }
+                }
+                var solo = new[] { "0", "1" }.Select(v =>
+                {
+                    var p = Fresh(checkpoint);
+                    SetupEngine.SetRule(p, db, "INSCheckpointGameMode", "FriendlyBotQuota", v);
+                    var plan = LaunchPlanner.Build(p, state);
+                    return (plan.OpenCommand ?? "").Replace("?FriendlyBotQuota=" + v, "") + " slots " + plan.PlayerSlots + " bots " + (plan.Overrides.TryGetValue("bBots", out var bb) ? bb : "-");
+                }).ToList();
+                if (solo[0] != solo[1]) fail("FriendlyBotQuota=1 (no AI teammate) launches unlike 0:\n  0: " + solo[0] + "\n  1: " + solo[1]);
+            }
+
+            // 20. (2026-10-02 audit) A running game read its rules from Game.ini at start: a match that leaves one of them at
+            //     the default sets it back after the map loads (Realism, then Game defaults kept Realism's rules). Own
+            //     Game.ini lines and the ruleset are read at start too: a change asks for a restart, and a game started some
+            //     other way (Steam) has no ruleset.
+            {
+                var named = new List<(string name, Profile p)> { ("Game defaults", Fresh(checkpoint)) };
+                foreach (var m in all.Where(x => x.ForModes.Count == 0 || x.ForModes.Contains("INSCheckpointGameMode")))
+                {
+                    var p = Fresh(checkpoint);
+                    SetupEngine.Apply(p, state, m);
+                    named.Add((m.Name, p));
+                }
+                var plans = named.Select(x => (x.name, x.p, plan: LaunchPlanner.Build(x.p, state))).Where(x => x.plan.Mode != null).ToList();
+                // What a plan writes into the mode sections of Game.ini is what it remembers as read at game start.
+                const string script = "/Script/Insurgency.";
+                foreach (var a in plans)
+                {
+                    var keys = LaunchPlanner.WrittenRuleKeys(a.plan, db);
+                    foreach (var sec in a.plan.IniSections.Where(x => x.Name.StartsWith(script, StringComparison.OrdinalIgnoreCase) && db.Mode(x.Name.Substring(script.Length)) != null))
+                        foreach (var v in sec.Values.Where(v => db.Prop(v.Key) != null))
+                            if (!keys.Contains(sec.Name.Substring(script.Length) + "|" + v.Key, StringComparer.OrdinalIgnoreCase)) { fail(a.name + ": " + v.Key + " goes into Game.ini but is not remembered as read at game start"); break; }
+                }
+                if (!plans.Any(a => LaunchPlanner.WrittenRuleKeys(a.plan, db).Count > 0)) fail("no preset writes a rule into Game.ini: check 20 has nothing to check");
+                bool reported = false;
+                foreach (var a in plans)
+                {
+                    var keys = LaunchPlanner.WrittenRuleKeys(a.plan, db);
+                    foreach (var b in plans)
+                    {
+                        if (reported) break;
+                        var live = b.plan.LiveProperties.Concat(LaunchPlanner.LiveResets(b.plan, db, keys)).ToList();
+                        foreach (var id in keys.Where(k => k.StartsWith(b.plan.Mode.Cls + "|", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            string key = id.Substring(id.IndexOf('|') + 1);
+                            string want = b.plan.Overrides.TryGetValue(key, out var ov) ? ov : db.DefaultValue(b.plan.Mode.Cls, key);
+                            var got = live.Where(kv => kv.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Value).ToList();
+                            if (got.Count == 1 && LaunchPlanner.Same(want, got[0], db.Prop(key))) continue;
+                            fail(a.name + " at game start, then " + b.name + ": " + key + " is sent as " + (got.Count == 0 ? "nothing" : string.Join("/", got)) + " (the match wants " + want + ")");
+                            reported = true;
+                            break;
+                        }
+                    }
+                }
+                Profile WithIni(string text) { var x = Fresh(checkpoint); x.CustomIniMode = "Append"; x.CustomIniText = text; return x; }
+                string none = LaunchPlanner.RestartKeyFor(Fresh(checkpoint), db);
+                string one = LaunchPlanner.RestartKeyFor(WithIni("[/Script/Insurgency.Mutator_X]\nA=1"), db), two = LaunchPlanner.RestartKeyFor(WithIni("[/Script/Insurgency.Mutator_X]\nA=2"), db);
+                if (one == two || one == none) fail("own Game.ini lines are read at game start, but changing them asks for no restart");
+                if (LaunchPlanner.RestartKeyFor(new Profile(), db) != LaunchPlanner.Hash("ruleset=")) fail("the restart key of a plain setup changed: games started by older versions would be restarted for nothing");
+
+                var withRuleset = Fresh(checkpoint);
+                withRuleset.LaunchRuleset = "RS_CompetitiveFirefight";
+                var planR = LaunchPlanner.Build(withRuleset, state);
+                var planPlain = LaunchPlanner.Build(Fresh(checkpoint), state);
+                var t0 = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+                var set = new AppSettings
+                {
+                    LastRulesWriteUtc = t0, LastWrittenRulesHash = planR.RestartKey, LastWrittenIniPart = LaunchPlanner.IniRestartPart(withRuleset, db),
+                    LastWrittenRuleKeys = new List<string> { "INSCheckpointGameMode|RoundTime" },
+                    GameStartedWithRulesHash = planR.RestartKey, GameStartedWithRuleKeys = new List<string> { "INSCheckpointGameMode|RoundTime" }, GameStartedAtUtc = t0.AddSeconds(1)
+                };
+                if (LaunchService.ActiveRestartKey(set, t0.AddSeconds(30), db) != planR.RestartKey) fail("the game the launcher started is not taken as started with its official ruleset");
+                string fromSteam = LaunchService.ActiveRestartKey(set, t0.AddHours(1), db);
+                if (fromSteam == planR.RestartKey || fromSteam != planPlain.RestartKey) fail("a game started outside the launcher is taken as started with the launcher's official ruleset");
+                if (LaunchService.ActiveRuleKeys(set, t0.AddHours(1)).Count != 1) fail("a game started outside the launcher after the last write did not read Game.ini's rules");
+                set.LastWrittenIniPart = null;
+                if (LaunchService.ActiveRestartKey(set, t0.AddHours(1), db) != set.LastWrittenRulesHash) fail("settings from 1.10.0: a game started outside the launcher is restarted for nothing");
+            }
+
+            // 21. (2026-10-02 audit) Secrets never leave the PC or show on screen: the public problem report kept the server's
+            //     Steam token, a waiting mod.io code and the remote server's name; the shown command line kept the end of
+            //     a quoted password.
+            {
+                var s = state.Settings;
+                var keep = (s.ServerGslt, s.ServerModioCode, s.ServerRemoteHost, s.ServerGameStatsToken, s.ServerRemoteRconPassword, s.ServerPassword);
+                s.ServerGslt = "GSLTSECRET0123"; s.ServerModioCode = "54321"; s.ServerRemoteHost = "secret-host.example.org";
+                s.ServerGameStatsToken = "STATSSECRET99"; s.ServerRemoteRconPassword = "RCONSECRET77"; s.ServerPassword = "JOINSECRET55";
+                try
+                {
+                    DebugReport.BuildPublic("check", state, null, out var shortText, out var fullText);
+                    if (!fullText.Contains("== settings")) fail("the public report has no settings part to check");
+                    foreach (var secret in new[] { "GSLTSECRET0123", "54321", "secret-host", "STATSSECRET99", "RCONSECRET77", "JOINSECRET55" })
+                        if ((shortText + fullText).Contains(secret)) fail("the public problem report contains " + secret);
+                }
+                finally { (s.ServerGslt, s.ServerModioCode, s.ServerRemoteHost, s.ServerGameStatsToken, s.ServerRemoteRconPassword, s.ServerPassword) = keep; }
+                var shown = new ServerPlan { OwnArgs = "Town?Scenario=Scenario_Hideout_Checkpoint_Security?Password=\"join me\" -RconPassword=\"open sesame\" -GSLTToken=\"TOK EN\" -GameStatsToken=\"ST ATS\" -SecurityCode=12345" }.ShownCommandLine;
+                foreach (var secret in new[] { "join", "me\"", "open", "sesame", "TOK", "EN\"", "ST ", "ATS", "12345" })
+                    if (shown.Contains(secret)) fail("the shown command line contains " + secret + ": " + shown);
+            }
+
+            // 22. (2026-10-02 audit) Names from a mod's .pak go into the open command, the server's command line, RCON and Game.ini
+            //     section names: one with a space, | or a line break could add server switches, RCON commands or ini sections.
+            //     The game's own names all pass; a mod's odd ones are left out, also when they come from an old scan cache.
+            {
+                foreach (var odd in new[] { "Scen_X -RconPassword=p", "M|exit", "A?B=1", "X\r\n[Rcon]", "a\"b", "", "a;b" })
+                    if (GameCatalog.SafeId(odd)) fail("a name from a mod passes the check: " + odd.Replace("\r\n", "\\r\\n"));
+                if (GameCatalog.SafeModePathText("/X/BP.BP_C'\r\n[/Script/Insurgency.TeamInfo]") || !GameCatalog.SafeModePathText("/Game/Game/GameModes/BP_Skirmish.BP_Skirmish_C"))
+                    fail("the game mode path check is wrong");
+                foreach (var s in state.Official.Scenarios)
+                    if (!GameCatalog.SafeId(s.Id) || !GameCatalog.SafeId(s.Level)) { fail("an official scenario fails the name check: " + s.Id + " " + s.Level); break; }
+                foreach (var m in state.Official.Mutators)
+                    if (!GameCatalog.SafeId(m.Id)) { fail("an official mutator fails the name check: " + m.Id); break; }
+                if (UeIni.Render(new[] { new UeIni.Section("A]\r\n[Rcon") { Values = { new KeyValuePair<string, string>("bEnabled", "False") } } }).Contains("Rcon"))
+                    fail("a section name with a line break is written into Game.ini");
+                var evil = new ModInfo { Id = 999, Name = "Evil" };
+                evil.Scenarios.Add(new ScenarioInfo { Id = "Scen_X -EnableCheats", Level = "/Game/Mods/Evil/Maps/X", MapKey = "X", GameModeClass = "INSCheckpointGameMode", Source = ContentSource.Mod });
+                evil.Scenarios.Add(new ScenarioInfo { Id = "Scen_Fine", Level = "/Game/Mods/Evil/Maps/Y", MapKey = "Y", GameModeClass = "INSCheckpointGameMode", GameModePath = "/X/BP.BP_C'\r\n[Rcon]", Source = ContentSource.Mod });
+                evil.Mutators.Add(new MutatorInfo { Id = "M|exit", DisplayName = "M", Source = ContentSource.Mod });
+                state.Mods.Add(evil);
+                try
+                {
+                    state.Rebuild();
+                    if (state.AllScenarios.Any(s => s.Id.Contains(" ")) || state.FindMutator("M|exit") != null) fail("a mod's unsafe name reaches the scenario or mutator list");
+                    if (state.AllScenarios.FirstOrDefault(s => s.Id == "Scen_Fine")?.GameModePath != null) fail("a mod's unsafe game mode path reaches the Game.ini sections");
+                }
+                finally { state.Mods.Remove(evil); state.Rebuild(); }
+                // A file nested very deep is a clean error, not a stack overflow that ends the launcher at every start.
+                try { Json.Parse(new string('[', 100000)); fail("JSON nested 100000 deep was read"); }
+                catch (FormatException) { }
+                if (Json.Parse("[[[[1]]]]") == null) fail("plain nested JSON is not read");
+                // SteamCMD: Valve's own certificate name only.
+                if (!SteamCmd.ValveNames.Contains("Valve Corp.") || SteamCmd.ValveNames.Contains("Valve Tools Ltd")) fail("the SteamCMD signer check accepts the wrong names");
+            }
+
+            // 23. (2026-10-02 audit) A setup saved before 1.8.0 (rules and mutators, maybe the match) loads the same whatever was on
+            //     screen before: the Advanced options of the setup before stayed (extra URL options, cheats, after-load lines).
+            {
+                var legacy = new RulesPreset
+                {
+                    Name = "Old", FullSetup = true, MapKey = checkpoint.MapKey, ScenarioId = checkpoint.Id, Lighting = "Night", MaxPlayers = 8,
+                    Rules = new Dictionary<string, Dictionary<string, string>> { ["INSCheckpointGameMode"] = new Dictionary<string, string> { ["RoundTime"] = "900" } },
+                };
+                var old = new Preset { Name = "Old", Kind = PresetKind.Saved, Saved = legacy };
+                var busy = Fresh(versus ?? checkpoint);
+                busy.ExtraUrlOptions = "?Foo=1"; busy.EnableCheatsAfterLoad = true; busy.AfterLoadCommands = "slomo 2"; busy.GameModeOverride = "Push";
+                busy.CustomIniMode = "Append"; busy.CustomIniText = "[/Script/Insurgency.Mutator_X]\nA=1"; busy.LaunchRuleset = "RS_Hardcore";
+                SetupEngine.Apply(busy, state, old);
+                var clean = Fresh(versus ?? checkpoint);
+                SetupEngine.Apply(clean, state, old);
+                if (SetupEngine.Fingerprint(busy) != SetupEngine.Fingerprint(clean)) fail("a setup saved before 1.8.0 keeps what the setup before had:\n" + Diff(SetupEngine.Fingerprint(busy), SetupEngine.Fingerprint(clean)));
+            }
+
+            // 24. (2026-10-02 audit) A playlist's own values win over its ruleset's (Chad Team666 sent the Frenzy ruleset's enemy
+            //     counts), and a hardcore playlist's rules reach the Hardcore Checkpoint match it is played as.
+            foreach (var pr in SetupEngine.PlaylistPresets(state, true).Where(x => x.Source is PlaylistDef pd && pd.CoopRules.Count > 0))
+            {
+                var pl = (PlaylistDef)pr.Source;
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, pr);
+                var plan = LaunchPlanner.Build(p, state);
+                if (plan.Mode == null || !(pl.Modes.Count == 0 || pl.Modes.Contains("INSCheckpointGameMode"))) continue;
+                foreach (var kv in pl.CoopRules)
+                {
+                    if (!SetupEngine.MatchPresetSets(db, plan.Mode.Cls, kv.Key, kv.Value) || db.DefaultValue(plan.Mode.Cls, kv.Key) == null) continue;
+                    string got = SetupEngine.Effective(p, db, plan.Mode.Cls, kv.Key);
+                    if (!LaunchPlanner.Same(kv.Value, got, db.Prop(kv.Key))) { fail(pr.Name + " on " + plan.Mode.Cls + ": " + kv.Key + " is " + got + " (the playlist says " + kv.Value + ")"); break; }
+                }
+            }
+            // Every Checkpoint rule a playlist sets (its ruleset's too) is in the match it is played as, Hardcore Checkpoint
+            // for the hardcore ones (Task Force 666's Frenzy rules sat on Checkpoint while Hardcore was played).
+            foreach (var pr in SetupEngine.PlaylistPresets(state, true).Where(x => x.Rules.ContainsKey("INSCheckpointGameMode") && (x.ForModes.Count == 0 || x.ForModes.Contains("INSCheckpointGameMode"))))
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.Apply(p, state, pr);
+                var plan = LaunchPlanner.Build(p, state);
+                if (plan.Mode == null) continue;
+                foreach (var kv in pr.Rules["INSCheckpointGameMode"])
+                {
+                    if (!SetupEngine.MatchPresetSets(db, plan.Mode.Cls, kv.Key, kv.Value) || db.DefaultValue(plan.Mode.Cls, kv.Key) == null) continue;
+                    string got = SetupEngine.Effective(p, db, plan.Mode.Cls, kv.Key);
+                    if (!LaunchPlanner.Same(kv.Value, got, db.Prop(kv.Key))) { fail(pr.Name + " played as " + plan.Mode.Cls + ": " + kv.Key + " is " + got + " (the playlist sets " + kv.Value + ")"); break; }
+                }
+            }
+
+            // 25. (2026-10-02 audit) Stored setups edited by hand load and clean up: a mode or rule written twice in another case
+            //     threw and the setup was set aside as broken; rules of a mode the game does not have stayed forever.
+            {
+                var p = new Profile { Name = "hand" };
+                p.Rules = new Dictionary<string, Dictionary<string, string>>
+                {
+                    ["INSCheckpointGameMode"] = new Dictionary<string, string> { ["RoundTime"] = "600", ["roundtime"] = "700" },
+                    ["inscheckpointgamemode"] = new Dictionary<string, string> { ["WinLimit"] = "3" },
+                    ["INSNoSuchMode"] = new Dictionary<string, string> { ["RoundTime"] = "600" },
+                    ["*"] = new Dictionary<string, string> { ["Foo"] = "1", ["AIDifficulty"] = "0.8" },
+                };
+                try
+                {
+                    Store.Normalize(p);
+                    if (!p.Rules.TryGetValue("INSCheckpointGameMode", out var cp) || !cp.ContainsKey("WinLimit") || cp.Count != 2) fail("rules written twice in another case were not merged: " + Canon(p.Rules));
+                    SetupEngine.CleanRules(p.Rules, db);
+                    var left = SetupEngine.Problems(p, state);
+                    if (left.Count > 0) fail("a setup edited by hand is not clean after loading: " + string.Join("; ", left));
+                    if (p.Rules.ContainsKey("INSNoSuchMode") || (p.Rules.TryGetValue("*", out var anyMode) && anyMode.ContainsKey("Foo"))) fail("rules nothing uses stayed: " + Canon(p.Rules));
+                    if (!(p.Rules.TryGetValue("*", out var all2) && all2.ContainsKey("AIDifficulty"))) fail("the versus AI difficulty went with the unused rules");
+                }
+                catch (Exception ex) { fail("a setup edited by hand: " + ex.GetType().Name + " " + ex.Message); }
+            }
+
+            // 26. (2026-10-02 audit) Own Game.ini lines in a section that also has rules are all written, in order (+Array=A went,
+            //     MyKey=1 became MyKey=2); [Rcon] is read as the game reads it (first value); and a custom map entry with ?, | or
+            //     a space in its scenario does not launch (it went into the open command as it was).
+            {
+                var p = Fresh(checkpoint);
+                SetupEngine.SetRule(p, db, "INSCheckpointGameMode", "RoundTime", "600");
+                p.CustomIniMode = "Append";
+                p.CustomIniText = "[/Script/Insurgency.INSCheckpointGameMode]\n+MyArray=A\n+MyArray=B\nMyKey=1\nMyKey=2";
+                var sec = LaunchPlanner.Build(p, state).IniSections.FirstOrDefault(x => x.Name == "/Script/Insurgency.INSCheckpointGameMode");
+                string lines = sec == null ? "" : string.Join("|", sec.Values.Select(v => v.Key + "=" + v.Value));
+                if (!lines.Contains("RoundTime=600") || !lines.Contains("+MyArray=A|+MyArray=B|MyKey=1|MyKey=2")) fail("own Game.ini lines next to rules: " + lines);
+
+                string twice = "[Rcon]\r\nbEnabled=True\r\nPassword=first\r\nPassword=second\r\n\r\n[Rcon]\r\nPassword=third\r\n";
+                var ownOptions = new AppSettings { ServerUseOwnArgs = true, ServerOwnArgs = "Town?Scenario=Scenario_Hideout_Checkpoint_Security -log" };
+                if (ServerPlanner.RconFor(ownOptions, twice).Password != "first") fail("[Rcon] read with a password the game does not use: " + ServerPlanner.RconFor(ownOptions, twice).Password);
+                // Own options with a password but no port: the server's default port, not the launcher's setting.
+                var portless = new AppSettings { ServerUseOwnArgs = true, ServerRconPort = 27999, ServerOwnArgs = "Town?Scenario=Scenario_Hideout_Checkpoint_Security -Rcon -RconPassword=abc" };
+                if (ServerPlanner.RconFor(portless, "").Port != 27015) fail("own options without an RCON port: the launcher tries port " + ServerPlanner.RconFor(portless, "").Port);
+                // Own options naming their map cycle: that file is the one shown and edited.
+                string srv = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-cyc-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+                try
+                {
+                    System.IO.Directory.CreateDirectory(srv);
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(srv, "InsurgencyServer.exe"), "");
+                    portless.ServerOwnArgs += " -MapCycle=DynCycle";
+                    string cyc = ServerPlanner.MapCyclePath(portless, ServerInstall.At(srv));
+                    if (cyc == null || !cyc.EndsWith("DynCycle.txt", StringComparison.OrdinalIgnoreCase)) fail("own options with -MapCycle=DynCycle: the page edits " + cyc);
+                }
+                finally { try { System.IO.Directory.Delete(srv, true); } catch { } }
+
+                var odd = new CustomMapEntry { Label = "Odd", Level = "Farmhouse", Scenario = "Scenario_Farmhouse_Checkpoint_Security?MaxPlayers=1" };
+                state.Settings.CustomMaps.Add(odd);
+                try
+                {
+                    var q = Fresh(checkpoint);
+                    q.CustomMapId = odd.Id;
+                    if (LaunchPlanner.Build(q, state).IsValid) fail("a custom map entry with ? in its scenario launches: " + LaunchPlanner.Build(q, state).OpenCommand);
+                }
+                finally { state.Settings.CustomMaps.Remove(odd); }
+            }
+
+            // 27. (2026-10-02 audit) Ambush and Free For All: the screen shows the minimum players the launch sends (1), with bots
+            //     or without, and 2 can be kept to wait for a second player (it showed 2, sent 1, and 2 could not be kept).
+            foreach (var m in db.Modes.Where(x => !x.Coop && x.Defaults.ContainsKey("bBots") && int.TryParse(db.DefaultValue(x.Cls, "MinimumPlayers"), out var mp) && mp > 1))
+            {
+                var sc = state.AllScenarios.FirstOrDefault(x => state.ModeFor(x, false)?.Cls == m.Cls);
+                if (sc == null) continue;
+                foreach (bool bots in new[] { true, false })
+                {
+                    var p = Fresh(sc);
+                    if (!bots) SetupEngine.SetRule(p, db, m.Cls, "bBots", "False");
+                    var plan = LaunchPlanner.Build(p, state);
+                    string shown = SetupEngine.Effective(p, db, m.Cls, "MinimumPlayers");
+                    string sent = plan.Overrides.TryGetValue("MinimumPlayers", out var o) ? o : db.DefaultValue(m.Cls, "MinimumPlayers");
+                    if (shown != "1" || sent != "1") fail(m.Name + (bots ? "" : " without bots") + ": minimum players shown " + shown + ", sent " + sent + " (want 1 and 1)");
+                    SetupEngine.SetRule(p, db, m.Cls, "MinimumPlayers", "2");
+                    plan = LaunchPlanner.Build(p, state);
+                    sent = plan.Overrides.TryGetValue("MinimumPlayers", out var o2) ? o2 : db.DefaultValue(m.Cls, "MinimumPlayers");
+                    if (SetupEngine.GetRule(p, m.Cls, "MinimumPlayers") != "2" || sent != "2") fail(m.Name + ": minimum players 2 is not kept or not sent (stored " + SetupEngine.GetRule(p, m.Cls, "MinimumPlayers") + ", sent " + sent + ")");
+                }
+            }
+
             // 16. Server types (the admin guide's example servers): each one sets up a valid match of its mode with its
             //     preset, a map cycle of installed official scenarios of that mode, and a server plan that starts.
             string fakeServer = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-fake-server-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -744,6 +1066,58 @@ namespace SandstormModLauncher.Services
                     if (!ServerPlanner.Build(match, set, done, db, "").IsValid) fail("a finished SteamCMD install does not start");
                     System.IO.Directory.Delete(System.IO.Path.Combine(fakeServer, "steamapps"), true);
                 }
+                // 18. The server's own rules (mod.io #1865863, #1866898): its Game.ini keeps every line the admin wrote, the
+                //     first URL and later map loads carry no rule option of the match (URL options beat Game.ini), and only
+                //     RCON and vote kick are written. Own options mode works the same way. Game stats send their token.
+                {
+                    var p = Fresh(versus ?? checkpoint);
+                    string cls = state.ModeFor(SetupEngine.Scenario(p, state), false)?.Cls ?? "INSCheckpointGameMode";
+                    SetupEngine.SetRule(p, db, cls, "RoundTime", "777");
+                    SetupEngine.SetRule(p, db, cls, "WinLimit", "9");
+                    var match = LaunchPlanner.Build(p, state);
+                    string admin = "[/Script/Insurgency." + cls + "]\r\nRoundTime=1200\r\nWinLimit=7\r\nbBots=False\r\n\r\n[/Script/Insurgency.INSCheckpointGameMode]\r\nFriendlyBotQuota=4\r\n";
+                    var adminLines = UeIni.Split(admin).Where(l => l.Trim().Length > 0).ToList();
+                    var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerVoteKick = true, ServerOwnRules = true };
+                    bool HasRuleOption(string url) => LaunchPlanner.UrlOptions.Any(k => url.IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0);
+                    foreach (bool ownArgs in new[] { false, true })
+                    {
+                        set.ServerUseOwnArgs = ownArgs;
+                        set.ServerOwnArgs = ownArgs ? "Hideout?Scenario=Scenario_Hideout_Checkpoint_Security?MaxPlayers=8 -Port=27102 -QueryPort=27131 -log" : "";
+                        string what = ownArgs ? "own options" : "own rules";
+                        var sp = ServerPlanner.Build(match, set, inst, db, admin);
+                        if (!sp.IsValid) { fail(what + ": " + sp.Error); continue; }
+                        if (!sp.OwnRules) fail(what + ": the plan does not keep the server's rules");
+                        var lines = UeIni.Split(sp.GameIni);
+                        foreach (var l in adminLines) if (!lines.Contains(l)) fail(what + ": the admin's Game.ini line \"" + l + "\" was changed or removed");
+                        if (sp.GameIni.Contains("777") || sp.GameIni.Contains("WinLimit=9")) fail(what + ": the match's rules went into the server's Game.ini");
+                        if (!sp.GameIni.Contains("Password=abcdefghijklmnopqrstuvwx")) fail(what + ": no RCON section in the server's Game.ini");
+                        if (!ownArgs && !ServerPlanner.VoteKickOn(sp.GameIni)) fail(what + ": vote kick is not in the server's Game.ini");
+                        if (sp.Url == null || HasRuleOption(sp.Url)) fail(what + ": the server URL has the match's rule options: " + sp.Url);
+                        else if (HasRuleOption(ServerService.TravelUrl(sp))) fail(what + ": a map load resets the server's rules: " + ServerService.TravelUrl(sp));
+                    }
+                    set.ServerUseOwnArgs = false;
+                    set.ServerOwnRules = false;
+                    var ours = ServerPlanner.Build(match, set, inst, db, admin);
+                    if (ours.OwnRules || !ours.GameIni.Contains("RoundTime=777") || ours.GameIni.Contains("RoundTime=1200")) fail("launcher rules: the match's rules are not the server's:\n" + ours.GameIni);
+                    if (!ours.Url.Contains("?RoundTime=777")) fail("launcher rules: the server URL lost the match's round time: " + ours.Url);
+
+                    // B4: game stats need the token from gamestats.sandstorm.game ("-GameStatsToken= required for statistics collection").
+                    set.ServerGameStats = true;
+                    set.ServerGslt = "ABCDEF0123456789";
+                    set.ServerGameStatsToken = " 1417264D1C6549CC95E10CA1E9BE8F09 ";
+                    var stats = ServerPlanner.Build(match, set, inst, db, "");
+                    if (!stats.Args.Contains("-GameStats") || !stats.Args.Contains("-GameStatsToken=1417264D1C6549CC95E10CA1E9BE8F09")) fail("game stats: " + stats.CommandLine);
+                    if (stats.ShownCommandLine.Contains("1417264D1C6549CC95E10CA1E9BE8F09")) fail("the shown command line has the game stats token: " + stats.ShownCommandLine);
+                    set.ServerGameStatsToken = "";
+                    var noToken = ServerPlanner.Build(match, set, inst, db, "");
+                    if (noToken.Args.Any(a => a.StartsWith("-GameStatsToken", StringComparison.Ordinal)) || !noToken.Warnings.Any(w => w.Contains("gamestats.sandstorm.game")))
+                        fail("game stats without a token: no warning, or an empty token on the command line: " + noToken.CommandLine);
+                    set.ServerGameStatsToken = "bad token";
+                    if (ServerPlanner.Build(match, set, inst, db, "").IsValid) fail("a game stats token with a space starts the server");
+                    set.ServerGameStats = false;
+                    set.ServerGameStatsToken = "1417264D1C6549CC95E10CA1E9BE8F09";
+                    if (ServerPlanner.Build(match, set, inst, db, "").Args.Any(a => a.StartsWith("-GameStatsToken", StringComparison.Ordinal))) fail("game stats off but the token is passed");
+                }
                 // Mods since game update 1.20: -Mods with -SecurityCode (the waiting code once, else none), no Mods.txt, and the
                 // server's mod.io login decides the warnings.
                 {
@@ -825,27 +1199,105 @@ namespace SandstormModLauncher.Services
                     set.ServerUseOwnArgs = false;
                     if (ServerPlanner.RconFor(set, theirs).Own) fail("the launcher's own start used the player's RCON");
                 }
-                // A map cycle entry with its own mutators (written over several lines, mod.io #1865932) counts as a scenario,
-                // and the plan says the match's mutators are not on that map; an entry without mutators says nothing.
+                // B3 (mod.io #1865932, verified on the server 2026-10-02): the match's mutators go on the command line, where they
+                // stay for every map and a map cycle entry's own ?Mutators= adds to them (in the start URL, an entry's list
+                // replaced them); never in the URL too (loaded twice). A map load on the running server names only mutators
+                // the server was not started with, and says which ones stay until a restart.
                 {
                     var p = Fresh(checkpoint);
                     p.Mutators.Add(own ?? "Hardcore");
                     var match = LaunchPlanner.Build(p, state);
                     string cycleFile = System.IO.Path.Combine(fakeServer, "dyn-cycle.txt");
                     var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerUseMapCycle = true, ServerMapCycleFile = cycleFile };
-                    System.IO.File.WriteAllText(cycleFile, "(Scenario=\"Scenario_Farmhouse_Checkpoint_Security\",\r\nLighting=\"Night\")\r\n");
-                    var plain = ServerPlanner.Build(match, set, inst, db, "");
                     System.IO.File.WriteAllText(cycleFile, "(Scenario=\"Scenario_Farmhouse_Checkpoint_Security\",\r\nLighting=\"Night\",Options=\"?Mutators=AllYouCanEat,\r\nHardcore\")\r\n");
                     var dyn = ServerPlanner.Build(match, set, inst, db, "");
-                    if (!plain.IsValid || !dyn.IsValid) fail("map cycle with a multi-line entry: " + (plain.Error ?? dyn.Error));
+                    if (!dyn.IsValid) fail("map cycle with a multi-line entry: " + dyn.Error);
                     else if (match.Mutators.Count == 0) fail("map cycle mutators: the match has no mutators to check with");
                     else
                     {
-                        var extra = dyn.Warnings.Except(plain.Warnings).ToList();
-                        if (extra.Count != 1 || !extra[0].Contains(string.Join(", ", match.Mutators)))
-                            fail("map cycle entry with its own mutators: the plan's notes " + (extra.Count == 0 ? "do not say the match's mutators are not on that map" : "are " + string.Join(" / ", extra)));
-                        if (plain.Warnings.Concat(dyn.Warnings).Contains(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."))) fail("a map cycle of one multi-line entry counts as having no scenarios");
+                        if (!dyn.Args.Contains("-mutators=" + string.Join(",", match.Mutators))) fail("the match's mutators are not on the server's command line: " + dyn.CommandLine);
+                        if (dyn.Url.IndexOf("?Mutators=", StringComparison.OrdinalIgnoreCase) >= 0) fail("the match's mutators are in the start URL too (loaded twice): " + dyn.Url);
+                        if (dyn.Warnings.Contains(T("The map cycle has no scenarios, so the server cycles through the game's versus scenarios."))) fail("a map cycle of one multi-line entry counts as having no scenarios");
+                        string again = ServerService.TravelUrl(dyn);
+                        if (System.Text.RegularExpressions.Regex.IsMatch(again, @"\?Mutators=[^?]")) fail("a map load names a mutator the server was started with: " + again);
+                        string another = state.AllMutators.Select(m => m.Id).FirstOrDefault(id => !match.Mutators.Contains(id, StringComparer.OrdinalIgnoreCase));
+                        if (another != null)
+                        {
+                            var q = Fresh(checkpoint);
+                            q.Mutators.Add(another);
+                            var plan2 = ServerPlanner.Build(LaunchPlanner.Build(q, state), set, inst, db, "");
+                            string load = ServerService.TravelUrl(plan2, dyn.StartMutators);
+                            if (!load.Contains("?Mutators=" + another)) fail("a map load does not add the match's new mutator: " + load);
+                            if (!ServerService.StuckMutators(plan2, dyn.StartMutators).SequenceEqual(match.Mutators)) fail("the mutators that stay until a restart are not named");
+                        }
                     }
+                    // A chosen MapCycle.txt from another folder is copied under the launcher's own name, never over the server's.
+                    string otherDir = System.IO.Path.Combine(fakeServer, "elsewhere");
+                    System.IO.Directory.CreateDirectory(otherDir);
+                    string chosen = System.IO.Path.Combine(otherDir, "MapCycle.txt");
+                    System.IO.File.WriteAllText(chosen, "Scenario_Farmhouse_Checkpoint_Security\r\n");
+                    set.ServerMapCycleFile = chosen;
+                    var copied = ServerPlanner.Build(match, set, inst, db, "");
+                    if (copied.MapCycleCopyFrom == null || copied.MapCycleName.Equals("MapCycle", StringComparison.OrdinalIgnoreCase)) fail("a chosen MapCycle.txt is copied over the server's own: " + copied.MapCycleName);
+                }
+                // The server's own Admins.txt: used as it is with no admins typed in the launcher, and admins only in the file
+                // are named before the launcher's list replaces it.
+                {
+                    var m = LaunchPlanner.Build(Fresh(checkpoint), state);
+                    System.IO.Directory.CreateDirectory(inst.ServerConfigDir);
+                    string adminsFile = System.IO.Path.Combine(inst.ServerConfigDir, "Admins.txt");
+                    System.IO.File.WriteAllText(adminsFile, "76561198000000001\r\n76561198000000002\r\n");
+                    try
+                    {
+                        var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" };
+                        var theirs = ServerPlanner.Build(m, set, inst, db, "");
+                        if (!theirs.Args.Contains("-AdminList=Admins") || theirs.AdminsText != null) fail("the server's own Admins.txt is not used, or is written over: " + theirs.CommandLine);
+                        set.ServerAdmins = "76561198000000003";
+                        var mine = ServerPlanner.Build(m, set, inst, db, "");
+                        if (mine.AdminsText == null || !mine.Warnings.Any(w => w.Contains("Admins.txt"))) fail("the launcher's admins replace Admins.txt without naming the admins only in the file");
+                    }
+                    finally { System.IO.File.Delete(adminsFile); }
+                }
+                // The server's own rules leave the match's ruleset out too; official rules stay a choice of their own.
+                {
+                    var p = Fresh(checkpoint);
+                    p.LaunchRuleset = "RS_Hardcore";
+                    var m = LaunchPlanner.Build(p, state);
+                    var set = new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerOwnRules = true };
+                    if (ServerPlanner.Build(m, set, inst, db, "").Args.Any(a => a.StartsWith("-ruleset=", StringComparison.Ordinal))) fail("own rules, but the match's ruleset is on the command line");
+                    set.ServerOfficialRules = true;
+                    if (!ServerPlanner.Build(m, set, inst, db, "").Args.Contains("-ruleset=OfficialRules")) fail("own rules took official rules off");
+                    // "Replace Game.ini" is for the player's game: the server's Game.ini keeps its other sections.
+                    p.LaunchRuleset = null;
+                    p.CustomIniMode = "Replace";
+                    p.CustomIniText = "[/Script/Insurgency.Mutator_X]\nA=1";
+                    var rep = ServerPlanner.Build(LaunchPlanner.Build(p, state), new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx" }, inst, db, "[/Script/Engine.GameSession]\r\nMaxPlayers=8\r\n");
+                    if (!rep.GameIni.Contains("[/Script/Engine.GameSession]") || !rep.GameIni.Contains("A=1")) fail("Replace Game.ini cut the server's Game.ini down:\n" + rep.GameIni);
+                    // A server on another PC: the match only, over RCON, without a server installed here; its own player count stays.
+                    var remote = ServerPlanner.Build(LaunchPlanner.Build(Fresh(checkpoint), state), new AppSettings { ServerRemote = true, ServerMaxPlayers = 12 }, new ServerInstall(), db, "");
+                    if (!remote.IsValid || remote.Url == null || remote.Url.Contains("MaxPlayers=") || remote.Args.Count > 0) fail("a server on another PC: " + (remote.Error ?? remote.Url));
+                }
+                // A map from a mod: the server starts on an official map until the mod is there, but loading the match on the
+                // running server loads the mod's map (it loaded Farmhouse).
+                {
+                    var modMap = new ModInfo { Id = 4242, Name = "Map mod" };
+                    modMap.Scenarios.Add(new ScenarioInfo { Id = "Scenario_ModTown_Checkpoint_Security", Level = "/Game/Mods/ModTown/Maps/ModTown", MapKey = "ModTown", GameModeClass = "INSCheckpointGameMode",
+                                                           GameModePath = "/Script/Insurgency.INSCheckpointGameMode", Category = "Co-op", IsCoop = true, Source = ContentSource.Mod, ModId = 4242 });
+                    state.Mods.Add(modMap);
+                    try
+                    {
+                        state.Rebuild();
+                        var p = Fresh(state.AllScenarios.First(s => s.Id == "Scenario_ModTown_Checkpoint_Security"));
+                        var mp = LaunchPlanner.Build(p, state);
+                        var sp = ServerPlanner.Build(mp, new AppSettings { ServerRconPassword = "abcdefghijklmnopqrstuvwx", ServerModsEnabled = true }, inst, db, "");
+                        if (!sp.IsValid) fail("a mod's map on the server: " + sp.Error);
+                        else
+                        {
+                            if (!sp.Url.StartsWith("Farmhouse?", StringComparison.Ordinal)) fail("a mod's map: the server does not start on an official map first: " + sp.Url);
+                            if (!ServerService.TravelUrl(sp).StartsWith(mp.Level + "?", StringComparison.Ordinal)) fail("a mod's map: loading the match on the running server loads " + ServerService.TravelUrl(sp));
+                        }
+                    }
+                    finally { state.Mods.Remove(modMap); state.Rebuild(); }
                 }
                 // Official rules and the match's own ruleset: one ruleset, official, with a note.
                 {
@@ -928,6 +1380,21 @@ namespace SandstormModLauncher.Services
                 if (!url.Contains("?Scenario=" + p.ScenarioId)) fail("travel URL misses the scenario: " + cmd);
                 if (plan.PlayerSlots < 1 || plan.PlayerSlots > 64) fail("player slots " + plan.PlayerSlots);
                 var mode = plan.Mode;
+                // A map load over RCON (relative: old options stay) brings every URL rule to what the match wants: its own
+                // value, or the mode's default (a switch turned off came back on, 2026-10-02 audit).
+                if (mode != null)
+                {
+                    var opts = (url + LaunchService.TravelResets(plan)).Split('?').Skip(1).Select(o => o.Split(new[] { '=' }, 2))
+                                                                    .GroupBy(o => o[0], StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+                    foreach (var key in LaunchPlanner.UrlOptions.Where(k => mode.Defaults.ContainsKey(k) && !plan.ExtraOptionKeys.Contains(k)))
+                    {
+                        string want = plan.Overrides.TryGetValue(key, out var ov) ? ov : mode.Defaults[key];
+                        if (want == null) continue;
+                        want = LaunchPlanner.IsTrue(want) ? "1" : want.Equals("False", StringComparison.OrdinalIgnoreCase) ? "0" : want;
+                        string got = opts.TryGetValue(key, out var kv) && kv.Length > 1 ? kv[1] : null;
+                        if (got != want) fail("a map load sends " + key + "=" + got + " but the match wants " + want + ": " + url + LaunchService.TravelResets(plan));
+                    }
+                }
                 if (mode != null && mode.Coop)
                 {
                     int mates = int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var mt) ? SetupEngine.AiTeammates(mt) : 0;
@@ -1035,7 +1502,6 @@ namespace SandstormModLauncher.Services
                 if (key == "BotQuota" && versusBots && int.TryParse(want, out var wq) && wq <= 0 && (got == "1" || got == "5")) continue;
                 // Bots off: the team size means nothing and is not sent (the screen still shows what bots would get).
                 if (key == "BotQuota" && !mode.Coop && !versusBots && !stored) continue;
-                if ((key == "MinimumPlayers" || key == "MinimumPlayersInProgress") && versusBots && !stored && got == "1") continue;
                 if (key == "bBots" && mode.Coop && !stored && LaunchPlanner.IsTrue(got)
                     && int.TryParse(SetupEngine.Effective(p, db, mode.Cls, "FriendlyBotQuota"), out var fb) && fb > 0) continue;
                 fail("the game would get " + mode.Cls + "." + key + "=" + got + " but the setup says " + want);

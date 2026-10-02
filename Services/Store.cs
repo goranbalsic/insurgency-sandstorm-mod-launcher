@@ -116,13 +116,19 @@ namespace SandstormModLauncher.Services
             }
         }
 
-        private static void Normalize(Profile p)
+        internal static void Normalize(Profile p)
         {
             p.Mutators = p.Mutators ?? new List<string>();
             p.Rules = p.Rules ?? new Dictionary<string, Dictionary<string, string>>();
+            // Merged key by key: a mode or a rule written twice in another case (a hand-edited file) threw, and the whole
+            // setup was set aside as broken; or one of the two modes was dropped (2026-10-02 audit). The last value wins.
             var fixedRules = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in p.Rules)
-                if (kv.Value != null) fixedRules[kv.Key] = new Dictionary<string, string>(kv.Value, StringComparer.OrdinalIgnoreCase);
+            {
+                if (kv.Value == null) continue;
+                if (!fixedRules.TryGetValue(kv.Key, out var map)) fixedRules[kv.Key] = map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var rule in kv.Value) map[rule.Key] = rule.Value;
+            }
             p.Rules = fixedRules;
             if (p.MaxPlayers <= 0) p.MaxPlayers = 8;
             if (p.MaxPlayers > 64) p.MaxPlayers = 64;

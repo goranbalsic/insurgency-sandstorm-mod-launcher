@@ -94,6 +94,13 @@ namespace SandstormModLauncher.Game
                     }
             }
             if (sc == null) { plan.Error = T("Pick a map and scenario first."); return plan; }
+            // The level and scenario go into the open command as they are: a space, ? or | would break it or add options
+            // (a custom map entry took any text, 2026-10-02 audit).
+            if (!GameCatalog.SafeId(sc.Id) || !GameCatalog.SafeId(sc.Level))
+            {
+                plan.Error = T("The map's level or scenario name has characters the game cannot take (only letters, digits and _ - . / are allowed).");
+                return plan;
+            }
             plan.Scenario = sc;
             plan.Hardcore = p.Hardcore && sc.GameModeClass == "INSCheckpointGameMode";
             plan.Mode = db.ResolveMode(sc.GameModeClass, plan.Hardcore);
@@ -144,10 +151,14 @@ namespace SandstormModLauncher.Game
                 plan.Overrides["BotQuota"] = "1";
                 plan.Warnings.Add(T("Players per team was 0 with bots on; 1 is used (you against one bot)."));
             }
-            if (versusBots)
-                foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
-                    if (int.TryParse(db.DefaultValue(cls, key), out int min) && min > 1 && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
-                        plan.Overrides[key] = "1";
+            // The launcher's default for the minimums (SetupEngine.LauncherDefault: 1), with bots or without: offline nobody
+            // else comes; a server that should wait for a second player keeps 2 in its rules.
+            foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
+            {
+                string launcherMin = SetupEngine.LauncherDefault(db, cls, key);
+                if (launcherMin != null && launcherMin != db.DefaultValue(cls, key) && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
+                    plan.Overrides[key] = launcherMin;
+            }
 
             if (plan.Mode != null && plan.Mode.Coop
                 && int.TryParse(plan.Overrides.TryGetValue("MinimumEnemies", out var mn) ? mn : db.DefaultValue(cls, "MinimumEnemies"), out int minE)
@@ -156,7 +167,7 @@ namespace SandstormModLauncher.Game
 
             // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
             if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
-                && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && fbn > 0
+                && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && SetupEngine.AiTeammates(fbn) > 0
                 && !(p.Rules.TryGetValue(cls, out var own2) && own2.ContainsKey("bBots")))
                 plan.Overrides["bBots"] = "True";
 
@@ -169,7 +180,8 @@ namespace SandstormModLauncher.Game
             if (plan.Mode != null && plan.Mode.Coop)
             {
                 string fb = plan.Overrides.TryGetValue("FriendlyBotQuota", out var ov2) ? ov2 : db.DefaultValue(cls, "FriendlyBotQuota");
-                wantsMates = int.TryParse(fb, out int mates) && mates > 0;
+                // FriendlyBotQuota counts you: 1 is no AI teammate (setups saved by 1.10.0 and older can hold it).
+                wantsMates = int.TryParse(fb, out int mates) && SetupEngine.AiTeammates(mates) > 0;
                 // Offline nobody else joins, so plenty of slots costs nothing; too few and the AI teammates do not join.
                 if (wantsMates) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Max(8, 1 + mates + 2));
             }
@@ -278,7 +290,14 @@ namespace SandstormModLauncher.Game
                 {
                     var existing = sections.FirstOrDefault(x => x.Name.Equals(s.Name, StringComparison.OrdinalIgnoreCase));
                     if (existing == null) sections.Add(s);
-                    else foreach (var v in s.Values) { existing.Values.RemoveAll(x => x.Key.Equals(v.Key, StringComparison.OrdinalIgnoreCase)); existing.Values.Add(v); }
+                    else
+                    {
+                        // The typed lines replace the rules of the same keys, and all of them stay, in their order: each one
+                        // took the earlier typed lines of its key out (+Array=A went, MyKey=1 became MyKey=2, 2026-10-02 audit).
+                        var typed = new HashSet<string>(s.Values.Select(v => UeIni.KeyOf(v.Key + "=")), StringComparer.OrdinalIgnoreCase);
+                        existing.Values.RemoveAll(x => typed.Contains(UeIni.KeyOf(x.Key + "=")));
+                        existing.Values.AddRange(s.Values);
+                    }
                 }
             return sections;
         }
@@ -294,9 +313,9 @@ namespace SandstormModLauncher.Game
         /// The new Game.ini text for a launch: the plan merged into the current file ("Replace" keeps only the plan).
         /// <paramref name="earlier"/> = the player's own extra keys written last time, removed again when no longer wanted.
         /// </summary>
-        public static string MergeGameIni(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier)
+        public static string MergeGameIni(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier, bool allowReplace = true)
         {
-            if (string.Equals(plan.Profile?.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)) return UeIni.Render(plan.IniSections) + "\r\n";
+            if (allowReplace && string.Equals(plan.Profile?.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)) return UeIni.Render(plan.IniSections) + "\r\n";
             var old = new HashSet<string>(earlier ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             return UeIni.MergeSections(current, plan.IniSections, (s, k) => IsManagedIniKey(db, s, k) || old.Contains(s + "\n" + k));
         }
@@ -319,7 +338,14 @@ namespace SandstormModLauncher.Game
                                      || db.Modes.Any(m => section.EndsWith("." + m.Cls, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>Fingerprint of everything that only takes effect when the game starts.</summary>
-        public static string RestartKeyFor(Profile p, RulesDb db)
+        public static string RestartKeyFor(Profile p, RulesDb db) => CombineRestartKey(IniRestartPart(p, db), p.LaunchRuleset);
+
+        /// <summary>
+        /// The Game.ini part of it: start-only rules, and the player's own Game.ini lines (mutator settings and the like are
+        /// read once at game start; edits never reached a running game, 2026-10-02 audit). Without own lines it is the text
+        /// older versions hashed, so a game started by one of them is not restarted for nothing.
+        /// </summary>
+        public static string IniRestartPart(Profile p, RulesDb db)
         {
             var sb = new StringBuilder();
             foreach (var mode in p.Rules.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
@@ -329,8 +355,42 @@ namespace SandstormModLauncher.Game
                     if (d != null && Same(d, kv.Value, db.Prop(kv.Key))) continue;
                     sb.Append(mode.Key).Append('.').Append(kv.Key).Append('=').Append(kv.Value).Append(';');
                 }
-            sb.Append("ruleset=").Append(p.LaunchRuleset ?? "");
-            return Hash(sb.ToString());
+            if (!string.Equals(p.CustomIniMode ?? "Off", "Off", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.CustomIniText))
+                sb.Append("ini=").Append(Hash(p.CustomIniMode + ":" + UeIni.Render(UeIni.Parse(p.CustomIniText)))).Append(';');
+            return sb.ToString();
+        }
+
+        /// <summary>The restart key from its Game.ini part and the official ruleset the game is started with (a start argument).</summary>
+        public static string CombineRestartKey(string iniPart, string ruleset) => Hash((iniPart ?? "") + "ruleset=" + (ruleset ?? ""));
+
+        /// <summary>"Mode|Key" of every rule the plan writes into Game.ini for a game mode (the game reads them at start).</summary>
+        public static List<string> WrittenRuleKeys(LaunchPlan plan, RulesDb db)
+        {
+            const string prefix = "/Script/Insurgency.";
+            return plan.IniSections.Where(s => s.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && db.Mode(s.Name.Substring(prefix.Length)) != null)
+                                   .SelectMany(s => s.Values.Where(v => db.Prop(v.Key) != null).Select(v => s.Name.Substring(prefix.Length) + "|" + v.Key))
+                                   .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>
+        /// For a game that is already running: the rules its Game.ini set at start that this plan leaves at the default, set
+        /// back to the default after the map loads (Realism, then Game defaults kept Realism's rules, 2026-10-02 audit).
+        /// </summary>
+        public static List<KeyValuePair<string, string>> LiveResets(LaunchPlan plan, RulesDb db, IEnumerable<string> startedWith)
+        {
+            var list = new List<KeyValuePair<string, string>>();
+            string cls = plan.Mode?.Cls;
+            if (cls == null || startedWith == null) return list;
+            foreach (var id in startedWith)
+            {
+                int bar = id.IndexOf('|');
+                if (bar <= 0 || !id.Substring(0, bar).Equals(cls, StringComparison.OrdinalIgnoreCase)) continue;
+                string key = id.Substring(bar + 1);
+                if (plan.Overrides.ContainsKey(key) || list.Any(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase))) continue;
+                string def = db.DefaultValue(cls, key);
+                if (def != null) list.Add(new KeyValuePair<string, string>(key, def));
+            }
+            return list;
         }
 
         public static string Hash(string s)

@@ -49,6 +49,9 @@ namespace SandstormModLauncher.Views.Controls
         private void Minus_Click(object sender, RoutedEventArgs e) => Commit(Value - 1);
         private void Plus_Click(object sender, RoutedEventArgs e) => Commit(Value + 1);
 
+        /// <summary>Takes a number typed but not yet confirmed (F5 or closing the window do not move the focus).</summary>
+        public void CommitTyped() => CommitText();
+
         private void CommitText()
         {
             if (int.TryParse(box.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int v)) Commit(v);

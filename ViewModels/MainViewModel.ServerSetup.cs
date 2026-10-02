@@ -585,12 +585,13 @@ namespace SandstormModLauncher.ViewModels
 
         public bool ServerVoteKick { get => State.Settings.ServerVoteKick; set => SetServerSetting(() => State.Settings.ServerVoteKick = value); }
         public bool ServerOfficialRules { get => State.Settings.ServerOfficialRules; set => SetServerSetting(() => State.Settings.ServerOfficialRules = value); }
+        public bool ServerOwnRules { get => State.Settings.ServerOwnRules; set => SetServerSetting(() => State.Settings.ServerOwnRules = value); }
 
         private void RaiseServerSetup()
         {
             missingRuntime = ServerInstall.MissingRuntime();
             RaiseMany(nameof(ServerInstallDir), nameof(ServerCanUpdate), nameof(ServerUpdatedBySteam), nameof(ServerNotInstalled), nameof(RuntimeMissing), nameof(RuntimeMissingText),
-                      nameof(ServerVoteKick), nameof(ServerOfficialRules));
+                      nameof(ServerVoteKick), nameof(ServerOfficialRules), nameof(ServerOwnRules));
             RefreshReachability();
             CommandManager.InvalidateRequerySuggested();
         }

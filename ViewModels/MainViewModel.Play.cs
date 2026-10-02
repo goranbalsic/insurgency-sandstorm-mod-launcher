@@ -312,7 +312,8 @@ namespace SandstormModLauncher.ViewModels
 
         private void SetSquadValue(string key, string value, Func<ModeDef, string, string> stored)
         {
-            foreach (var m in SquadModes(key)) RuleSet(m.Cls, key, stored(m, value));
+            foreach (var m in SquadModes(key)) SetupEngine.SetSquadRule(Profile, State.Rules, m.Cls, key, stored(m, value));
+            ProfileChanged();
             RaiseSquad();
             RefreshRuleItems();
         }
@@ -332,7 +333,8 @@ namespace SandstormModLauncher.ViewModels
         public int MinEnemies { get => EffectiveInt("MinimumEnemies"); set => SetInt("MinimumEnemies", value, 0, 64); }
         public int MaxEnemies { get => EffectiveInt("MaximumEnemies"); set => SetInt("MaximumEnemies", value, 0, 64); }
         public int BotQuota { get => EffectiveInt("BotQuota"); set => SetInt("BotQuota", value, 1, 32); }
-        public string TeammatesHint => F("FriendlyBotQuota {0} (you + AI) · mode default {1}", EffectiveInt("FriendlyBotQuota"), SetupEngine.AiTeammates(DefaultInt("FriendlyBotQuota")));
+        // Both numbers are the game's own (you + AI): the default was the AI count, so the default setup read "4 · default 3".
+        public string TeammatesHint => F("FriendlyBotQuota {0} (you + AI) · mode default {1}", EffectiveInt("FriendlyBotQuota"), DefaultInt("FriendlyBotQuota"));
         public string SoloEnemiesHint => F("SoloEnemies · mode default {0}", DefaultInt("SoloEnemies"));
         public string MinEnemiesHint => F("MinimumEnemies · default {0}", DefaultInt("MinimumEnemies"));
         public string MaxEnemiesHint => F("MaximumEnemies · default {0}", DefaultInt("MaximumEnemies"));
@@ -378,10 +380,13 @@ namespace SandstormModLauncher.ViewModels
             set
             {
                 var mode = CurrentMode;
+                // No known game mode: nothing would send it (it was stored as the versus value).
+                if (mode == null) { RaiseSquad(); return; }
                 double v = Math.Round(Math.Max(0, Math.Min(1, value)) * 20) / 20;
                 string s = v.ToString("0.##", CultureInfo.InvariantCulture);
                 // Stored only where it differs from that mode's own default.
                 if (mode != null && mode.Coop) { SetSquadValue("AIDifficulty", s, (m, x) => LaunchPlanner.Same(State.Rules.DefaultValue(m.Cls, "AIDifficulty"), x, null) ? null : x); return; }
+                SetupEngine.OwnSquadValue(Profile, "*", "AIDifficulty");
                 RuleSet("*", "AIDifficulty", Math.Abs(v - 0.5) < 0.001 ? null : s);
                 RaiseSquad();
                 RefreshRuleItems();

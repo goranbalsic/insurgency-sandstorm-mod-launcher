@@ -48,7 +48,9 @@ The Server page installs the server with SteamCMD (about 5 GB, folder of your ch
 
 1. Pick a server type or set up the match on Play.
 2. Fill in name, ports, slots, password, admins, mods and a GSLT if you want it in the browser.
-3. Start. The launcher writes `Game.ini`, `Admins.txt`, `MapCycle.txt` (backed up first), starts `InsurgencyServer.exe` and waits for RCON.
+3. Start. The launcher writes `Game.ini` and `Admins.txt` (backed up first), starts `InsurgencyServer.exe` and waits for RCON.
+
+The match's mutators go on the command line (`-mutators=`), so map cycle entries with their own `?Mutators=` add to them. Rules already in the server's `Game.ini`? Switch on "Use the rules in the server's Game.ini" on the Match card: the launcher then writes only RCON and vote kick there. Game stats need a token from gamestats.sandstorm.game, a GSLT and no join password.
 
 Already have a .bat? Switch on "Start with my own options" and paste its options or import the file. They are used as-is; the launcher only adds a waiting security code, and its RCON to `Game.ini` if you have none.
 
@@ -119,7 +121,7 @@ Releasing: raise `<Version>` in the csproj, add a section to `packaging/release-
 
 **Does it change online play?** No. The `Game.ini` block only affects matches you host. Settings > "Remove launcher rules from Game.ini" takes it out.
 
-**Why does the AI teammate count restart the game?** The game reads it only at startup. The launcher asks first.
+**Why does the launcher want to restart the game?** The game reads AI teammates, the official ruleset and your own Game.ini lines only at startup. The launcher asks first.
 
 **Steam or Epic?** Tested with Steam; Epic installs are detected.
 

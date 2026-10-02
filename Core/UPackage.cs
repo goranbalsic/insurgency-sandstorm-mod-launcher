@@ -164,6 +164,9 @@ namespace SandstormModLauncher.Core
         private Dictionary<string, object> ReadTagged(BinReader r, int end, int depth)
         {
             var result = new Dictionary<string, object>(StringComparer.Ordinal);
+            // Nested structs in arrays, sets and maps came here without a limit: a mod's file nested deep enough ended the
+            // launcher with a stack overflow, at every start (2026-10-02 audit). The rest of this value is skipped.
+            if (depth > 12) { r.Pos = Math.Max(r.Pos, end); return result; }
             while (r.Pos + 8 <= end)
             {
                 string name = FName(r);
@@ -231,11 +234,12 @@ namespace SandstormModLauncher.Core
                         string st = FName(r); r.Skip(16);
                         if (FileVersion >= 503 && r.U8() != 0) r.Skip(16);
                         if (NativeStructs.Contains(st)) return list;
-                        for (int i = 0; i < n && r.Pos < end; i++) list.Add(ReadTagged(r, end, depth + 1));
+                        for (int i = 0; i < n && r.Pos < end; i++) { int at = r.Pos; list.Add(ReadTagged(r, end, depth + 1)); if (r.Pos == at) break; }
                     }
                     else
                     {
-                        for (int i = 0; i < n && r.Pos < end; i++) list.Add(ReadInner(r, inner, end, depth));
+                        // An element type it cannot read reads nothing: stop instead of counting to a huge n.
+                        for (int i = 0; i < n && r.Pos < end; i++) { int at = r.Pos; list.Add(ReadInner(r, inner, end, depth)); if (r.Pos == at) break; }
                     }
                     return list;
                 }
@@ -246,9 +250,11 @@ namespace SandstormModLauncher.Core
                     var map = new List<KeyValuePair<object, object>>();
                     for (int i = 0; i < n && r.Pos < end; i++)
                     {
+                        int at = r.Pos;
                         object k = ReadInner(r, inner, end, depth);
                         object v = valueType == "StructProperty" ? ReadTagged(r, end, depth + 1) : ReadInner(r, valueType, end, depth);
                         map.Add(new KeyValuePair<object, object>(k, v));
+                        if (r.Pos == at) break;
                     }
                     return map;
                 }
