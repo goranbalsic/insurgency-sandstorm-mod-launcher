@@ -1,0 +1,1779 @@
+{
+  "Key": "114014280|639259502419676219|2",
+  "Commands": [
+    {
+      "Name": "AddClaim",
+      "Params": [
+        {
+          "Name": "ClaimName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AddCompassTestMarker",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AddStatsHeadshots",
+      "Params": [
+        {
+          "Name": "Kills",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AddStatsRoundsPlayed",
+      "Params": [
+        {
+          "Name": "RoundsPlayed",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AddStatsRoundsWon",
+      "Params": [
+        {
+          "Name": "RoundsWon",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AddStatsWeaponHeadshots",
+      "Params": [
+        {
+          "Name": "Kills",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminBanPlayer",
+      "Params": [
+        {
+          "Name": "PlayerId",
+          "Type": "int"
+        },
+        {
+          "Name": "BanDuration",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminCheat",
+      "Params": [
+        {
+          "Name": "Command",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminConsoleCommand",
+      "Params": [
+        {
+          "Name": "Command",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminDebugLightLevels",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminDebugPlayerState",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminExtendRoundTimer",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminForceGameOver",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminGetGamemodeProperty",
+      "Params": [
+        {
+          "Name": "Property",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminKickPlayer",
+      "Params": [
+        {
+          "Name": "PlayerId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminRespawnAllPlayers",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminRestartRound",
+      "Params": [
+        {
+          "Name": "bSwitchTeams",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminSetGamemodeProperty",
+      "Params": [
+        {
+          "Name": "Property",
+          "Type": "string"
+        },
+        {
+          "Name": "Value",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminTravelMap",
+      "Params": [
+        {
+          "Name": "TravelArgs",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminTravelScenario",
+      "Params": [
+        {
+          "Name": "Scenario",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AdminUnbanPlayer",
+      "Params": [
+        {
+          "Name": "UniqueId",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIDebugHUD",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIDebugHUDSpectate",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIDebugThreats",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIDifficulty",
+      "Params": [
+        {
+          "Name": "NewDifficulty",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIIgnorePlayers",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "AILoggingVerbose",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "AIModifyMorale",
+      "Params": [
+        {
+          "Name": "Amount",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AINoTargetPlayer",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AiPerceptionToggle",
+      "Params": [],
+      "Flags": 1073874433
+    },
+    {
+      "Name": "AIPurge",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIPurgeEnemy",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIPurgeFriendly",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIRespawnBots",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIRespawnEnemyBots",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIRespawnFriendlyBots",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "AISetBotsAmount",
+      "Params": [
+        {
+          "Name": "Amount",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AISpawn",
+      "Params": [
+        {
+          "Name": "AITeamId",
+          "Type": "byte"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "AIToggle",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "BenchmarkStart",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "BlindMe",
+      "Params": [
+        {
+          "Name": "Duration",
+          "Type": "float"
+        },
+        {
+          "Name": "FadeTime",
+          "Type": "float"
+        },
+        {
+          "Name": "Suppression",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "BugIt",
+      "Params": [
+        {
+          "Name": "ScreenShotDescription",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "BugItGo",
+      "Params": [
+        {
+          "Name": "X",
+          "Type": "float"
+        },
+        {
+          "Name": "Y",
+          "Type": "float"
+        },
+        {
+          "Name": "Z",
+          "Type": "float"
+        },
+        {
+          "Name": "Pitch",
+          "Type": "float"
+        },
+        {
+          "Name": "Yaw",
+          "Type": "float"
+        },
+        {
+          "Name": "Roll",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "BugItStringCreator",
+      "Params": [
+        {
+          "Name": "ViewLocation",
+          "Type": "struct"
+        },
+        {
+          "Name": "ViewRotation",
+          "Type": "struct"
+        },
+        {
+          "Name": "GoString",
+          "Type": "string"
+        },
+        {
+          "Name": "LocString",
+          "Type": "string"
+        }
+      ],
+      "Flags": 12715520
+    },
+    {
+      "Name": "Camera",
+      "Params": [
+        {
+          "Name": "NewMode",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ChallengesEnqueueEvent",
+      "Params": [
+        {
+          "Name": "EventName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "ChallengesFlushEventsQueue",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ChallengesForceUpdate",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ChangeBotCosmetic",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ChangeSize",
+      "Params": [
+        {
+          "Name": "F",
+          "Type": "float"
+        }
+      ],
+      "Flags": 67241472
+    },
+    {
+      "Name": "CheatCaptureObjective",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "CheatCounterAttack",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "CheatFinishCounterAttack",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "CheatRespawnBotsRandomCounterAttackClass",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "CheatScript",
+      "Params": [
+        {
+          "Name": "ScriptName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "ClearAnalyticsData",
+      "Params": [],
+      "Flags": 525825
+    },
+    {
+      "Name": "ClearSmoothing",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ConfirmLoadout",
+      "Params": [],
+      "Flags": 67241473
+    },
+    {
+      "Name": "ConsoleKey",
+      "Params": [
+        {
+          "Name": "Key",
+          "Type": "struct"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "CreateParty",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "CreateReturningDialog",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "CycleDebugCamera",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DamageTarget",
+      "Params": [
+        {
+          "Name": "DamageAmount",
+          "Type": "float"
+        }
+      ],
+      "Flags": 67241472
+    },
+    {
+      "Name": "DebugCapsuleSweep",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepCapture",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepChannel",
+      "Params": [
+        {
+          "Name": "Channel",
+          "Type": "byte"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepClear",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepComplex",
+      "Params": [
+        {
+          "Name": "bTraceComplex",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepPawn",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCapsuleSweepSize",
+      "Params": [
+        {
+          "Name": "HalfHeight",
+          "Type": "float"
+        },
+        {
+          "Name": "Radius",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugCreatePlayer",
+      "Params": [
+        {
+          "Name": "ControllerId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugDumpAmmo",
+      "Params": [
+        {
+          "Name": "AmountToDump",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "DebugFireSupportRadialMenu",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DebugRemovePlayer",
+      "Params": [
+        {
+          "Name": "ControllerId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugStartMapVoteFromCycle",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DebugToggleOverlay",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "Debug_UpdateAchievementProgress",
+      "Params": [
+        {
+          "Name": "Id",
+          "Type": "string"
+        },
+        {
+          "Name": "Percent",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "DestroyAll",
+      "Params": [
+        {
+          "Name": "aClass",
+          "Type": "class"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DestroyAllPawnsExceptTarget",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DestroyPawns",
+      "Params": [
+        {
+          "Name": "aClass",
+          "Type": "class"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "DestroyServerStatReplicator",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DestroyTarget",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "DisplayHydraDebugInfo",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DisplayHydraSessionInfo",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DisplayPlayerId",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "DumpChatState",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DumpOnlineSessionState",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DumpPartyState",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "DumpVoiceMutingState",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "EnableCheats",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "FlushLog",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "Fly",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "ForceObjectiveCapture",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ForceSetBotCanEquip",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ForceStartFPSChart",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ForceStopFPSChart",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "FOV",
+      "Params": [
+        {
+          "Name": "NewFOV",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "FreezeFrame",
+      "Params": [
+        {
+          "Name": "Delay",
+          "Type": "float"
+        }
+      ],
+      "Flags": 67241472
+    },
+    {
+      "Name": "Ghost",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "GiveAmmo",
+      "Params": [
+        {
+          "Name": "Count",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "GiveItem",
+      "Params": [
+        {
+          "Name": "ItemClass",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "GiveSupplyPoints",
+      "Params": [
+        {
+          "Name": "Count",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "GiveSupplyPointsUnrestricted",
+      "Params": [
+        {
+          "Name": "Count",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "GiveWeapon",
+      "Params": [
+        {
+          "Name": "WeaponClass",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "GiveWeaponUpgrade",
+      "Params": [
+        {
+          "Name": "UpgradeClass",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "God",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "GodMode",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "GodModeAllPlayer",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "GoToLocation",
+      "Params": [
+        {
+          "Name": "Location",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "HurtMe",
+      "Params": [
+        {
+          "Name": "DamageAmount",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "IgnoreRoundOver",
+      "Params": [
+        {
+          "Name": "bIgnoreRoundOver",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "Incapacitate",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "IncrementSuppression",
+      "Params": [
+        {
+          "Name": "Increment",
+          "Type": "float"
+        },
+        {
+          "Name": "HoldTime",
+          "Type": "float"
+        },
+        {
+          "Name": "InSuppressionContext",
+          "Type": "enum"
+        },
+        {
+          "Name": "DistToSrc",
+          "Type": "float"
+        }
+      ],
+      "Flags": 67241473
+    },
+    {
+      "Name": "InstaCap",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "InstantlyCaptureObjective",
+      "Params": [
+        {
+          "Name": "TeamId",
+          "Type": "int"
+        },
+        {
+          "Name": "ObjectiveId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "InvertAxis",
+      "Params": [
+        {
+          "Name": "AxisName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "InvertAxisKey",
+      "Params": [
+        {
+          "Name": "AxisKey",
+          "Type": "struct"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "InvertMouse",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "JoinFaction",
+      "Params": [
+        {
+          "Name": "FactionId",
+          "Type": "byte"
+        }
+      ],
+      "Flags": 67241473
+    },
+    {
+      "Name": "JoinPlayerClass",
+      "Params": [
+        {
+          "Name": "DesiredClass",
+          "Type": "object"
+        },
+        {
+          "Name": "NeedSave",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 67241473
+    },
+    {
+      "Name": "Kill",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "KillAllPlayersForTeam",
+      "Params": [
+        {
+          "Name": "TeamId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "LoadAnalyticsData",
+      "Params": [],
+      "Flags": 525825
+    },
+    {
+      "Name": "LocalTravel",
+      "Params": [
+        {
+          "Name": "URL",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "LockAllDLC",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "LogLoc",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "LogPerformanceSnapshot",
+      "Params": [
+        {
+          "Name": "SnapshotTitle",
+          "Type": "string"
+        },
+        {
+          "Name": "bResetStats",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 67249665
+    },
+    {
+      "Name": "MinimizeGameWindow",
+      "Params": [],
+      "Flags": 67241473
+    },
+    {
+      "Name": "MountMod",
+      "Params": [
+        {
+          "Name": "PluginName",
+          "Type": "string"
+        },
+        {
+          "Name": "Path",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "MountPak",
+      "Params": [
+        {
+          "Name": "PakPath",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "MountPaksInDirectory",
+      "Params": [
+        {
+          "Name": "Directory",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "NextDebugTarget",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "Noclip",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "OnForceLogout",
+      "Params": [
+        {
+          "Name": "LocalUserNum",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "OnlyLoadLevel",
+      "Params": [
+        {
+          "Name": "PackageName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "Pause",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "PlayersOnly",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "PreviousDebugTarget",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "PrintAvailableFireSupport",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "QAGetPos",
+      "Params": [
+        {
+          "Name": "bCopyToClipboard",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "RemoveClaim",
+      "Params": [
+        {
+          "Name": "ClaimName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "RemoveWeaponUpgrade",
+      "Params": [
+        {
+          "Name": "UpgradeClass",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "ReQueryEntitlements",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ReQueryPlatformReceipts",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ResetCameraPosition",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ResetCosmeticsNotify",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ResetPlayerAccount",
+      "Params": [],
+      "Flags": 263681
+    },
+    {
+      "Name": "RespawnAllBots",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "RespawnMe",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "RestartLevel",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "ResupplyNow",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "RevertConfirmableEvents",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "Revive",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "SABER_CreateParty",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_DisplayInviteId",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_GetClientChallanges",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_LeaveParty",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_OpenInviteUI",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_PlayDialogue",
+      "Params": [
+        {
+          "Name": "DialogueType",
+          "Type": "enum"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_PlayDialogueForObjective",
+      "Params": [
+        {
+          "Name": "DialogueType",
+          "Type": "enum"
+        },
+        {
+          "Name": "ObjectiveId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_QueryExternalAccountId",
+      "Params": [
+        {
+          "Name": "AccountId",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_QuerySanctions",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_RegisterChallengesEvent",
+      "Params": [
+        {
+          "Name": "EventName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_SendInvite",
+      "Params": [
+        {
+          "Name": "TargetUserId",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SABER_SetMapDownloadSpeed",
+      "Params": [
+        {
+          "Name": "SpeedType",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SaveAnalyticsData",
+      "Params": [],
+      "Flags": 525825
+    },
+    {
+      "Name": "SaveCurrentLoadout",
+      "Params": [],
+      "Flags": 67241473
+    },
+    {
+      "Name": "SaveLocalProfile",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "Say",
+      "Params": [
+        {
+          "Name": "Msg",
+          "Type": "string"
+        }
+      ],
+      "Flags": 67241472
+    },
+    {
+      "Name": "SendToConsole",
+      "Params": [
+        {
+          "Name": "Command",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ServerExec",
+      "Params": [
+        {
+          "Name": "Msg",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SetBandwidthLimit",
+      "Params": [
+        {
+          "Name": "AsyncIOBandwidthLimit",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "SetBind",
+      "Params": [
+        {
+          "Name": "BindName",
+          "Type": "name"
+        },
+        {
+          "Name": "Command",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SetConsoleTarget",
+      "Params": [
+        {
+          "Name": "PlayerIndex",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "SetLastCosmeticsNotifyVersion",
+      "Params": [
+        {
+          "Name": "Version",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SetMaxWaterDepthForProne",
+      "Params": [
+        {
+          "Name": "InMaxWaterDepth",
+          "Type": "float"
+        }
+      ],
+      "Flags": 525825
+    },
+    {
+      "Name": "SetMouseSensitivity",
+      "Params": [
+        {
+          "Name": "Sensitivity",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SetMouseSensitivityToDefault",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "SetName",
+      "Params": [
+        {
+          "Name": "S",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "SetRoundTimer",
+      "Params": [
+        {
+          "Name": "Seconds",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SetVotedForKick",
+      "Params": [
+        {
+          "Name": "setVotedForKick",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 67241473
+    },
+    {
+      "Name": "SetWorldOrigin",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ShowDebug",
+      "Params": [
+        {
+          "Name": "DebugType",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ShowDebugForReticleTargetToggle",
+      "Params": [
+        {
+          "Name": "DesiredClass",
+          "Type": "class"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "ShowDebugSelectedInfo",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "ShowDebugToggleSubCategory",
+      "Params": [
+        {
+          "Name": "Category",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "ShowHUD",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "ShowTitleSafeArea",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "SkipToExtraction",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "Slomo",
+      "Params": [
+        {
+          "Name": "NewTimeDilation",
+          "Type": "float"
+        }
+      ],
+      "Flags": 67241472
+    },
+    {
+      "Name": "SpawnFireSupport",
+      "Params": [
+        {
+          "Name": "FireSupportClassName",
+          "Type": "string"
+        },
+        {
+          "Name": "bEnemy",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "SpawnRandomInventoryFromAvailableItems",
+      "Params": [],
+      "Flags": 525825
+    },
+    {
+      "Name": "SpawnServerStatReplicator",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SpawnWeapon",
+      "Params": [
+        {
+          "Name": "WeaponClass",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "SpawnWeaponWithUpgrades",
+      "Params": [
+        {
+          "Name": "WeaponAndUpgrades",
+          "Type": "string"
+        }
+      ],
+      "Flags": 4326913
+    },
+    {
+      "Name": "SpewSpawnZones",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "SSForceGamepadId",
+      "Params": [
+        {
+          "Name": "NewControllerId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 263681
+    },
+    {
+      "Name": "SSForceKeyboardId",
+      "Params": [
+        {
+          "Name": "NewControllerId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 263681
+    },
+    {
+      "Name": "SSSwapControllers",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "StartFire",
+      "Params": [
+        {
+          "Name": "FireModeNum",
+          "Type": "byte"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "StartPerformanceSnapshots",
+      "Params": [],
+      "Flags": 67249665
+    },
+    {
+      "Name": "StopPerformanceSnapshots",
+      "Params": [],
+      "Flags": 67249665
+    },
+    {
+      "Name": "StreamLevelIn",
+      "Params": [
+        {
+          "Name": "PackageName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "StreamLevelOut",
+      "Params": [
+        {
+          "Name": "PackageName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "Summon",
+      "Params": [
+        {
+          "Name": "ClassName",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "SuppressMe",
+      "Params": [
+        {
+          "Name": "Suppression",
+          "Type": "float"
+        },
+        {
+          "Name": "HoldTime",
+          "Type": "float"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "SwitchLevel",
+      "Params": [
+        {
+          "Name": "URL",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "Teleport",
+      "Params": [],
+      "Flags": 67241472
+    },
+    {
+      "Name": "TeleportToObjective",
+      "Params": [
+        {
+          "Name": "ObjectiveId",
+          "Type": "int"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "TestCollisionDistance",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "TestNavSpawning",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "TestServerLevelVisibilityChange",
+      "Params": [
+        {
+          "Name": "PackageName",
+          "Type": "name"
+        },
+        {
+          "Name": "FileName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 263681
+    },
+    {
+      "Name": "ToggleAdminMenu",
+      "Params": [],
+      "Flags": 67241473
+    },
+    {
+      "Name": "ToggleAILogging",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "ToggleDebugCamera",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "ToggleServerStatReplicatorClientOverwrite",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ToggleServerStatReplicatorUpdateStatNet",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ToggleSpeaking",
+      "Params": [
+        {
+          "Name": "bInSpeaking",
+          "Type": "bool"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "TransactionToMultiplayerByActivity",
+      "Params": [
+        {
+          "Name": "ActivityID",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "UnlockAllDLC",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "UnlockDLCWithPopup",
+      "Params": [
+        {
+          "Name": "ItemIds",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132609
+    },
+    {
+      "Name": "UpdateSafeArea",
+      "Params": [],
+      "Flags": 132609
+    },
+    {
+      "Name": "ViewActor",
+      "Params": [
+        {
+          "Name": "ActorName",
+          "Type": "name"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ViewClass",
+      "Params": [
+        {
+          "Name": "DesiredClass",
+          "Type": "class"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ViewPlayer",
+      "Params": [
+        {
+          "Name": "S",
+          "Type": "string"
+        }
+      ],
+      "Flags": 132608
+    },
+    {
+      "Name": "ViewSelf",
+      "Params": [],
+      "Flags": 132608
+    },
+    {
+      "Name": "Walk",
+      "Params": [],
+      "Flags": 67241472
+    }
+  ]
+}
