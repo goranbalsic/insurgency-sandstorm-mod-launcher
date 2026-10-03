@@ -982,6 +982,90 @@ namespace SandstormModLauncher.Services
                 }
             }
 
+            // 28. (mod.io comment, 2026-10-03: "have it read all the game rules from my Game.ini") Your own Game.ini rules: a launch
+            //     writes no rule or line of Play's into Game.ini (only the RCON section) and sends none (open command, map loads,
+            //     after the load, ruleset); AI teammates and bots set in Game.ini get their player slots and no bSoloGame; the
+            //     restart key is the same whatever Play has; the server's match keeps Play's rules.
+            {
+                string cls = state.ModeFor(checkpoint, false)?.Cls ?? "INSCheckpointGameMode";
+                var p = Fresh(checkpoint);
+                SetupEngine.SetRule(p, db, cls, "RoundTime", "777");
+                SetupEngine.SetRule(p, db, cls, "FriendlyBotQuota", "6");
+                p.LaunchRuleset = "RS_CompetitiveFirefight";
+                p.CustomIniMode = "Append";
+                p.CustomIniText = "[/Script/Insurgency.Mutator_X]\nA=1";
+                p.ExtraUrlOptions = "?WinLimit=3";
+                string mine = "[/Script/Insurgency." + cls + "]\r\nRoundTime=1200\r\nFriendlyBotQuota=1\r\nSomeOwnKey=5\r\n\r\n[/Script/Insurgency.Mutator_Y]\r\nB=2\r\n";
+                var mineLines = UeIni.Split(mine).Where(l => l.Trim().Length > 0).ToList();
+                bool keepSolo = state.Settings.SoloGameFlag, keepOwn = state.Settings.OwnRules;
+                state.Settings.SoloGameFlag = true;
+                try
+                {
+                    var ownPlan = LaunchPlanner.Build(p, state, true, mine);
+                    var playPlan = LaunchPlanner.Build(p, state, false);
+                    bool SendsRule(string url, LaunchPlan x) => LaunchPlanner.UrlOptions.Any(k => !x.ExtraOptionKeys.Contains(k) && (url ?? "").IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0);
+                    if (!ownPlan.IsValid || !ownPlan.OwnRules || playPlan.OwnRules) fail("own Game.ini rules: the plans are wrong: " + ownPlan.Error + " own " + ownPlan.OwnRules + ", Play " + playPlan.OwnRules);
+                    else
+                    {
+                        if (SendsRule(ownPlan.OpenCommand, ownPlan)) fail("own Game.ini rules: the open command sends rules: " + ownPlan.OpenCommand);
+                        if (!ownPlan.OpenCommand.Contains("?WinLimit=3")) fail("own Game.ini rules: the player's extra URL option is gone: " + ownPlan.OpenCommand);
+                        string resets = LaunchService.TravelResets(ownPlan);
+                        if (SendsRule(resets, ownPlan)) fail("own Game.ini rules: a map load sets rules back: " + resets);
+                        if (ownPlan.IniSections.Count > 0 || ownPlan.GameIniBlock.Length > 0 || ownPlan.LiveProperties.Count > 0 || ownPlan.Overrides.Count > 0 || ownPlan.StartRuleset != null
+                            || ownPlan.AfterLoad.Any(a => a.StartsWith("gamemodeproperty", StringComparison.Ordinal)))
+                            fail("own Game.ini rules: the plan still writes or sends rules");
+                        if (LaunchPlanner.LiveResets(ownPlan, db, new[] { cls + "|RoundTime" }).Count > 0) fail("own Game.ini rules: a running game's rules are set back after the load");
+                        if (playPlan.StartRuleset != "RS_CompetitiveFirefight" || playPlan.IniSections.Count == 0 || playPlan.Overrides.Count == 0) fail("Play's rules: the plan lost the rules, lines or ruleset");
+
+                        // Game.ini: every line stays, nothing of Play's goes in, the RCON section does.
+                        var settings = new AppSettings { RconPort = 27015, RconPassword = "abcdefghijklmnopqrstuvwx" };
+                        string written = LaunchPlanner.GameIniForLaunch(mine, ownPlan, db, new List<string> { "/Script/Insurgency.Mutator_Y\nB" }, settings);
+                        var lines = UeIni.Split(written);
+                        foreach (var l in mineLines) if (!lines.Contains(l)) fail("own Game.ini rules: the line \"" + l + "\" was changed or removed");
+                        if (written.Contains("RoundTime=777") || written.Contains("Mutator_X")) fail("own Game.ini rules: Play's rules or lines went into Game.ini:\n" + written);
+                        if (!written.Contains("Password=" + settings.RconPassword)) fail("own Game.ini rules: no RCON section in Game.ini:\n" + written);
+                        if (LaunchPlanner.MergeGameIni(mine, ownPlan, db, new[] { "/Script/Insurgency.Mutator_Y\nB" }) != mine) fail("own Game.ini rules: the merge changed Game.ini");
+                        var keys = LaunchPlanner.RuleKeysIn(UeIni.Parse(mine), db);
+                        if (!keys.Contains(cls + "|RoundTime") || keys.Any(k => k.EndsWith("|SomeOwnKey", StringComparison.Ordinal))) fail("own Game.ini rules: the rules the game reads at start are " + string.Join(", ", keys));
+
+                        // Play's 5 AI teammates do not count; Game.ini's do (with its bots on), and they need room.
+                        if (!ownPlan.OpenCommand.Contains("?bSoloGame=1")) fail("own Game.ini rules: Play's AI teammates kept bSoloGame out: " + ownPlan.OpenCommand);
+                        if (playPlan.OpenCommand.Contains("bSoloGame")) fail("Play's rules: bSoloGame with AI teammates: " + playPlan.OpenCommand);
+                        var withMates = LaunchPlanner.Build(p, state, true, mine.Replace("FriendlyBotQuota=1", "FriendlyBotQuota=6\r\nbBots=True"));
+                        if (withMates.OpenCommand.Contains("bSoloGame") || withMates.PlayerSlots < 9 || !withMates.OpenCommand.Contains("?MaxPlayers=" + withMates.PlayerSlots.ToString(CultureInfo.InvariantCulture)))
+                            fail("own Game.ini rules: Game.ini's AI teammates get no room, or bSoloGame keeps them out: " + withMates.OpenCommand);
+                        if (versus != null)
+                        {
+                            string vcls = state.ModeFor(versus, false)?.Cls;
+                            var vp = Fresh(versus);
+                            var noBots = LaunchPlanner.Build(vp, state, true, "");
+                            if (SendsRule(noBots.OpenCommand, noBots)) fail("own Game.ini rules: versus still sends the launcher's bots: " + noBots.OpenCommand);
+                            var bots = LaunchPlanner.Build(vp, state, true, "[/Script/Insurgency." + vcls + "]\r\nbBots=True\r\nBotQuota=10\r\n");
+                            if (bots.PlayerSlots < 22) fail("own Game.ini rules: Game.ini's 10 bots per team got " + bots.PlayerSlots + " player slots");
+                        }
+
+                        // Restarts: the same key whatever Play has, another one than Play's; a game started outside the launcher after
+                        // a write with your own rules is not restarted for nothing.
+                        var plainOwn = LaunchPlanner.Build(Fresh(checkpoint), state, true, mine);
+                        if (ownPlan.RestartKey != plainOwn.RestartKey || ownPlan.RestartKey == playPlan.RestartKey || ownPlan.RestartKey == LaunchPlanner.Build(Fresh(checkpoint), state, false).RestartKey)
+                            fail("own Game.ini rules: the restart key follows Play or equals Play's");
+                        var t0 = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+                        var written0 = new AppSettings { LastRulesWriteUtc = t0, LastWrittenRulesHash = ownPlan.RestartKey, LastWrittenIniPart = LaunchPlanner.OwnRulesPart };
+                        if (LaunchService.ActiveRestartKey(written0, t0.AddHours(1), db) != ownPlan.RestartKey) fail("own Game.ini rules: a game started outside the launcher would be restarted for nothing");
+
+                        // Warnings: Play's rules are not used (said once), and nothing is said when Play has none.
+                        if (ownPlan.Warnings.Count != plainOwn.Warnings.Count + 1) fail("own Game.ini rules: no word that Play's rules are not used (" + string.Join(" | ", ownPlan.Warnings) + ")");
+
+                        // The setting picks the plan.
+                        state.Settings.OwnRules = true;
+                        if (!LaunchPlanner.Build(p, state).OwnRules) fail("own Game.ini rules: the setting is on but the plan has Play's rules");
+                        state.Settings.OwnRules = false;
+                        if (LaunchPlanner.Build(p, state).OwnRules || LaunchPlanner.Build(p, state).OpenCommand != playPlan.OpenCommand) fail("own Game.ini rules: the setting is off but the plan is not Play's");
+                    }
+                }
+                finally { state.Settings.SoloGameFlag = keepSolo; state.Settings.OwnRules = keepOwn; }
+            }
+
             // 16. Server types (the admin guide's example servers): each one sets up a valid match of its mode with its
             //     preset, a map cycle of installed official scenarios of that mode, and a server plan that starts.
             string fakeServer = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sml-fake-server-" + Guid.NewGuid().ToString("N").Substring(0, 8));

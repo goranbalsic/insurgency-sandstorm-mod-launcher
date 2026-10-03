@@ -89,7 +89,7 @@ namespace SandstormModLauncher.ViewModels
             ExtraModFolders.Clear();
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
-                      nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs), nameof(StartWith), nameof(StartCommand), nameof(StartWithCommand), nameof(StartWithNote),
+                      nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(OwnRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs), nameof(StartWith), nameof(StartCommand), nameof(StartWithCommand), nameof(StartWithNote),
                       nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate), nameof(UiScale), nameof(UiScaleText));
         }
 
@@ -225,6 +225,8 @@ namespace SandstormModLauncher.ViewModels
         public bool MinimizeOnLaunch { get => State.Settings.MinimizeOnLaunch; set => SetSetting(() => State.Settings.MinimizeOnLaunch = value); }
         public bool SoloGameFlag { get => State.Settings.SoloGameFlag; set => SetSetting(() => State.Settings.SoloGameFlag = value, true); }
         public bool ApplyLiveRules { get => State.Settings.ApplyLiveRules; set => SetSetting(() => State.Settings.ApplyLiveRules = value, true); }
+        /// <summary>Your game uses the rules in your own Game.ini: Play gives only the map, scenario, lighting and mutators.</summary>
+        public bool OwnRules { get => State.Settings.OwnRules; set => SetSetting(() => State.Settings.OwnRules = value, true); }
         public string InputMethod { get => State.Settings.InputMethod ?? "Paste"; set => SetSetting(() => State.Settings.InputMethod = value ?? "Paste"); }
         public int KeyDelayMs { get => State.Settings.KeyDelayMs; set => SetSetting(() => State.Settings.KeyDelayMs = Math.Max(30, Math.Min(250, value))); }
         public string RestartPolicy { get => State.Settings.RestartPolicy ?? "Ask"; set => SetSetting(() => State.Settings.RestartPolicy = value ?? "Ask"); }
@@ -540,7 +542,9 @@ namespace SandstormModLauncher.ViewModels
         private async Task RemoveIniRules()
         {
             if (GameProcessRunning) { await ShowMessage("Close the game first", "The game rewrites Game.ini while it runs, so close it and then remove the rules."); return; }
-            if (await Ask("Remove launcher rules?", "Remove every match rule from Game.ini? Other lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
+            if (await Ask("Remove launcher rules?", State.Settings.OwnRules
+                    ? "Your game uses the rules in your Game.ini, so this removes your own rules too: every match rule in Game.ini, the ones you wrote yourself included. Other lines are kept, and a backup is made first. The game uses its default rules from the next start."
+                    : "Remove every match rule from Game.ini? Other lines are kept, and a backup is made first. The game uses its default rules from the next start.", "Remove") != "Remove") return;
             try
             {
                 string path = GameInstall.GameIniPath;
@@ -554,7 +558,7 @@ namespace SandstormModLauncher.ViewModels
                 State.Settings.LastWrittenRulesHash = LaunchPlanner.RestartKeyFor(new Profile(), State.Rules);
                 State.Settings.LastRulesWriteUtc = DateTime.UtcNow;
                 SaveSettingsSoon();
-                UpdateLaunchButton();
+                UpdatePlan();   // with your own Game.ini rules the plan reads the file (bots and AI teammates)
                 ShowToast("Launcher rules removed from Game.ini");
             }
             catch (Exception ex) { await ShowMessage("Could not update Game.ini", ex.Message); }

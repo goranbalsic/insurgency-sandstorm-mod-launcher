@@ -94,7 +94,7 @@ namespace SandstormModLauncher.Services
             "ServerCommandLine", "ServerPlanError", "ServerMatchSummary", "ServerMatchMods", "MapCycleFile", "MapCycleIsDefault", "MapCycleCount",
             "ServerRconAddress", "CanStartServer", "PlayTarget", "PlaysOnServer", "MainActionTitle", "MainActionTip", "CanMainAction",
             "ServerUseOwnArgs", "ServerUsesLauncherArgs", "ServerOwnArgs", "ServerModsOn", "ServerModioEmail", "ServerModioCode", "ModioCodeHint",
-            "ModioAccountText", "ModioAccountKind", "ServerModsListText", "HasOtherSubs", "ModSyncText", "ModioText", "OwnArgsNote", "ServerOwnRules"
+            "ModioAccountText", "ModioAccountKind", "ServerModsListText", "HasOtherSubs", "ModSyncText", "ModioText", "OwnArgsNote", "ServerOwnRules", "OwnRules"
         };
 
         private static readonly string[] Names = { "My setup", "my setup", "a/b", "a?b", "CON", "x.", "  ", "Lone Wolf", "ž č", "Very long " + new string('x', 120), "Settings" };   // (a name that is also a text of the launcher)
@@ -390,7 +390,7 @@ namespace SandstormModLauncher.Services
                 vm.ServerOwnRules = true;
                 await Pump();
                 CheckServer(vm, state, Fail);
-                var statsPlan = ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, db, "");
+                var statsPlan = ServerPlanner.Build(vm.ServerMatch, state.Settings, vm.ServerInstall, db, "");
                 if (!statsPlan.IsValid || statsPlan.OwnArgs != null) Fail("the server checks have no plan to check: " + statsPlan.Error);
                 vm.ServerOwnRules = false;
                 vm.ServerGameStats = false;
@@ -605,6 +605,8 @@ namespace SandstormModLauncher.Services
                             vm.UiScale = scale;
                             vm.SoloGameFlag = rnd.Next(2) == 0;
                             vm.ApplyLiveRules = rnd.Next(4) > 0;
+                            // Your own Game.ini rules, from the scale already picked (no extra random number: the seeds keep their runs).
+                            vm.OwnRules = scale >= 1.4;
                             break;
                         }
                         case 23: name = "random mission"; await Do(vm.RandomMissionCommand, null); break;
@@ -698,7 +700,7 @@ namespace SandstormModLauncher.Services
                                 if (vm.MainActionCommand.CanExecute(null) != vm.CanLaunch) Fail(name + ": the button can" + (vm.CanLaunch ? "not" : "") + " be pressed but launching can" + (vm.CanLaunch ? "" : "not"));
                                 break;
                             }
-                            var plan = vm.CurrentPlan == null && !(state.Settings.ServerUseOwnArgs && !state.Settings.ServerRemote) ? null : ServerPlanner.Build(vm.CurrentPlan, state.Settings, vm.ServerInstall, state.Rules, "");
+                            var plan = vm.ServerMatch == null && !(state.Settings.ServerUseOwnArgs && !state.Settings.ServerRemote) ? null : ServerPlanner.Build(vm.ServerMatch, state.Settings, vm.ServerInstall, state.Rules, "");
                             bool planOk = plan?.IsValid == true;
                             bool setUp = vm.ServerRemote ? string.IsNullOrWhiteSpace(state.Settings.ServerRemoteHost) || !planOk || plan.Match == null || plan.Url == null : !vm.ServerFound || !planOk;
                             string want = setUp ? Loc.T("Set up the server") : vm.ServerRemote ? Loc.T("Load on the server") : Loc.T("Start the server");
@@ -954,7 +956,7 @@ namespace SandstormModLauncher.Services
         {
             var s = state.Settings;
             if (!string.Equals(s.ServerMapCycleFile, TortureCycle, StringComparison.OrdinalIgnoreCase)) fail("the map cycle file moved to " + s.ServerMapCycleFile);
-            var fresh = vm.CurrentPlan == null && !(s.ServerUseOwnArgs && !s.ServerRemote) ? null : ServerPlanner.Build(vm.CurrentPlan, s, vm.ServerInstall, state.Rules, "");
+            var fresh = vm.ServerMatch == null && !(s.ServerUseOwnArgs && !s.ServerRemote) ? null : ServerPlanner.Build(vm.ServerMatch, s, vm.ServerInstall, state.Rules, "");
             string want = fresh?.IsValid == true && !s.ServerRemote ? "InsurgencyServer.exe " + fresh.ShownCommandLine : "";
             if (vm.ServerCommandLine != want) fail("server command line on screen is stale:\n  shown " + vm.ServerCommandLine + "\n  fresh " + want);
             string code = ServerModio.CleanCode(s.ServerModioCode);
@@ -999,7 +1001,7 @@ namespace SandstormModLauncher.Services
                 // The server's own rules: no rule option of the match in the URL or a map load, no match rules in its Game.ini.
                 if (fresh.OwnRules != s.ServerOwnRules) fail("own rules do not follow the switch");
                 string travel = ServerService.TravelUrl(fresh);
-                if (s.ServerOwnRules && LaunchPlanner.UrlOptions.Any(k => travel.IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0 && !vm.CurrentPlan.ExtraOptionKeys.Contains(k)))
+                if (s.ServerOwnRules && LaunchPlanner.UrlOptions.Any(k => travel.IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0 && !vm.ServerMatch.ExtraOptionKeys.Contains(k)))
                     fail("own rules, but a map load sends the match's rules: " + travel);
                 if (s.ServerOwnRules && UeIni.Parse(fresh.GameIni).Any(x => x.Name.IndexOf("GameMode", StringComparison.OrdinalIgnoreCase) >= 0 && x.Values.Count > 0))
                     fail("own rules, but the match's rules go into the server's Game.ini:\n" + fresh.GameIni);
@@ -1042,6 +1044,23 @@ namespace SandstormModLauncher.Services
                 if (shown.OpenCommand != fresh.OpenCommand) fail("screen plan is stale:\n  shown " + shown.OpenCommand + "\n  real  " + fresh.OpenCommand);
                 if (shown.GameIniBlock != fresh.GameIniBlock) fail("screen Game.ini block is stale");
                 if (string.Join("|", shown.AfterLoad) != string.Join("|", fresh.AfterLoad)) fail("screen after-load commands are stale");
+            }
+            // Your own Game.ini rules (Settings): the plan follows the switch and writes or sends no rule of Play's, and the
+            // server's match keeps Play's rules whatever your game uses.
+            if (shown != null)
+            {
+                if (shown.OwnRules != state.Settings.OwnRules) fail("own Game.ini rules do not follow the switch");
+                var serverMatch = vm.ServerMatch;
+                if (serverMatch == null || serverMatch.OwnRules) fail("the server's match does not have Play's rules");
+                else if (serverMatch.OpenCommand != LaunchPlanner.Build(p, state, false).OpenCommand) fail("the server's match is stale: " + serverMatch.OpenCommand);
+                if (shown.OwnRules)
+                {
+                    if (LaunchPlanner.UrlOptions.Any(k => !shown.ExtraOptionKeys.Contains(k) && (shown.OpenCommand ?? "").IndexOf("?" + k + "=", StringComparison.OrdinalIgnoreCase) >= 0))
+                        fail("own Game.ini rules, but the open command sends rules: " + shown.OpenCommand);
+                    if (shown.IniSections.Count > 0 || shown.LiveProperties.Count > 0 || shown.Overrides.Count > 0 || shown.StartRuleset != null)
+                        fail("own Game.ini rules, but the plan writes or sends rules");
+                }
+                else if (!ReferenceEquals(serverMatch, shown)) fail("the server's match is not the plan on screen");
             }
 
             var mode = SetupEngine.CurrentMode(p, state);
@@ -1108,7 +1127,7 @@ namespace SandstormModLauncher.Services
                 }
             }
             // The rule count in the summary is the count the Rules tab shows (not the launcher's own bot adjustments).
-            string wantRules = vm.RuleChangeCount == 0 ? Loc.T("Game default rules") : vm.RuleChangeCount == 1 ? Loc.T("1 rule change") : Loc.F("{0} rule changes", vm.RuleChangeCount);
+            string wantRules = state.Settings.OwnRules ? Loc.T("Rules from your Game.ini") : vm.RuleChangeCount == 0 ? Loc.T("Game default rules") : vm.RuleChangeCount == 1 ? Loc.T("1 rule change") : Loc.F("{0} rule changes", vm.RuleChangeCount);
             if (vm.RulesSummary != wantRules) fail("the summary says \"" + vm.RulesSummary + "\" but the Rules tab has " + vm.RuleChangeCount + " changed");
             // "In use" marks exactly the match preset last applied (not another one of the same name).
             foreach (var item in vm.RulePresets.Concat(vm.SquadPresets))

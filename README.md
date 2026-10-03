@@ -38,6 +38,8 @@ Needs Windows 10/11, Insurgency: Sandstorm and .NET Framework 4.8 (in Windows 10
 3. `open <map>?...` is sent through the game's RCON (127.0.0.1 only, random password), as a `defer` console command. The game confirms the load in its log. Nothing is typed.
 4. If the game is already running, rules are set over RCON.
 
+Rules already in your own `Game.ini`? Switch on Settings > Launching > "Use the rules in my Game.ini". The launcher then writes only its RCON section there and sends no rules, bots or AI teammates: Play gives the map, scenario, lighting and mutators. The game reads `Game.ini` when it starts, so restart it after editing the file. Rules the launcher wrote earlier stay in the file until you remove them (by hand, or with "Remove launcher rules from Game.ini", which removes every rule line).
+
 Cheats, AI difficulty and after-load commands use the same path. Typing into the console is a fallback for a game RCON can't reach: it checks the console line on screen before each key and adds F10 as a console key for layouts without `` ` ``.
 
 Settings > Launching starts the game's own exe or a command of yours instead of Steam.
@@ -121,7 +123,7 @@ Releasing: raise `<Version>` in the csproj, add a section to `packaging/release-
 
 **Does it change online play?** No. The `Game.ini` block only affects matches you host. Settings > "Remove launcher rules from Game.ini" takes it out.
 
-**Why does the launcher want to restart the game?** The game reads AI teammates, the official ruleset and your own Game.ini lines only at startup. The launcher asks first.
+**Why does the launcher want to restart the game?** The game reads AI teammates, the official ruleset and your own Game.ini lines only at startup (with "Use the rules in my Game.ini", the whole file). The launcher asks first.
 
 **Steam or Epic?** Tested with Steam; Epic installs are detected.
 

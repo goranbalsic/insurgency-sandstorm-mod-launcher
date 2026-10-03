@@ -26,7 +26,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand StartGameCommand { get; private set; }
         public ICommand RetryLaunchCommand { get; private set; }
 
-        private LaunchPlan currentPlan;
+        private LaunchPlan currentPlan, serverMatch;
         private CancellationTokenSource launchCts;
         private bool launchOverlayOpen, launchRunning, launchSucceeded;
         private string launchResult, launchTitle = T("Launch"), launchSubtitle = "", launchHeadline = "";
@@ -47,11 +47,20 @@ namespace SandstormModLauncher.ViewModels
 
         public LaunchPlan CurrentPlan { get => currentPlan; private set => Set(ref currentPlan, value); }
 
+        /// <summary>The Play match for the dedicated server: always with Play's rules (your own Game.ini rules are for your game; the
+        /// server has its own switch). The same plan as <see cref="CurrentPlan"/> when that one has Play's rules too.</summary>
+        public LaunchPlan ServerMatch => serverMatch;
+
         public void UpdatePlan()
         {
             if (State.Rules == null || State.Install == null) return;
-            try { CurrentPlan = LaunchPlanner.Build(Profile, State); }
-            catch (Exception ex) { AppLog.Error("Could not build the launch plan", ex); CurrentPlan = null; }
+            try
+            {
+                var plan = LaunchPlanner.Build(Profile, State);
+                serverMatch = plan.OwnRules ? LaunchPlanner.Build(Profile, State, false) : plan;
+                CurrentPlan = plan;
+            }
+            catch (Exception ex) { AppLog.Error("Could not build the launch plan", ex); CurrentPlan = null; serverMatch = null; }
             RaiseMany(nameof(PlanCommand), nameof(PlanIni), nameof(PlanAfterLoad), nameof(MapSummary), nameof(ModeSummary), nameof(SquadSummary),
                       nameof(MutatorSummary), nameof(RulesSummary), nameof(CanLaunch), nameof(PlanError), nameof(ActivePresetName));
             UpdateLaunchButton();
@@ -60,7 +69,8 @@ namespace SandstormModLauncher.ViewModels
 
         public string PlanError => currentPlan?.Error;
         public string PlanCommand => currentPlan?.OpenCommand ?? "";
-        public string PlanIni => string.IsNullOrWhiteSpace(currentPlan?.GameIniBlock) ? T("; No Game.ini changes. The game uses its default rules.") : currentPlan.GameIniBlock;
+        public string PlanIni => currentPlan?.OwnRules == true ? T("; Your Game.ini is used as it is: the launcher adds only its RCON section.")
+            : string.IsNullOrWhiteSpace(currentPlan?.GameIniBlock) ? T("; No Game.ini changes. The game uses its default rules.") : currentPlan.GameIniBlock;
         public string PlanAfterLoad => currentPlan == null || currentPlan.AfterLoad.Count == 0 ? T("Nothing. The match uses the rules above as loaded.") : string.Join("\n", currentPlan.AfterLoad);
 
         public string MapSummary => currentPlan?.Scenario == null ? T("No map selected")
@@ -74,6 +84,7 @@ namespace SandstormModLauncher.ViewModels
             {
                 var mode = CurrentMode;
                 if (mode == null) return T("Game defaults");
+                if (State.Settings.OwnRules) return T("Bots and AI teammates from your Game.ini");
                 string diff = AiDifficulty.ToString("0.00", CultureInfo.InvariantCulture);
                 if (mode.Coop)
                 {
@@ -122,11 +133,11 @@ namespace SandstormModLauncher.ViewModels
                     break;
                 case GamePhase.InMatch:
                     LaunchTitle = T("Launch");
-                    LaunchSubtitle = restart ? T("Restarts the game so the AI teammate count applies") : T("Switches the running match to this setup");
+                    LaunchSubtitle = restart ? RestartReason : T("Switches the running match to this setup");
                     break;
                 case GamePhase.Menu:
                     LaunchTitle = T("Launch");
-                    LaunchSubtitle = restart ? T("Restarts the game so the AI teammate count applies") : T("Game is ready at the main menu");
+                    LaunchSubtitle = restart ? RestartReason : T("Game is ready at the main menu");
                     break;
                 default:
                     LaunchTitle = T("Launch");
@@ -134,6 +145,8 @@ namespace SandstormModLauncher.ViewModels
                     break;
             }
         }
+
+        private string RestartReason => currentPlan?.OwnRules == true ? T("Restarts the game so it reads your Game.ini") : T("Restarts the game so the AI teammate count applies");
 
         // ------------------------------------------------------------------ overlay state
 
@@ -209,8 +222,9 @@ namespace SandstormModLauncher.ViewModels
                     case "Always": options.RestartIfNeeded = true; break;
                     case "Never": break;
                     default:
-                        string answer = await Ask("Restart the game?",
-                            T("The game was started with a different number of AI teammates, official ruleset or own Game.ini lines. The game only reads those when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart."),
+                        string answer = await Ask("Restart the game?", plan.OwnRules
+                            ? T("Your game uses the rules in your Game.ini, and the game reads that file only when it starts: it has to restart once to use them.\n\nWithout a restart, the game keeps the rules it started with.")
+                            : T("The game was started with a different number of AI teammates, official ruleset or own Game.ini lines. The game only reads those when it starts, so it has to restart once for this setup to be exact.\n\nEverything else (enemies, difficulty, rules, mutators) works without a restart."),
                             "Restart and launch", "Launch without restart", "Cancel");
                         if (answer == null || answer == "Cancel") return;
                         options.RestartIfNeeded = answer == "Restart and launch";

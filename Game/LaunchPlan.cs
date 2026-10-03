@@ -35,6 +35,15 @@ namespace SandstormModLauncher.Game
         /// <summary>Commands only the game's own console can run (cheats such as versus AI difficulty, the player's own lines).</summary>
         public List<string> ConsoleOnly = new List<string>();
 
+        /// <summary>
+        /// The rules are the player's own Game.ini (Settings > Launching): the launch writes no rule or extra line into it and
+        /// sends no rule (URL options, after-load settings, official ruleset). Never for the server's match.
+        /// </summary>
+        public bool OwnRules;
+
+        /// <summary>The official ruleset the game is started with (-ruleset=), or null.</summary>
+        public string StartRuleset => OwnRules ? null : Profile?.LaunchRuleset;
+
         /// <summary>Keys of the player's extra URL options (they replace the launcher's value for the same key).</summary>
         public HashSet<string> ExtraOptionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -62,9 +71,22 @@ namespace SandstormModLauncher.Game
         /// <summary>Settings the game only reads when bots are first added, so they need a fresh game start.</summary>
         public static readonly HashSet<string> RestartOnly = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "FriendlyBotQuota" };
 
-        public static LaunchPlan Build(Profile p, AppState state)
+        /// <summary>Game.ini part of the restart key with the player's own Game.ini rules (the launcher writes no rules then).</summary>
+        public const string OwnRulesPart = "own=1;";
+
+        /// <summary>Game.ini sections of the classes every game mode is made from: a mode reads their values too.</summary>
+        private static readonly string[] BaseModeSections = { "/Script/Insurgency.INSGameMode", "/Script/Insurgency.INSMultiplayerMode", "/Script/Insurgency.INSCoopMode" };
+
+        /// <summary>The plan for the player's game (with their own Game.ini rules when that setting is on).</summary>
+        public static LaunchPlan Build(Profile p, AppState state) => Build(p, state, state.Settings.OwnRules);
+
+        /// <summary>
+        /// <paramref name="ownRules"/> = the rules are in the player's own Game.ini (<paramref name="ownGameIni"/>: its text, read
+        /// from the game's folder when null). The server's match is always built with Play's rules (false).
+        /// </summary>
+        public static LaunchPlan Build(Profile p, AppState state, bool ownRules, string ownGameIni = null)
         {
-            var plan = new LaunchPlan { Profile = p };
+            var plan = new LaunchPlan { Profile = p, OwnRules = ownRules };
             var db = state.Rules;
             ScenarioInfo sc = null;
             if (!string.IsNullOrEmpty(p.CustomMapId))
@@ -124,52 +146,11 @@ namespace SandstormModLauncher.Game
             foreach (var mi in plan.MutatorInfos.Where(m => m.IsBaseClass))
                 plan.Warnings.Add(F("{0} is a base class used by other mutators; it usually does nothing on its own.", mi.DisplayName));
 
-            // Rules for the played mode
+            // Rules for the played mode. None with the player's own Game.ini rules: the game reads them there, and the launcher's
+            // own adjustments for offline play are rules too (they would beat Game.ini's).
             string cls = plan.Mode?.Cls;
-            if (cls != null && p.Rules.TryGetValue(cls, out var ov))
-                foreach (var kv in ov)
-                {
-                    string def = db.DefaultValue(cls, kv.Key);
-                    if (def == null || !Same(def, kv.Value, db.Prop(kv.Key))) plan.Overrides[kv.Key] = kv.Value;
-                }
-
-            // Versus is played against bots unless the profile turns them off (the game's own default is off).
-            if (plan.Mode != null && !plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
-                && !(p.Rules.TryGetValue(cls, out var own) && own.ContainsKey("bBots")))
-                plan.Overrides["bBots"] = "True";
-
-            // Ambush and Free For All wait for two human players (MinimumPlayers=2) before the match starts, and bots
-            // only join once it has started, so offline they sat at "waiting for players" with no bots. With bots on,
-            // one player is enough (unless the profile sets these itself).
+            if (!ownRules) AddRules(plan, p, db, cls);
             bool versusBots = plan.Mode != null && !plan.Mode.Coop && plan.Overrides.TryGetValue("bBots", out var vb) && IsTrue(vb);
-            // Ambush, Defusal and Free For All also default to BotQuota=0: bots "on" but none would come.
-            if (versusBots && !plan.Overrides.ContainsKey("BotQuota") && int.TryParse(db.DefaultValue(cls, "BotQuota"), out int dq) && dq <= 0)
-                plan.Overrides["BotQuota"] = "5";
-            // Bots on but a team size of 0 (set by hand) would also leave the match empty: one per team at least.
-            if (versusBots && plan.Overrides.TryGetValue("BotQuota", out var setQuota) && int.TryParse(setQuota, out int sq) && sq <= 0)
-            {
-                plan.Overrides["BotQuota"] = "1";
-                plan.Warnings.Add(T("Players per team was 0 with bots on; 1 is used (you against one bot)."));
-            }
-            // The launcher's default for the minimums (SetupEngine.LauncherDefault: 1), with bots or without: offline nobody
-            // else comes; a server that should wait for a second player keeps 2 in its rules.
-            foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
-            {
-                string launcherMin = SetupEngine.LauncherDefault(db, cls, key);
-                if (launcherMin != null && launcherMin != db.DefaultValue(cls, key) && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
-                    plan.Overrides[key] = launcherMin;
-            }
-
-            if (plan.Mode != null && plan.Mode.Coop
-                && int.TryParse(plan.Overrides.TryGetValue("MinimumEnemies", out var mn) ? mn : db.DefaultValue(cls, "MinimumEnemies"), out int minE)
-                && int.TryParse(plan.Overrides.TryGetValue("MaximumEnemies", out var mx) ? mx : db.DefaultValue(cls, "MaximumEnemies"), out int maxE) && minE > maxE)
-                plan.Warnings.Add(F("Minimum enemies ({0}) is above maximum enemies ({1}); the game then uses the maximum.", minE, maxE));
-
-            // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
-            if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
-                && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && SetupEngine.AiTeammates(fbn) > 0
-                && !(p.Rules.TryGetValue(cls, out var own2) && own2.ContainsKey("bBots")))
-                plan.Overrides["bBots"] = "True";
 
             // Travel URL
             var url = new StringBuilder();
@@ -177,7 +158,35 @@ namespace SandstormModLauncher.Game
             // AI teammates take player slots, so there must be room for you plus all of them.
             plan.PlayerSlots = Math.Max(1, p.MaxPlayers);
             bool wantsMates = false;
-            if (plan.Mode != null && plan.Mode.Coop)
+            if (ownRules && plan.Mode != null)
+            {
+                // The player's own Game.ini decides the bots: every value it gives the mode counts (its section, its blueprints'
+                // and its base classes'), and the mode's default, as more slots offline cost nothing.
+                string gameIni = ownGameIni ?? ReadOwnGameIni();
+                List<string> OwnValues(string key)
+                {
+                    var list = OwnIniValues(gameIni, plan, state, key);
+                    string d = db.DefaultValue(cls, key);
+                    if (d != null) list.Add(d);
+                    return list;
+                }
+                int OwnMax(string key) => OwnValues(key).Select(v => int.TryParse(v.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? Math.Max(0, Math.Min(100, n)) : 0)
+                                                        .DefaultIfEmpty(0).Max();
+                bool ownBots = OwnValues("bBots").Any(v => IsTrue(v.Trim()));
+                if (plan.Mode.Coop)
+                {
+                    // AI teammates only join when the mode fills teams with bots.
+                    int ownMates = OwnMax("FriendlyBotQuota");
+                    wantsMates = ownBots && SetupEngine.AiTeammates(ownMates) > 0;
+                    if (wantsMates) plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Min(64, Math.Max(8, 1 + ownMates + 2)));
+                }
+                else if (ownBots)
+                {
+                    int ownQuota = OwnMax("BotQuota");
+                    plan.PlayerSlots = Math.Max(plan.PlayerSlots, Math.Min(64, 2 * (ownQuota > 0 ? ownQuota : 5) + 2));
+                }
+            }
+            else if (plan.Mode != null && plan.Mode.Coop)
             {
                 string fb = plan.Overrides.TryGetValue("FriendlyBotQuota", out var ov2) ? ov2 : db.DefaultValue(cls, "FriendlyBotQuota");
                 // FriendlyBotQuota counts you: 1 is no AI teammate (setups saved by 1.10.0 and older can hold it).
@@ -233,10 +242,10 @@ namespace SandstormModLauncher.Game
             foreach (var kv in extra) url.Append('?').Append(kv.Key).Append(kv.Value == null ? "" : "=" + kv.Value);
             plan.OpenCommand = url.ToString();
 
-            // Game.ini sections (every mode the profile customises)
-            plan.IniSections = BuildIniSections(p, state);
+            // Game.ini sections (every mode the profile customises; none with the player's own Game.ini rules)
+            plan.IniSections = ownRules ? new List<UeIni.Section>() : BuildIniSections(p, state);
             plan.GameIniBlock = UeIni.Render(plan.IniSections);
-            plan.RestartKey = RestartKeyFor(p, db);
+            plan.RestartKey = ownRules ? CombineRestartKey(OwnRulesPart, "") : RestartKeyFor(p, db);
 
             // After-load: game mode properties go over RCON (gamemodeproperty); cheats and the player's own lines need the console.
             if (state.Settings.ApplyLiveRules && cls != null)
@@ -246,7 +255,8 @@ namespace SandstormModLauncher.Game
                     plan.LiveProperties.Add(new KeyValuePair<string, string>(kv.Key, kv.Value));
                     plan.AfterLoad.Add("gamemodeproperty " + kv.Key + " " + kv.Value);
                 }
-            if (plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var versusDifficulty))
+            // (The versus AI difficulty is a rule from Play as well: not with the player's own Game.ini rules.)
+            if (!ownRules && plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.TryGetValue("AIDifficulty", out var versusDifficulty))
             {
                 plan.ConsoleOnly.Add("EnableCheats");
                 plan.ConsoleOnly.Add("AIDifficulty " + versusDifficulty);
@@ -260,7 +270,93 @@ namespace SandstormModLauncher.Game
             foreach (var c in plan.ConsoleOnly) plan.AfterLoad.Add("console: " + c);
             if (plan.Overrides.Count > 0 && cls == null)
                 plan.Warnings.Add(T("This scenario's game mode is not in the rules database, so rule changes are skipped."));
+            if (ownRules && PlayHasRules(p, db, plan))
+                plan.Warnings.Add(T("Your game uses the rules in your Game.ini: rule, bot and AI teammate changes, the official ruleset and the extra Game.ini lines from Play are not used."));
             return plan;
+        }
+
+        /// <summary>Play sets something the player's own Game.ini rules leave out: a rule of the played mode, the versus AI
+        /// difficulty, an official ruleset or extra Game.ini lines.</summary>
+        private static bool PlayHasRules(Profile p, RulesDb db, LaunchPlan plan)
+        {
+            string cls = plan.Mode?.Cls;
+            if (cls != null && p.Rules.TryGetValue(cls, out var mine)
+                && mine.Any(kv => { string d = db.DefaultValue(cls, kv.Key); return d == null || !Same(d, kv.Value, db.Prop(kv.Key)); }))
+                return true;
+            if (plan.Mode != null && !plan.Mode.Coop && p.Rules.TryGetValue("*", out var global) && global.ContainsKey("AIDifficulty")) return true;
+            if (!string.IsNullOrWhiteSpace(p.LaunchRuleset)) return true;
+            return !string.Equals(p.CustomIniMode ?? "Off", "Off", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.CustomIniText);
+        }
+
+        /// <summary>
+        /// The values a Game.ini gives a key for the played mode, the first one of each section the mode reads: its base
+        /// classes', its own and its blueprints'. Used to size the match (player slots, bSoloGame), so each one counts.
+        /// </summary>
+        public static List<string> OwnIniValues(string gameIni, LaunchPlan plan, AppState state, string key)
+        {
+            var list = new List<string>();
+            string cls = plan.Mode?.Cls;
+            if (cls == null || string.IsNullOrWhiteSpace(gameIni)) return list;
+            var sections = BaseModeSections.Concat(new[] { "/Script/Insurgency." + cls }).Concat(ModeBlueprints(state, cls)).ToList();
+            if (!string.IsNullOrEmpty(plan.Scenario?.GameModePath)) sections.Add(plan.Scenario.GameModePath);
+            foreach (var section in sections.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string v = UeIni.FirstValue(gameIni, section, key);
+                if (v != null) list.Add(v);
+            }
+            return list;
+        }
+
+        /// <summary>The game's Game.ini as it is now, read once ("" when it is missing or another program holds it).</summary>
+        private static string ReadOwnGameIni() => UeIni.ReadTextOnce(GameInstall.GameIniPath);
+
+        /// <summary>The profile's rules for the played mode, and the launcher's adjustments for offline play.</summary>
+        private static void AddRules(LaunchPlan plan, Profile p, RulesDb db, string cls)
+        {
+            if (cls != null && p.Rules.TryGetValue(cls, out var ov))
+                foreach (var kv in ov)
+                {
+                    string def = db.DefaultValue(cls, kv.Key);
+                    if (def == null || !Same(def, kv.Value, db.Prop(kv.Key))) plan.Overrides[kv.Key] = kv.Value;
+                }
+
+            // Versus is played against bots unless the profile turns them off (the game's own default is off).
+            if (plan.Mode != null && !plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
+                && !(p.Rules.TryGetValue(cls, out var own) && own.ContainsKey("bBots")))
+                plan.Overrides["bBots"] = "True";
+
+            // Ambush and Free For All wait for two human players (MinimumPlayers=2) before the match starts, and bots
+            // only join once it has started, so offline they sat at "waiting for players" with no bots. With bots on,
+            // one player is enough (unless the profile sets these itself).
+            bool versusBots = plan.Mode != null && !plan.Mode.Coop && plan.Overrides.TryGetValue("bBots", out var vb) && IsTrue(vb);
+            // Ambush, Defusal and Free For All also default to BotQuota=0: bots "on" but none would come.
+            if (versusBots && !plan.Overrides.ContainsKey("BotQuota") && int.TryParse(db.DefaultValue(cls, "BotQuota"), out int dq) && dq <= 0)
+                plan.Overrides["BotQuota"] = "5";
+            // Bots on but a team size of 0 (set by hand) would also leave the match empty: one per team at least.
+            if (versusBots && plan.Overrides.TryGetValue("BotQuota", out var setQuota) && int.TryParse(setQuota, out int sq) && sq <= 0)
+            {
+                plan.Overrides["BotQuota"] = "1";
+                plan.Warnings.Add(T("Players per team was 0 with bots on; 1 is used (you against one bot)."));
+            }
+            // The launcher's default for the minimums (SetupEngine.LauncherDefault: 1), with bots or without: offline nobody
+            // else comes; a server that should wait for a second player keeps 2 in its rules.
+            foreach (var key in new[] { "MinimumPlayers", "MinimumPlayersInProgress" })
+            {
+                string launcherMin = SetupEngine.LauncherDefault(db, cls, key);
+                if (launcherMin != null && launcherMin != db.DefaultValue(cls, key) && !(p.Rules.TryGetValue(cls, out var own3) && own3.ContainsKey(key)))
+                    plan.Overrides[key] = launcherMin;
+            }
+
+            if (plan.Mode != null && plan.Mode.Coop
+                && int.TryParse(plan.Overrides.TryGetValue("MinimumEnemies", out var mn) ? mn : db.DefaultValue(cls, "MinimumEnemies"), out int minE)
+                && int.TryParse(plan.Overrides.TryGetValue("MaximumEnemies", out var mx) ? mx : db.DefaultValue(cls, "MaximumEnemies"), out int maxE) && minE > maxE)
+                plan.Warnings.Add(F("Minimum enemies ({0}) is above maximum enemies ({1}); the game then uses the maximum.", minE, maxE));
+
+            // Co-op AI teammates only join when the mode fills teams with bots (bBots is off by default).
+            if (plan.Mode != null && plan.Mode.Coop && plan.Mode.Defaults.ContainsKey("bBots")
+                && int.TryParse(plan.Overrides.TryGetValue("FriendlyBotQuota", out var fbq) ? fbq : db.DefaultValue(cls, "FriendlyBotQuota"), out int fbn) && SetupEngine.AiTeammates(fbn) > 0
+                && !(p.Rules.TryGetValue(cls, out var own2) && own2.ContainsKey("bBots")))
+                plan.Overrides["bBots"] = "True";
         }
 
         /// <summary>Game.ini sections for every mode the profile customises, plus the profile's own extra lines.</summary>
@@ -315,12 +411,17 @@ namespace SandstormModLauncher.Game
         /// </summary>
         public static string MergeGameIni(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier, bool allowReplace = true)
         {
+            // The player's own Game.ini rules: nothing of the launcher's goes in, and nothing comes out.
+            if (plan.OwnRules) return current ?? "";
             if (allowReplace && string.Equals(plan.Profile?.CustomIniMode, "Replace", StringComparison.OrdinalIgnoreCase)) return UeIni.Render(plan.IniSections) + "\r\n";
             var old = new HashSet<string>(earlier ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
             return UeIni.MergeSections(current, plan.IniSections, (s, k) => IsManagedIniKey(db, s, k) || old.Contains(s + "\n" + k));
         }
 
-        /// <summary>Game.ini as a launch writes it: the plan merged in, and the launcher's [Rcon] section kept (also in Replace mode).</summary>
+        /// <summary>
+        /// Game.ini as a launch writes it: the plan merged in, and the launcher's [Rcon] section kept (also in Replace mode). With
+        /// the player's own Game.ini rules only the [Rcon] section is written.
+        /// </summary>
         public static string GameIniForLaunch(string current, LaunchPlan plan, RulesDb db, IEnumerable<string> earlier, AppSettings settings) =>
             RconSetup.Apply(MergeGameIni(current, plan, db, earlier), settings);
 
@@ -364,10 +465,13 @@ namespace SandstormModLauncher.Game
         public static string CombineRestartKey(string iniPart, string ruleset) => Hash((iniPart ?? "") + "ruleset=" + (ruleset ?? ""));
 
         /// <summary>"Mode|Key" of every rule the plan writes into Game.ini for a game mode (the game reads them at start).</summary>
-        public static List<string> WrittenRuleKeys(LaunchPlan plan, RulesDb db)
+        public static List<string> WrittenRuleKeys(LaunchPlan plan, RulesDb db) => RuleKeysIn(plan.IniSections, db);
+
+        /// <summary>"Mode|Key" of every rule in game mode sections of Game.ini text (the player's own rules, read by the game at start).</summary>
+        public static List<string> RuleKeysIn(IEnumerable<UeIni.Section> sections, RulesDb db)
         {
             const string prefix = "/Script/Insurgency.";
-            return plan.IniSections.Where(s => s.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && db.Mode(s.Name.Substring(prefix.Length)) != null)
+            return sections.Where(s => s.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && db.Mode(s.Name.Substring(prefix.Length)) != null)
                                    .SelectMany(s => s.Values.Where(v => db.Prop(v.Key) != null).Select(v => s.Name.Substring(prefix.Length) + "|" + v.Key))
                                    .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
@@ -380,7 +484,8 @@ namespace SandstormModLauncher.Game
         {
             var list = new List<KeyValuePair<string, string>>();
             string cls = plan.Mode?.Cls;
-            if (cls == null || startedWith == null) return list;
+            // The player's own Game.ini rules are never set back (the launcher sends no rules then).
+            if (cls == null || startedWith == null || plan.OwnRules) return list;
             foreach (var id in startedWith)
             {
                 int bar = id.IndexOf('|');

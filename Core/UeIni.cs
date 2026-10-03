@@ -40,6 +40,30 @@ namespace SandstormModLauncher.Core
                     throw new IOException(Path.GetFileName(path) + " is in use by another program (" + ex.Message.TrimEnd('.') + "). Close the game or the program that has it open and try again.", ex);
                 }
             }
+            return Decode(bytes);
+        }
+
+        /// <summary>The text of a config file in one try, never waiting: "" when it is missing or another program holds it (for reading only).</summary>
+        public static string ReadTextOnce(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return "";
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var m = new MemoryStream())
+                {
+                    fs.CopyTo(m);
+                    return Decode(m.ToArray());
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException || ex is NotSupportedException || ex is ArgumentException)
+            {
+                return "";
+            }
+        }
+
+        private static string Decode(byte[] bytes)
+        {
             if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
             if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) return Encoding.UTF8.GetString(bytes, 3, bytes.Length - 3);
             return Encoding.UTF8.GetString(bytes);

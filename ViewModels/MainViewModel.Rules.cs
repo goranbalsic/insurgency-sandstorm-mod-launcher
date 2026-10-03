@@ -321,7 +321,10 @@ namespace SandstormModLauncher.ViewModels
 
         /// <summary>The player's own rule changes, as the Rules tab counts them (bots are in their own line; the launcher's
         /// automatic adjustments for offline play are in the command line, not counted as the player's changes).</summary>
-        public string RulesSummary
+        public string RulesSummary => State.Settings.OwnRules ? T("Rules from your Game.ini") : RuleChangesSummary;
+
+        /// <summary>The rule changes of the Play match (what the server gets, whatever your game uses).</summary>
+        public string RuleChangesSummary
         {
             get
             {
