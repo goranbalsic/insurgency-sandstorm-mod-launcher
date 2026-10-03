@@ -241,6 +241,12 @@
                                     <TextBlock Text="Also sets them straight in the running match over RCON, no restart needed" Style="{StaticResource Mute}" />
                                 </StackPanel>
                             </CheckBox>
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding OwnRules}">
+                                <StackPanel>
+                                    <TextBlock Text="Use the rules in my Game.ini" FontSize="13.5" />
+                                    <TextBlock Text="Rules, bots and AI teammates stay as you set them in your Game.ini; the launcher writes and sends none. Play gives only the map, scenario, lighting and mutators. The game reads Game.ini when it starts." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding SoloGameFlag}">
                                 <StackPanel>
                                     <TextBlock Text="Mark matches as solo games (bSoloGame)" FontSize="13.5" />

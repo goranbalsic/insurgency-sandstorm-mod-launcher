@@ -198,6 +198,7 @@ namespace SandstormModLauncher.Models
         public string RestartPolicy { get; set; } = "Ask";      // Ask / Always / Never
         public bool SoloGameFlag { get; set; } = true;
         public bool ApplyLiveRules { get; set; } = true;
+        public bool OwnRules { get; set; }                        // the rules in the player's own Game.ini; Play gives only map, lighting, mutators
         public string LaunchArgs { get; set; } = "";
         public string LastWrittenRulesHash { get; set; } = "";
         public string LastWrittenIniPart { get; set; }                  // its Game.ini part (no ruleset); null = written by 1.10.0 or older

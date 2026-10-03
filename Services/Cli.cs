@@ -23,6 +23,7 @@ namespace SandstormModLauncher.Services
     ///   set mode|*|current key value | unset mode|*|current key
     ///   mutators [add id.. | remove id.. | clear]
     ///   plan                                     open command, Game.ini block, after-load commands
+    ///   own-rules [on|off]                       your game uses the rules in your own Game.ini (Play gives map, lighting, mutators)
     ///   ini-merge in.ini out.ini                 writes the plan into a copy of a Game.ini (read-only files too)
     ///   torture [steps] [seed]                   random stress test of the whole setup logic (checks every step)
     ///   report-send [address]                    sends the cleaned problem report (to the inbox, or to an address for testing)
@@ -121,6 +122,16 @@ namespace SandstormModLauncher.Services
                         print("After load: " + string.Join(" | ", plan.AfterLoad));
                         print(plan.GameIniBlock);
                         return plan.Error == null ? 0 : 1;
+                    }
+                    case "own-rules":
+                    {
+                        // own-rules [on|off]: the rules in the player's own Game.ini (shows the setting without on or off).
+                        string v = (A(1) ?? "").ToLowerInvariant();
+                        if (v == "on" || v == "off") state.Settings.OwnRules = v == "on";
+                        else if (v.Length > 0) { print("own-rules takes on or off"); save = false; return 1; }
+                        else save = false;
+                        print("Own Game.ini rules: " + (state.Settings.OwnRules ? "on" : "off"));
+                        return 0;
                     }
                     case "ini-merge":
                     {
@@ -433,7 +444,8 @@ namespace SandstormModLauncher.Services
         private static ServerPlan ServerPlanFor(AppState state, Profile p, ServerInstall inst)
         {
             string ini = inst.Found && File.Exists(inst.GameIniPath) ? UeIni.ReadText(inst.GameIniPath) : "";
-            return ServerPlanner.Build(LaunchPlanner.Build(p, state), state.Settings, inst, state.Rules, ini, ServerModio.ReadAccount());
+            // The server's match has Play's rules whatever your game uses (it has its own switch for its Game.ini).
+            return ServerPlanner.Build(LaunchPlanner.Build(p, state, false), state.Settings, inst, state.Rules, ini, ServerModio.ReadAccount());
         }
 
         private static void PrintServerPlan(ServerPlan plan, Action<string> print)

@@ -85,7 +85,7 @@ namespace SandstormModLauncher.ViewModels
             CopyServerCommandLineCommand = new RelayCommand(CopyServerCommandLine, () => serverPlan?.IsValid == true);
             NewServerRconPasswordCommand = new AsyncCommand(NewServerRconPassword, () => !serverBusy);
             CopyServerRconPasswordCommand = new RelayCommand(() => CopyText(ServerRemote ? State.Settings.ServerRemoteRconPassword : State.Settings.ServerRconPassword, "RCON password copied"));
-            AddMatchToCycleCommand = new RelayCommand(AddMatchToCycle, () => CurrentPlan?.IsValid == true && MapCycleFile != null);
+            AddMatchToCycleCommand = new RelayCommand(AddMatchToCycle, () => ServerMatch?.IsValid == true && MapCycleFile != null);
             RemoveCycleItemCommand = new RelayCommand(p => EditCycle(p as MapCycleItem, (list, i) => list.RemoveAt(i)));
             MoveCycleItemUpCommand = new RelayCommand(p => EditCycle(p as MapCycleItem, (list, i) => { if (i > 0) { var e = list[i]; list.RemoveAt(i); list.Insert(i - 1, e); } }));
             MoveCycleItemDownCommand = new RelayCommand(p => EditCycle(p as MapCycleItem, (list, i) => { if (i < list.Count - 1) { var e = list[i]; list.RemoveAt(i); list.Insert(i + 1, e); } }));
@@ -268,7 +268,7 @@ namespace SandstormModLauncher.ViewModels
         private void UpdateServerPlan()
         {
             if (Server == null) return;
-            try { serverPlan = CurrentPlan == null && !(State.Settings.ServerUseOwnArgs && !State.Settings.ServerRemote) ? null : ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, "", serverAccount); }
+            try { serverPlan = ServerMatch == null && !(State.Settings.ServerUseOwnArgs && !State.Settings.ServerRemote) ? null : ServerPlanner.Build(ServerMatch, State.Settings, ServerInstall, State.Rules, "", serverAccount); }
             catch (Exception ex) { AppLog.Error("Could not build the server plan", ex); serverPlan = null; }
             ServerWarnings.Clear();
             if (serverPlan != null) foreach (var w in serverPlan.Warnings.Distinct()) ServerWarnings.Add(w);
@@ -280,8 +280,8 @@ namespace SandstormModLauncher.ViewModels
 
         public string ServerCommandLine => serverPlan?.IsValid == true && !ServerRemote ? "InsurgencyServer.exe " + serverPlan.ShownCommandLine : "";
         public string ServerPlanError => ServerRemote ? null : serverPlan == null ? T("Pick a map and scenario in Play first.") : serverPlan.Error;
-        public string ServerMatchSummary => CurrentPlan?.IsValid != true ? T("No match set up in Play yet")
-            : MapSummary + " · " + ModeSummary + " · " + (serverPlan?.OwnRules == true ? T("the server's own rules") : RulesSummary) + " · " + MutatorSummary;
+        public string ServerMatchSummary => ServerMatch?.IsValid != true ? T("No match set up in Play yet")
+            : MapSummary + " · " + ModeSummary + " · " + (serverPlan?.OwnRules == true ? T("the server's own rules") : RuleChangesSummary) + " · " + MutatorSummary;
         public string ServerMatchMods => serverPlan == null || serverPlan.MatchModIds.Count == 0 ? "" : F("This match uses mods {0}.", string.Join(", ", serverPlan.MatchModIds));
 
         // ------------------------------------------------------------------ start / stop
@@ -290,7 +290,7 @@ namespace SandstormModLauncher.ViewModels
         {
             string ini = File.Exists(ServerInstall.GameIniPath) ? UeIni.ReadText(ServerInstall.GameIniPath) : "";
             ReadServerAccount();
-            var plan = ServerPlanner.Build(CurrentPlan, State.Settings, ServerInstall, State.Rules, ini, serverAccount);
+            var plan = ServerPlanner.Build(ServerMatch, State.Settings, ServerInstall, State.Rules, ini, serverAccount);
             if (!plan.IsValid) { await ShowMessage("The server cannot start", plan.Error); return false; }
             var progress = new Progress<string>(t => ServerProgress = t);
             string failed = await Server.Start(plan, progress, CancellationToken.None);
@@ -480,9 +480,9 @@ namespace SandstormModLauncher.ViewModels
 
         private void AddMatchToCycle()
         {
-            if (CurrentPlan?.IsValid != true || !CycleUnchangedOnDisk()) return;
+            if (ServerMatch?.IsValid != true || !CycleUnchangedOnDisk()) return;
             var entries = MapCycleItems.Select(i => i.Entry).ToList();
-            entries.Add(MapCycle.For(CurrentPlan));
+            entries.Add(MapCycle.For(ServerMatch));
             SaveMapCycle(entries);
             ShowToast(F("Added to the map cycle: {0}", MapSummary));
         }

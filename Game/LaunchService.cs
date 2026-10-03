@@ -180,7 +180,8 @@ namespace SandstormModLauncher.Game
                     RconSetup.EnsureSettings(state.Settings);
                     AppLog.Info("RCON port " + old + " is used by another program; the launcher uses " + state.Settings.RconPort + " now");
                 }
-                if (GameProcessRunning()) Report(1, StepState.Skipped, T("The game is running: the rules are sent after the map loads, and Game.ini is updated before the next start"));
+                if (GameProcessRunning()) Report(1, StepState.Skipped, plan.OwnRules ? T("The game is running: it keeps the rules it read from your Game.ini when it started")
+                                                                     : T("The game is running: the rules are sent after the map loads, and Game.ini is updated before the next start"));
                 else Report(1, StepState.Done, WriteGameIni(plan));
 
                 // 3. Start / restart
@@ -493,7 +494,7 @@ namespace SandstormModLauncher.Game
         /// Options a travel would otherwise carry over from the map before: those the launcher may set, given their
         /// neutral value when this plan does not set them (checked in the game: game= and Mutators= empty work).
         /// </summary>
-        public static string TravelResets(LaunchPlan plan) => TravelResets(plan, plan.TravelUrl);
+        public static string TravelResets(LaunchPlan plan) => TravelResets(plan, plan.TravelUrl, !plan.OwnRules);
 
         /// <summary>
         /// The same for another URL of the plan's match (a dedicated server's). <paramref name="rules"/> false = the rules are the
@@ -590,6 +591,16 @@ namespace SandstormModLauncher.Game
                 AppLog.Info("Game.ini updated (" + sections + " section(s), " + UeIni.Split(current).Count + " -> " + UeIni.Split(updated).Count + " lines)");
                 AppLog.Debug("Game.ini rules:\r\n" + plan.GameIniBlock);
             }
+            if (plan.OwnRules)
+            {
+                // The player's own rules: the extra lines written earlier stay the launcher's (they go when the switch is off
+                // again), and the game reads the rules in the file as it is.
+                state.Settings.LastWrittenRulesHash = plan.RestartKey;
+                state.Settings.LastWrittenIniPart = LaunchPlanner.OwnRulesPart;
+                state.Settings.LastWrittenRuleKeys = LaunchPlanner.RuleKeysIn(UeIni.Parse(updated), db);
+                state.Settings.LastRulesWriteUtc = DateTime.UtcNow;
+                return T("Your Game.ini's rules");
+            }
             state.Settings.ManagedIniKeys = LaunchPlanner.PlayerIniKeys(plan, db);
             state.Settings.LastWrittenRulesHash = plan.RestartKey;
             state.Settings.LastWrittenIniPart = LaunchPlanner.IniRestartPart(plan.Profile, db);
@@ -626,7 +637,7 @@ namespace SandstormModLauncher.Game
             var args = new List<string>();
             RconSetup.EnsureSettings(state.Settings);
             args.Add(RconSetup.CommandLine(state.Settings));
-            string ruleset = plan?.Profile?.LaunchRuleset;
+            string ruleset = plan?.StartRuleset;
             if (!string.IsNullOrWhiteSpace(ruleset)) args.Add("-ruleset=" + ruleset.Trim());
             if (!string.IsNullOrWhiteSpace(state.Settings.LaunchArgs)) args.Add(state.Settings.LaunchArgs.Trim());
             string argLine = string.Join(" ", args);
