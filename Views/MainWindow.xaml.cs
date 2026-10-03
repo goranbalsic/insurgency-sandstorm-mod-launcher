@@ -25,8 +25,10 @@ namespace SandstormModLauncher.Views
             DataContext = vm;
             Loaded += async (s, e) =>
             {
-                await vm.InitializeAsync();
+                // Every start looks for an update at once (reading the game and the mods can take a while, and a question
+                // such as "Game not found" waits for an answer).
                 vm.StartUpdateChecks();
+                await vm.InitializeAsync();
             };
             StateChanged += (s, e) => UpdateChrome();
             Closing += OnClosing;

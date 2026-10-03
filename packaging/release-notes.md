@@ -2,6 +2,7 @@
 
 - Settings > Launching > "Use the rules in my Game.ini": your game keeps the rules, bots and AI teammates you set in Game.ini. The launcher writes and sends none; Play gives the map, scenario, lighting and mutators.
 - The dedicated server still gets Play's rules (it has its own switch for its Game.ini).
+- Updates: looked for every time the launcher opens, then every 10 minutes (was every 3), with the same tiny request.
 
 **1.11.0**
 
