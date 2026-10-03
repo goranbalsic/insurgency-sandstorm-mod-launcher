@@ -44,8 +44,8 @@ Built by GitHub Actions from the public source. SHA-256 is on the release page:
 
 Updates
 -------
-Checked every 3 minutes while open; the new zip is verified against its SHA-256
-and used from the next start.
+Checked when the launcher opens and every 10 minutes while it is open; the new
+zip is verified against its SHA-256 and used from the next start.
 
 
 Uninstall

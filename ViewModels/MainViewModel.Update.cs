@@ -11,8 +11,9 @@ namespace SandstormModLauncher.ViewModels
 {
     public sealed partial class MainViewModel
     {
-        // A tiny "anything new?" request while the launcher is open (see Updater.Check: usually a 304 with no body).
-        private static readonly TimeSpan UpdateInterval = TimeSpan.FromMinutes(3);
+        // A tiny "anything new?" request when the launcher opens, then every 10 minutes while it is open (see Updater.Check:
+        // usually a HEAD request to the release page, with no body).
+        private static readonly TimeSpan UpdateInterval = TimeSpan.FromMinutes(10);
         private string failedTag, lastCheckError;
         private DateTime failedAtUtc, lastRebuildCheckUtc;
         private DispatcherTimer updateTimer;
@@ -48,22 +49,22 @@ namespace SandstormModLauncher.ViewModels
         public string UpdateStatus { get => updateStatus; private set => Set(ref updateStatus, value); }
         public string UpdateReadyTip => readyVersion == null ? "" : F("v{0} is installed and starts the next time you open the launcher. Click to restart now.", readyVersion.ToString(3));
         public string AutoUpdateHint => Updater.CanInstall
-            ? T("Looks for a new release every 3 minutes (a tiny request) and puts it in place for the next start. The launcher's only network access.")
+            ? T("Looks for a new release when the launcher opens and every 10 minutes (a tiny request), and puts it in place for the next start. The launcher's only network access.")
             : T("Built from source: new releases are only reported. The launcher's only network access.");
 
-        /// <summary>Called once the window is up (not for command-line tools or test runs).</summary>
+        /// <summary>
+        /// Called when the window is up, every start (not for command-line tools or test runs): one check right away, while the
+        /// game and the mods are read, then one every 10 minutes.
+        /// </summary>
         public void StartUpdateChecks()
         {
-            if (AppPaths.TestRun) return;
+            if (AppPaths.TestRun || updateTimer != null) return;
             Updater.CleanUp();
-            updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(20) };
-            updateTimer.Tick += async (s, e) =>
-            {
-                updateTimer.Interval = UpdateInterval;
-                await CheckForUpdates(false);
-            };
-            updateTimer.Start();
             ShowLastUpdateCheck();
+            updateTimer = new DispatcherTimer { Interval = UpdateInterval };
+            updateTimer.Tick += async (s, e) => await CheckForUpdates(false);
+            updateTimer.Start();
+            _ = CheckForUpdates(false);
         }
 
         private void ShowLastUpdateCheck()
