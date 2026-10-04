@@ -1,3 +1,8 @@
+**1.12.1**
+
+- Mods: a mod the game is updating or removing during a scan no longer empties the mod list.
+- Mods: one broken entry in mod.io's state.json no longer drops the names of the others or lists unsubscribed mods.
+
 **1.12.0**
 
 - Settings > Launching > "Use the rules in my Game.ini": your game keeps the rules, bots and AI teammates you set in Game.ini. The launcher writes and sends none; Play gives the map, scenario, lighting and mutators.

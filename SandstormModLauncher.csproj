@@ -9,8 +9,8 @@
     <RootNamespace>SandstormModLauncher</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.12.0</Version>
-    <FileVersion>1.12.0.0</FileVersion>
+    <Version>1.12.1</Version>
+    <FileVersion>1.12.1.0</FileVersion>
     <Product>Sandstorm Local, Server &amp; Mod Manager</Product>
     <AssemblyTitle>Sandstorm Local, Server &amp; Mod Manager</AssemblyTitle>
     <Description>Local play launcher with mods and mutators for Insurgency: Sandstorm</Description>

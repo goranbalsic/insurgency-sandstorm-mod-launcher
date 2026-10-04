@@ -60,7 +60,12 @@ namespace SandstormModLauncher.Game
                     {
                         var mod = FromModio(m);
                         if (mod.Folder == null) continue;
-                        known[Path.GetFullPath(mod.Folder).TrimEnd('\\')] = mod;
+                        // One unusable path must not cost every other mod its name.
+                        try { known[Path.GetFullPath(mod.Folder).TrimEnd('\\')] = mod; }
+                        catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException)
+                        {
+                            AppLog.Warn("mod.io state.json: mod " + mod.Id + " has an unusable folder: " + ex.Message);
+                        }
                     }
                 }
                 catch (Exception ex) { AppLog.Warn("mod.io state.json unreadable: " + ex.Message); }
@@ -81,13 +86,23 @@ namespace SandstormModLauncher.Game
             foreach (var folder in folders)
             {
                 n++;
+                // The game can update or remove a mod while it is read: that one is left out, not the whole list.
+                try { ScanFolder(folder); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException)
+                {
+                    AppLog.Warn("Mod folder skipped (" + folder + "): " + ex.Message);
+                }
+            }
+
+            void ScanFolder(string folder)
+            {
                 string full = Path.GetFullPath(folder).TrimEnd('\\');
                 var paks = Directory.Exists(full) ? Directory.GetFiles(full, "*.pak", SearchOption.TopDirectoryOnly) : new string[0];
                 known.TryGetValue(full, out var mod);
                 // Only mods that are on this PC and that the game loads: none whose files are gone (deleted, or unsubscribed and
                 // removed) or still downloading, and none the game is about to remove (unsubscribed: "uninstall pending").
-                if (paks.Length == 0) continue;
-                if (mod != null && mod.StateCode == 5) { AppLog.Info("Mod " + mod.Name + " left out: the game is removing it (unsubscribed)"); continue; }
+                if (paks.Length == 0) return;
+                if (mod != null && mod.StateCode == 5) { AppLog.Info("Mod " + mod.Name + " left out: the game is removing it (unsubscribed)"); return; }
                 if (mod == null)
                 {
                     mod = new ModInfo { Folder = full, Name = Path.GetFileName(full), State = N("Local folder") };

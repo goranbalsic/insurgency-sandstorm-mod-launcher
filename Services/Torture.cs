@@ -1412,12 +1412,15 @@ namespace SandstormModLauncher.Services
                     if (pak) System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, "x.pak"), new byte[64]);
                     return "{\"ID\":" + id + ",\"PathOnDisk\":" + Json.Serialize(dir) + ",\"State\":" + st + ",\"Profile\":{\"name\":\"Mod " + id + "\"}}";
                 }
-                string json = "{\"Mods\":[" + string.Join(",", Mod(1, 1, true, true), Mod(2, 0, false, false), Mod(3, 1, true, false), Mod(4, 5, true, true)) + "],\"version\":1}";
+                string json = "{\"Mods\":[" + string.Join(",", "{\"ID\":9,\"PathOnDisk\":\"C:\\\\bad|path\",\"State\":1,\"Profile\":{}}",
+                    Mod(1, 1, true, true), Mod(2, 0, false, false), Mod(3, 1, true, false), Mod(4, 5, true, true)) + "],\"version\":1}";
                 System.IO.File.WriteAllText(System.IO.Path.Combine(root, "metadata", "state.json"), json);
                 Environment.SetEnvironmentVariable("PUBLIC", temp);
                 var found = ModScanner.Scan(new GameInstall(), new string[0], System.IO.Path.Combine(temp, "cache"), t => { });
                 string names = string.Join(",", found.Select(m => m.Id));
                 if (names != "1") fail("installed mods are " + names + " (only mod 1 is on the PC and kept)");
+                // A mod with an unusable folder in state.json (mod 9) must not cost the others their names.
+                else if (found[0].Name != "Mod 1") fail("mod 1 is named \"" + found[0].Name + "\" (a bad state.json entry dropped the mod.io names)");
             }
             catch (Exception ex) { fail("mod list check: " + ex.Message); }
             finally
