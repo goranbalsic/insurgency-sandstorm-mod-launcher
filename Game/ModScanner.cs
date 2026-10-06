@@ -72,7 +72,9 @@ namespace SandstormModLauncher.Game
             }
             var folders = new List<string>();
             string modsDir = Path.Combine(root, "mods");
-            if (Directory.Exists(modsDir)) folders.AddRange(Directory.GetDirectories(modsDir));
+            // The background scan runs while the game downloads or removes a mod: a folder list that cannot be read is logged, not a crash.
+            try { if (Directory.Exists(modsDir)) folders.AddRange(Directory.GetDirectories(modsDir)); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLog.Warn("mod.io mods folder unreadable: " + ex.Message); }
             foreach (var k in known.Keys) if (!folders.Any(f => Same(f, k))) folders.Add(k);
 
             // 2. legacy layout and user folders
@@ -200,7 +202,8 @@ namespace SandstormModLauncher.Game
                 Version = p.Path("modfile", "version").Str(),
             };
             long updated = p.Get("date_updated").Long();
-            if (updated > 0) mod.Updated = DateTimeOffset.FromUnixTimeSeconds(updated).LocalDateTime;
+            // A date past the year 9999 threw, and one such entry cost every mod in state.json its name.
+            if (updated > 0 && updated <= 253402300799) mod.Updated = DateTimeOffset.FromUnixTimeSeconds(updated).LocalDateTime;
             foreach (var t in p.Get("tags").Arr()) { string tn = t.Get("name").Str(); if (!string.IsNullOrEmpty(tn)) mod.Tags.Add(tn); }
             return mod;
         }
@@ -231,7 +234,7 @@ namespace SandstormModLauncher.Game
                     mod.Id = j.Get("id").Long();
                     mod.Summary = j.Get("summary").Str();
                     mod.Author = j.Path("submitted_by", "username").Str() ?? j.Path("submittedBy", "username").Str();
-                    foreach (var t in j.Get("tags").Arr()) mod.Tags.Add(t.Get("name").Str());
+                    foreach (var t in j.Get("tags").Arr()) { string tn = t.Get("name").Str(); if (!string.IsNullOrEmpty(tn)) mod.Tags.Add(tn); }
                     mod.State = N("Legacy mod folder");
                     return;
                 }

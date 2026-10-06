@@ -339,6 +339,19 @@ namespace SandstormModLauncher.Services
             if (players.Count != 2 || players[0].Id != "0" || players[0].Name != "Some Player" || players[0].Score != "120") fail("listplayers: " + players.Count + " players read wrongly");
             else if (players[1].Name != "a|b" || players[1].Score != "5" || players[1].Id != "1") fail("listplayers: a name with | was read as " + players[1].Name + " / score " + players[1].Score);
             if (ServerService.ParsePlayers("ID\t | Name\t | NetID\t | IP\t | Score\t |\n" + new string('=', 79) + "\n").Count != 0) fail("listplayers: an empty server has players");
+
+            // Unban takes the NetID column's form, from a Steam ID or that form; anything else is refused.
+            if (ServerService.NetId(" 76561198000000001 ") != "SteamNWI:76561198000000001" || ServerService.NetId("steamnwi:76561198000000001") != "SteamNWI:76561198000000001"
+                || ServerService.NetId("7656119800000000") != null || ServerService.NetId("1; quit") != null) fail("unban: Steam IDs read wrongly");
+
+            // Tick rate in Engine.ini: set, replaced, the launcher's own value taken out again, a rate set by hand kept.
+            const string engine = "[Core.Log]\r\nLogNet=Log\r\n";
+            string tick = ServerPlanner.ApplyTickRate(engine, 128, 0);
+            if (UeIni.FirstValue(tick, ServerPlanner.NetDriverSection, ServerPlanner.TickRateKey) != "128" || UeIni.FirstValue(tick, "Core.Log", "LogNet") != "Log") fail("tick rate: not written: " + tick);
+            string tick2 = ServerPlanner.ApplyTickRate(tick, 96, 128);
+            if (UeIni.ReadArray(tick2, ServerPlanner.NetDriverSection, ServerPlanner.TickRateKey).Count != 1 || UeIni.FirstValue(tick2, ServerPlanner.NetDriverSection, ServerPlanner.TickRateKey) != "96") fail("tick rate: not replaced: " + tick2);
+            if (UeIni.FirstValue(ServerPlanner.ApplyTickRate(tick2, 0, 96), ServerPlanner.NetDriverSection, ServerPlanner.TickRateKey) != null) fail("tick rate: the launcher's value stayed after the box was cleared");
+            if (UeIni.FirstValue(ServerPlanner.ApplyTickRate(tick2, 0, 128), ServerPlanner.NetDriverSection, ServerPlanner.TickRateKey) != "96") fail("tick rate: a rate set by hand was taken out");
         }
 
         /// <summary>
