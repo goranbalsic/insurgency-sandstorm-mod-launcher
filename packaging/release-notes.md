@@ -1,3 +1,9 @@
+**1.12.2**
+
+- Live: the game watch no longer lists every module of the running game 2.5 times a second (less CPU and fewer open handles while you play).
+- RCON: a reply cut off by a timeout no longer garbles the next command's reply.
+- Server: starting the server again within a minute no longer gives two mod checks and a false "no mods" warning.
+
 **1.12.1**
 
 - Mods: a mod the game is updating or removing during a scan no longer empties the mod list.
