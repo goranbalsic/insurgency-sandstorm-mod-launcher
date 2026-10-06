@@ -54,9 +54,11 @@ The Server page installs the server with SteamCMD (about 5 GB, folder of your ch
 
 The match's mutators go on the command line (`-mutators=`), so map cycle entries with their own `?Mutators=` add to them. Rules already in the server's `Game.ini`? Switch on "Use the rules in the server's Game.ini" on the Match card: the launcher then writes only RCON and vote kick there. Game stats need a token from gamestats.sandstorm.game, a GSLT and no join password.
 
+Optional: a message of the day (`Motd.txt`), the tick rate (`NetServerMaxTickRate` in `Engine.ini`), and restarting the server when it crashes (while the launcher is open).
+
 Already have a .bat? Switch on "Start with my own options" and paste its options or import the file. They are used as-is; the launcher only adds a waiting security code, and its RCON to `Game.ini` if you have none.
 
-Running, the page lists players (kick, ban, chat, restart round, any admin command). It also shows the join address, ports to forward and the Windows Firewall state, and says whether the server loaded its mods.
+Running, the page lists players (kick, ban, unban, chat, timed messages, restart round, any admin command). It also shows the join address, ports to forward and the Windows Firewall state, and says whether the server loaded its mods.
 
 Mods (game update 1.20+): the server needs its own mod.io account, separate from the one you play with. Enter its e-mail on the Mods card, press Send code, type the 5-digit code and start the server: it logs in once (`-SecurityCode=<code>`, later starts use `-SecurityCode=none`) and loads the mods that account is subscribed to. Subscribe subscribes it to the mod list; Import Mods.txt fills the list from an old Mods.txt. Mods.txt and the access token are no longer read by the server.
 

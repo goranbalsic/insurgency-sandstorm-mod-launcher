@@ -1,3 +1,10 @@
+**1.13.0**
+
+- Server: restart the server when it closes without Stop (a crash), at most 3 times in 15 minutes.
+- Server: message of the day (Motd.txt), tick rate (Engine.ini), timed chat messages, unban by Steam ID.
+- Epic: one unreadable manifest of another game no longer hides Sandstorm.
+- Mods: a broken date in mod.io's state.json no longer drops every mod's name; a background scan that cannot read the mods folder no longer shows an error.
+
 **1.12.2**
 
 - Live: the game watch no longer lists every module of the running game 2.5 times a second (less CPU and fewer open handles while you play).
