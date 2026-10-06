@@ -83,11 +83,16 @@ namespace SandstormModLauncher.Game
             {
                 string manifest = Path.Combine(lib, "steamapps", "appmanifest_" + SteamAppId + ".acf");
                 string installDir = "sandstorm";
-                if (File.Exists(manifest))
+                // A manifest Steam is rewriting (an update) is skipped, not a failed search.
+                try
                 {
-                    var m = Regex.Match(File.ReadAllText(manifest), "\"installdir\"\\s+\"([^\"]+)\"");
-                    if (m.Success) installDir = m.Groups[1].Value;
+                    if (File.Exists(manifest))
+                    {
+                        var m = Regex.Match(File.ReadAllText(manifest), "\"installdir\"\\s+\"([^\"]+)\"");
+                        if (m.Success) installDir = m.Groups[1].Value;
+                    }
                 }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { }
                 string dir = Path.Combine(lib, "steamapps", "common", installDir);
                 if (IsGameDir(dir))
                 {
@@ -257,7 +262,9 @@ namespace SandstormModLauncher.Game
                 if (!Directory.Exists(manifests)) return (null, null);
                 foreach (var f in Directory.GetFiles(manifests, "*.item"))
                 {
-                    var json = Json.Parse(File.ReadAllText(f));
+                    // One unreadable manifest (another game's, half written) no longer ends the search for Sandstorm's.
+                    object json;
+                    try { json = Json.Parse(File.ReadAllText(f)); } catch (Exception ex) { AppLog.Debug("Epic manifest " + Path.GetFileName(f) + ": " + ex.Message); continue; }
                     string name = json.Get("DisplayName").Str() ?? "";
                     if (name.IndexOf("Sandstorm", StringComparison.OrdinalIgnoreCase) < 0) continue;
                     string dir = json.Get("InstallLocation").Str();

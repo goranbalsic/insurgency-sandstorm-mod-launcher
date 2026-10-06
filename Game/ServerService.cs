@@ -64,7 +64,10 @@ namespace SandstormModLauncher.Game
             return Monitor;
         }
 
-        public bool IsRunning => install().FindProcess() != null;
+        public bool IsRunning
+        {
+            get { using (var p = install().FindProcess()) return p != null; }
+        }
 
         /// <summary>
         /// Writes the server's files for a plan: Game.ini (backed up), Admins.txt and the map cycle. Mods.txt is left alone:
@@ -211,26 +214,30 @@ namespace SandstormModLauncher.Game
         /// <summary>Asks the server to close (over RCON, then its window). False when it is still running.</summary>
         public async Task<bool> Stop(CancellationToken ct)
         {
-            var p = install().FindProcess();
-            if (p == null) return true;
-            if (await Task.Run(() => Rcon.Exit(), ct))
-                for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
-            if (!p.HasExited)
+            using (var p = install().FindProcess())
             {
-                try { p.CloseMainWindow(); } catch { }
-                for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                if (p == null) return true;
+                if (await Task.Run(() => Rcon.Exit(), ct))
+                    for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                if (!p.HasExited)
+                {
+                    try { p.CloseMainWindow(); } catch { }
+                    for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                }
+                Monitor?.Poll();
+                return p.HasExited;
             }
-            Monitor?.Poll();
-            return p.HasExited;
         }
 
         /// <summary>Ends the server process at once (when it does not close by itself).</summary>
         public bool Kill()
         {
-            var p = install().FindProcess();
-            if (p == null) return true;
-            try { p.Kill(); p.WaitForExit(10000); } catch (Exception ex) { AppLog.Warn("Server kill: " + ex.Message); }
-            return p.HasExited;
+            using (var p = install().FindProcess())
+            {
+                if (p == null) return true;
+                try { p.Kill(); p.WaitForExit(10000); } catch (Exception ex) { AppLog.Warn("Server kill: " + ex.Message); }
+                return p.HasExited;
+            }
         }
 
         // ------------------------------------------------------------------ control (RCON)

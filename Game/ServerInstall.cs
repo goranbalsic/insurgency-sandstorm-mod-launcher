@@ -174,7 +174,7 @@ namespace SandstormModLauncher.Game
                 foreach (var p in Process.GetProcessesByName(ProcessName))
                 {
                     string exe;
-                    try { exe = p.MainModule?.FileName; } catch { continue; }
+                    using (p) try { exe = p.MainModule?.FileName; } catch { continue; }
                     // <server>\Insurgency\Binaries\Win64\InsurgencyServer-Win64-Shipping.exe
                     string dir = exe == null ? null : Directory.GetParent(exe)?.Parent?.Parent?.Parent?.FullName;
                     if (IsServerDir(dir)) return dir;
@@ -188,16 +188,18 @@ namespace SandstormModLauncher.Game
         public Process FindProcess()
         {
             if (Root == null) return null;
+            Process found = null;
             foreach (var p in Process.GetProcessesByName(ProcessName))
             {
                 try
                 {
-                    string exe = p.MainModule?.FileName;
-                    if (exe != null && exe.StartsWith(Root + "\\", StringComparison.OrdinalIgnoreCase)) return p;
+                    string exe = found == null ? p.MainModule?.FileName : null;
+                    if (exe != null && exe.StartsWith(Root + "\\", StringComparison.OrdinalIgnoreCase)) { found = p; continue; }
                 }
                 catch { }
+                p.Dispose();   // asked every second while the server starts: the others' handles are not left to the finalizer
             }
-            return null;
+            return found;
         }
 
         private void ReadBuild()
