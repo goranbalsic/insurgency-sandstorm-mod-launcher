@@ -144,7 +144,8 @@ namespace SandstormModLauncher.Core
             while (got < count)
             {
                 int left = (int)(until - DateTime.UtcNow).TotalMilliseconds;
-                if (left <= 0) throw new RconException(RconError.Timeout, "the game did not answer in time");
+                // Closed like the timeout below: half a packet was read, so the next reply on this socket would be read from its middle.
+                if (left <= 0) { Close(); throw new RconException(RconError.Timeout, "the game did not answer in time"); }
                 try
                 {
                     tcp.ReceiveTimeout = Math.Max(1, left);
