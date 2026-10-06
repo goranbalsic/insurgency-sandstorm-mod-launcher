@@ -248,6 +248,22 @@ namespace SandstormModLauncher.Game
             return UeIni.MergeSections(string.Join("\r\n", kept), new UeIni.Section[0], (sec, key) => false);
         }
 
+        public const string NetDriverSection = "/Script/OnlineSubsystemUtils.IpNetDriver";
+        public const string TickRateKey = "NetServerMaxTickRate";
+
+        /// <summary>
+        /// The server's Engine.ini with its tick rate (updates per second, the game's default is 64). <paramref name="rate"/> 0 =
+        /// none of the launcher's: the rate it wrote before (<paramref name="written"/>) goes again, a rate set by hand stays.
+        /// </summary>
+        public static string ApplyTickRate(string engineIni, int rate, int written)
+        {
+            string ini = engineIni ?? "";
+            if (rate > 0)
+                return UeIni.MergeSections(ini, new[] { new UeIni.Section(NetDriverSection) { Values = { new KeyValuePair<string, string>(TickRateKey, rate.ToString(CultureInfo.InvariantCulture)) } } }, (sec, key) => false);
+            if (written <= 0 || UeIni.FirstValue(ini, NetDriverSection, TickRateKey) != written.ToString(CultureInfo.InvariantCulture)) return ini;
+            return UeIni.MergeSections(ini, new UeIni.Section[0], (sec, key) => sec.Equals(NetDriverSection, StringComparison.OrdinalIgnoreCase) && key.Equals(TickRateKey, StringComparison.OrdinalIgnoreCase));
+        }
+
         /// <summary>True when the server's Game.ini has the vote kick switched on.</summary>
         public static bool VoteKickOn(string gameIni)
         {

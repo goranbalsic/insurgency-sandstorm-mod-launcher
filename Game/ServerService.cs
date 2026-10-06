@@ -64,7 +64,10 @@ namespace SandstormModLauncher.Game
             return Monitor;
         }
 
-        public bool IsRunning => install().FindProcess() != null;
+        public bool IsRunning
+        {
+            get { using (var p = install().FindProcess()) return p != null; }
+        }
 
         /// <summary>
         /// Writes the server's files for a plan: Game.ini (backed up), Admins.txt and the map cycle. Mods.txt is left alone:
@@ -89,6 +92,40 @@ namespace SandstormModLauncher.Game
             if (plan.AdminsText != null) WriteIfChanged(Path.Combine(inst.ServerConfigDir, ServerPlanner.AdminsName + ".txt"), plan.AdminsText);
             if (plan.MapCycleCopyFrom != null)
                 WriteIfChanged(Path.Combine(inst.ServerConfigDir, plan.MapCycleName + ".txt"), File.ReadAllText(plan.MapCycleCopyFrom));
+
+            // The message of the day players see while joining; an emptied box removes the file (a copy is kept).
+            var s = settings();
+            if (s.ServerMotd != null)
+            {
+                string motdPath = Path.Combine(inst.ServerConfigDir, MotdName);
+                if (s.ServerMotd.Trim().Length > 0) WriteIfChanged(motdPath, s.ServerMotd.Replace("\r\n", "\n").Replace("\n", "\r\n").TrimEnd() + "\r\n");
+                else if (File.Exists(motdPath)) { ConsoleBridge.BackupFile(motdPath, "server-"); File.Delete(motdPath); AppLog.Info("Server file removed: " + MotdName); }
+            }
+            if (s.ServerTickRate > 0 || s.ServerTickRateWritten > 0)
+            {
+                string engine = File.Exists(inst.EngineIniPath) ? UeIni.ReadText(inst.EngineIniPath) : "";
+                string updated = ServerPlanner.ApplyTickRate(engine, s.ServerTickRate, s.ServerTickRateWritten);
+                if (Normalize(updated) != Normalize(engine))
+                {
+                    if (File.Exists(inst.EngineIniPath)) ConsoleBridge.BackupFile(inst.EngineIniPath, "server-");
+                    UeIni.WriteText(inst.EngineIniPath, updated);
+                    AppLog.Info("Server Engine.ini: tick rate " + (s.ServerTickRate > 0 ? s.ServerTickRate.ToString(System.Globalization.CultureInfo.InvariantCulture) : "back to the server's own"));
+                }
+                s.ServerTickRateWritten = s.ServerTickRate;
+            }
+        }
+
+        public const string MotdName = "Motd.txt";
+
+        /// <summary>The server's Motd.txt as it is ("" when there is none).</summary>
+        public string ReadMotd()
+        {
+            try
+            {
+                string path = install().ServerConfigDir == null ? null : Path.Combine(install().ServerConfigDir, MotdName);
+                return path != null && File.Exists(path) ? File.ReadAllText(path).TrimEnd() : "";
+            }
+            catch (Exception ex) { AppLog.Warn("Motd.txt: " + ex.Message); return ""; }
         }
 
         /// <summary>What the running server's own log says about its mods.</summary>
@@ -211,26 +248,30 @@ namespace SandstormModLauncher.Game
         /// <summary>Asks the server to close (over RCON, then its window). False when it is still running.</summary>
         public async Task<bool> Stop(CancellationToken ct)
         {
-            var p = install().FindProcess();
-            if (p == null) return true;
-            if (await Task.Run(() => Rcon.Exit(), ct))
-                for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
-            if (!p.HasExited)
+            using (var p = install().FindProcess())
             {
-                try { p.CloseMainWindow(); } catch { }
-                for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                if (p == null) return true;
+                if (await Task.Run(() => Rcon.Exit(), ct))
+                    for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                if (!p.HasExited)
+                {
+                    try { p.CloseMainWindow(); } catch { }
+                    for (int i = 0; i < 40 && !p.HasExited; i++) await Task.Delay(500, ct);
+                }
+                Monitor?.Poll();
+                return p.HasExited;
             }
-            Monitor?.Poll();
-            return p.HasExited;
         }
 
         /// <summary>Ends the server process at once (when it does not close by itself).</summary>
         public bool Kill()
         {
-            var p = install().FindProcess();
-            if (p == null) return true;
-            try { p.Kill(); p.WaitForExit(10000); } catch (Exception ex) { AppLog.Warn("Server kill: " + ex.Message); }
-            return p.HasExited;
+            using (var p = install().FindProcess())
+            {
+                if (p == null) return true;
+                try { p.Kill(); p.WaitForExit(10000); } catch (Exception ex) { AppLog.Warn("Server kill: " + ex.Message); }
+                return p.HasExited;
+            }
         }
 
         // ------------------------------------------------------------------ control (RCON)
@@ -265,6 +306,17 @@ namespace SandstormModLauncher.Game
         public string PermBan(ServerPlayer p, string reason) => Rcon.Run(("permban " + p.Id + " " + Reason(reason)).Trim())[0].Trim();
 
         public string Say(string message) => Rcon.Run("say " + Reason(message))[0].Trim();
+
+        /// <summary>
+        /// The net id the server bans by (listplayers' NetID column, SteamNWI:7656119...) from a Steam ID or a net id, or null.
+        /// </summary>
+        public static string NetId(string text)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match((text ?? "").Trim(), @"^(?:SteamNWI:)?(7656119\d{10})$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return m.Success ? "SteamNWI:" + m.Groups[1].Value : null;
+        }
+
+        public string Unban(string netId) => Rcon.Run("unban " + netId)[0].Trim();
 
         /// <summary>Loads a match on the running server (RCON's travel, with every option of the map before reset).</summary>
         public RconReply Travel(ServerPlan plan) => Rcon.Travel(TravelUrl(plan, RunningMutators(plan)));

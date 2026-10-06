@@ -257,5 +257,11 @@ namespace SandstormModLauncher.Models
         public bool ServerOwnRules { get; set; }                  // the rules in the server's own Game.ini; Play gives only map, lighting, mutators
         public string ServerInstallDir { get; set; } = "";        // where SteamCMD installs the server (empty = C:\SandstormServer)
         public List<string> ServerManagedIniKeys { get; set; } = new List<string>();
+        public bool ServerAutoRestart { get; set; }               // start the server again when it closes without Stop or Restart (a crash)
+        public string ServerMotd { get; set; }                    // Motd.txt in the server's Config\Server (null = the file is left as it is)
+        public int ServerTickRate { get; set; }                   // NetServerMaxTickRate in the server's Engine.ini (0 = left as it is)
+        public int ServerTickRateWritten { get; set; }            // the rate the launcher wrote last: taken out again when the box is cleared
+        public string ServerAnnouncements { get; set; } = "";     // chat messages sent in turn while the server runs, one per line
+        public int ServerAnnounceMinutes { get; set; }            // minutes between them (0 = off)
     }
 }

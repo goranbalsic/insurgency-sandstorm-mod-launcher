@@ -317,6 +317,26 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- message of the day, tick rate, restart after a crash -->
+                    <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding ServerRemote, Converter={StaticResource VisNot}}">
+                        <StackPanel>
+                            <TextBlock Text="Message of the day" Style="{StaticResource H2}" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,8" TextWrapping="Wrap"
+                                       Text="Players see it while they join: your rules, a Discord link. Saved as Motd.txt when the server starts; an empty box removes the file." />
+                            <TextBox Style="{StaticResource CodeBox}" Height="70" TextWrapping="Wrap" Text="{Binding ServerMotd, UpdateSourceTrigger=LostFocus}" Tag="e.g. No team killing. Discord: discord.gg/..." />
+                            <TextBlock Text="Tick rate (optional)" Style="{StaticResource Label}" />
+                            <TextBox Text="{Binding ServerTickRateText, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Width="120" HorizontalAlignment="Left" Tag="64" />
+                            <TextBlock Style="{StaticResource Mute}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                       Text="Updates per second, 10 to 240 (NetServerMaxTickRate in the server's Engine.ini). The game uses 64; 128 is smoother and needs more CPU. Empty leaves Engine.ini as it is." />
+                            <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerAutoRestart}" Margin="0,10,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="Restart the server if it closes" FontSize="13.5" />
+                                    <TextBlock Text="Starts it again 10 seconds after it closes without Stop (a crash), at most 3 times in 15 minutes. The launcher has to stay open." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </CheckBox>
+                        </StackPanel>
+                    </Border>
+
                     <!-- mods -->
                     <Border Style="{StaticResource Card}" Margin="0,12,0,0" Visibility="{Binding ServerRemote, Converter={StaticResource VisNot}}">
                         <StackPanel>
@@ -544,6 +564,18 @@
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Send" Margin="8,0,0,0" Command="{Binding SayCommand}" />
                                 <TextBox Text="{Binding SayText, UpdateSourceTrigger=PropertyChanged}" Tag="e.g. Map change in 2 minutes" />
+                            </DockPanel>
+                            <TextBlock Text="Timed messages" Style="{StaticResource Label}" />
+                            <TextBox Style="{StaticResource CodeBox}" Height="60" TextWrapping="Wrap" Text="{Binding ServerAnnouncements, UpdateSourceTrigger=LostFocus}" Tag="one chat message per line, sent in turn" />
+                            <DockPanel Margin="0,6,0,0">
+                                <TextBlock Text="Every" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBox Text="{Binding ServerAnnounceMinutesText, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Width="60" Tag="0" />
+                                <TextBlock Text="minutes while the launcher is open (empty = off)" Style="{StaticResource Mute}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            </DockPanel>
+                            <TextBlock Text="Unban a player" Style="{StaticResource Label}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Unban" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Command="{Binding UnbanCommand}" />
+                                <TextBox Text="{Binding UnbanText, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource Mono}" Tag="Steam ID, e.g. 76561198000000000" />
                             </DockPanel>
                             <WrapPanel Margin="0,12,0,0">
                                 <Button Content="Load the Play match now" Margin="0,0,8,6" Command="{Binding TravelServerCommand}" ToolTip="Changes the running server to the match set up in Play" />

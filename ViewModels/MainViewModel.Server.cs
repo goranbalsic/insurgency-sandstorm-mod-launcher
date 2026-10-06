@@ -45,6 +45,13 @@ namespace SandstormModLauncher.ViewModels
         private ServerPlan serverPlan;
         private DispatcherTimer serverTimer;
         private bool serverBusy, remoteReachable;
+        /// <summary>The launcher started the server and has not stopped it: closing now is a crash (see RestartAfterCrash).</summary>
+        private bool serverExpected, serverWasRunning;
+        private readonly List<DateTime> autoRestarts = new List<DateTime>();
+        private DispatcherTimer announceTimer;
+        private DateTime lastAnnounceUtc;
+        private int announceNext;
+        private string unbanText = "";
         private string serverStatus = T("Not running"), serverStatusKind = "Off", serverOutput = "", sayText = "", serverCommand = "", serverProgress = "";
         private readonly HashSet<string> backedUpCycles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -73,6 +80,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand RestartServerRoundCommand { get; private set; }
         public ICommand SendServerCommandCommand { get; private set; }
         public ICommand CheckServerConnectionCommand { get; private set; }
+        public ICommand UnbanCommand { get; private set; }
 
         private void InitServerCommands()
         {
@@ -105,6 +113,7 @@ namespace SandstormModLauncher.ViewModels
             RestartServerRoundCommand = new AsyncCommand(p => RestartServerRound(p as string == "1"), p => CanControlServer);
             SendServerCommandCommand = new AsyncCommand(SendServerCommand, () => CanControlServer && !string.IsNullOrWhiteSpace(serverCommand));
             CheckServerConnectionCommand = new AsyncCommand(() => CheckServerConnection(true), () => !serverBusy);
+            UnbanCommand = new AsyncCommand(Unban, () => CanControlServer && !string.IsNullOrWhiteSpace(unbanText));
         }
 
         /// <summary>After the settings are loaded: find the server, watch it and read its map cycle.</summary>
@@ -128,6 +137,9 @@ namespace SandstormModLauncher.ViewModels
                 }
             };
             serverTimer.Start();
+            announceTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+            announceTimer.Tick += async (s, e) => await Announce();
+            announceTimer.Start();
             LoadMapCycle();
             UpdateServerPlan();
             RaiseServer();
@@ -142,6 +154,7 @@ namespace SandstormModLauncher.ViewModels
 
         internal void ReloadServerInstall()
         {
+            serverExpected = false;   // another folder's server is not the one the launcher started
             ServerInstall = ServerInstall.Detect(State.Settings.ServerDirOverride);
             SaveSettingsSoon();
             WatchServer();
@@ -157,7 +170,8 @@ namespace SandstormModLauncher.ViewModels
                       nameof(ServerShowLog), nameof(ServerCheats), nameof(ServerGslt), nameof(ServerGameStats), nameof(ServerGameStatsToken), nameof(ServerExtraArgs), nameof(ServerRemoteHost),
                       nameof(ServerRemotePortText), nameof(ServerRemotePassword), nameof(ServerUseMapCycle), nameof(MapCycleFile), nameof(MapCycleIsDefault),
                       nameof(ServerAdmins), nameof(ServerModsEnabled), nameof(ServerModIds), nameof(ServerRconAddress), nameof(ServerUseOwnArgs),
-                      nameof(ServerUsesLauncherArgs), nameof(ServerOwnArgs), nameof(ServerModioEmail), nameof(ServerModioCode), nameof(ModioCodeHint));
+                      nameof(ServerUsesLauncherArgs), nameof(ServerOwnArgs), nameof(ServerModioEmail), nameof(ServerModioCode), nameof(ModioCodeHint),
+                      nameof(ServerAutoRestart), nameof(ServerMotd), nameof(ServerTickRateText), nameof(ServerAnnouncements), nameof(ServerAnnounceMinutesText));
             ReadServerAccount();
             RaiseServerSetup();
             OnServerStateChanged();
@@ -183,6 +197,9 @@ namespace SandstormModLauncher.ViewModels
         private void OnServerStateChanged()
         {
             var m = Server?.Monitor;
+            bool runningNow = !ServerRemote && m != null && m.IsRunning;
+            if (serverWasRunning && !runningNow) _ = RestartAfterCrash();
+            serverWasRunning = runningNow;
             if (ServerRemote)
             {
                 ServerStatus = string.IsNullOrWhiteSpace(State.Settings.ServerRemoteHost) ? T("Enter the other PC's address") : remoteReachable ? F("Connected to {0}", State.Settings.ServerRemoteHost) : T("Not connected");
@@ -260,6 +277,31 @@ namespace SandstormModLauncher.ViewModels
         public string ServerAdmins { get => State.Settings.ServerAdmins; set => SetServerSetting(() => State.Settings.ServerAdmins = value ?? ""); }
         public bool ServerModsEnabled { get => State.Settings.ServerModsEnabled; set => SetServerSetting(() => State.Settings.ServerModsEnabled = value); }
         public string ServerModIds { get => State.Settings.ServerMods; set => SetServerSetting(() => State.Settings.ServerMods = value ?? ""); }
+        public bool ServerAutoRestart { get => State.Settings.ServerAutoRestart; set => SetServerSetting(() => State.Settings.ServerAutoRestart = value); }
+        /// <summary>The server's Motd.txt: the launcher's text once it was edited here, else the file as it is.</summary>
+        public string ServerMotd
+        {
+            get => State.Settings.ServerMotd ?? Server?.ReadMotd() ?? "";
+            set => SetServerSetting(() => State.Settings.ServerMotd = value ?? "");
+        }
+        /// <summary>An empty box is 0: the setting is off (tick rate left to Engine.ini, no timed messages).</summary>
+        private void SetOptionalNumber(string text, int min, int max, Action<int> apply, string name)
+        {
+            if (string.IsNullOrWhiteSpace(text) || text.Trim() == "0") { apply(0); SaveSettingsSoon(); Raise(name); }
+            else SetNumber(text, min, max, apply, name);
+        }
+        public string ServerTickRateText
+        {
+            get => State.Settings.ServerTickRate > 0 ? Num(State.Settings.ServerTickRate) : "";
+            set => SetOptionalNumber(value, 10, 240, n => State.Settings.ServerTickRate = n, nameof(ServerTickRateText));
+        }
+        public string ServerAnnouncements { get => State.Settings.ServerAnnouncements; set { State.Settings.ServerAnnouncements = value ?? ""; SaveSettingsSoon(); Raise(nameof(ServerAnnouncements)); } }
+        public string ServerAnnounceMinutesText
+        {
+            get => State.Settings.ServerAnnounceMinutes > 0 ? Num(State.Settings.ServerAnnounceMinutes) : "";
+            set => SetOptionalNumber(value, 1, 240, n => State.Settings.ServerAnnounceMinutes = n, nameof(ServerAnnounceMinutesText));
+        }
+        public string UnbanText { get => unbanText; set => Set(ref unbanText, value ?? ""); }
         public string SayText { get => sayText; set => Set(ref sayText, value ?? ""); }
         public string ServerCommand { get => serverCommand; set => Set(ref serverCommand, value ?? ""); }
 
@@ -299,6 +341,7 @@ namespace SandstormModLauncher.ViewModels
             if (plan.UsesCode) { RaiseMany(nameof(ServerModioCode), nameof(ModioCodeHint), nameof(ModioAccountText), nameof(ModioAccountKind)); UpdateServerPlan(); }
             if (failed != null) { await ShowMessage("The server did not start", failed); return false; }
             ShowToast(plan.StartMap != null ? F("Server running: {0}", plan.StartMap) : T("Server running"));
+            serverExpected = true;
             WatchServerMods(plan.ModsOn);
             await RefreshPlayers(true);
             return true;
@@ -314,6 +357,7 @@ namespace SandstormModLauncher.ViewModels
 
         private async Task<bool> StopServerCore()
         {
+            serverExpected = false;
             ServerProgress = T("Stopping the server");
             bool stopped = await Server.Stop(CancellationToken.None);
             ServerProgress = "";
@@ -343,6 +387,56 @@ namespace SandstormModLauncher.ViewModels
                 await RunServer();
             }
             finally { ServerBusy = false; OnServerStateChanged(); }
+        }
+
+        /// <summary>
+        /// The server the launcher started closed without Stop or Restart (a crash, or its window closed): started again after
+        /// 10 seconds when the setting is on, at most 3 times in 15 minutes (a server that cannot start is not started forever).
+        /// </summary>
+        private async Task RestartAfterCrash()
+        {
+            if (!serverExpected) return;
+            serverExpected = false;
+            if (!State.Settings.ServerAutoRestart || ServerRemote) return;
+            autoRestarts.RemoveAll(t => DateTime.UtcNow - t > TimeSpan.FromMinutes(15));
+            if (autoRestarts.Count >= 3)
+            {
+                AppLog.Warn("Server closed again: not restarted (3 restarts in 15 minutes)");
+                ShowToast("The server closed again. It was not restarted: it closed 3 times in 15 minutes (see its log)");
+                return;
+            }
+            AppLog.Warn("Server closed without being stopped; starting it again in 10 s");
+            ShowToast("The server closed by itself. Starting it again in 10 seconds");
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                if (ServerRunningHere || serverBusy || !State.Settings.ServerAutoRestart) return;
+                autoRestarts.Add(DateTime.UtcNow);
+                await StartServer();
+            }
+            catch (Exception ex) { AppLog.Error("Server restart after a crash failed", ex); }
+        }
+
+        /// <summary>The next timed message, when the server is running and its interval has passed (one line after the other).</summary>
+        private async Task Announce()
+        {
+            var lines = (State.Settings.ServerAnnouncements ?? "").Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith("//", StringComparison.Ordinal)).ToList();
+            int minutes = State.Settings.ServerAnnounceMinutes;
+            bool reachable = ServerRemote ? remoteReachable : ServerRunningHere && Server?.Monitor?.Phase == GamePhase.InMatch;
+            if (minutes <= 0 || lines.Count == 0 || serverBusy || !reachable || DateTime.UtcNow - lastAnnounceUtc < TimeSpan.FromMinutes(minutes)) return;
+            lastAnnounceUtc = DateTime.UtcNow;
+            string line = lines[announceNext++ % lines.Count];
+            if (await OverServer(() => Server.Say(line), true) != null) AppLog.Debug("Server: timed message sent");
+        }
+
+        private async Task Unban()
+        {
+            string id = ServerService.NetId(unbanText);
+            if (id == null) { ShowToast("Enter a Steam ID (the 17-digit number starting with 7656119)"); return; }
+            string r = await OverServer(() => Server.Unban(id));
+            if (r == null) return;
+            ServerOutput = r.Length > 0 ? r : F("Unbanned {0}", id);
+            UnbanText = "";
         }
 
         private async Task ChangeServerDir()

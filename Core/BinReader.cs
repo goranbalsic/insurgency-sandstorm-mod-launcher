@@ -23,7 +23,7 @@ namespace SandstormModLauncher.Core
 
         private void Need(int n)
         {
-            if (n < 0 || Pos + n > end) throw new InvalidDataException($"Read past end of buffer (pos {Pos}, need {n}, end {end})");
+            if (n < 0 || n > end - Pos) throw new InvalidDataException($"Read past end of buffer (pos {Pos}, need {n}, end {end})");
         }
 
         public byte U8() { Need(1); return Data[Pos++]; }

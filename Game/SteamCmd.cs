@@ -266,7 +266,7 @@ namespace SandstormModLauncher.Game
                 result.Error = result.Ok ? null : error ?? F("SteamCMD ended without finishing (exit code {0}). Try again.", proc.ExitCode);
             }
             // After updating itself SteamCMD may still be finishing in a second process of its own.
-            for (int i = 0; i < 120 && Running().Any(); i++)
+            for (int i = 0; i < 120 && IsRunning; i++)
             {
                 if (ct.IsCancellationRequested) { StopAll(); throw new OperationCanceledException(ct); }
                 await Task.Delay(500);
@@ -282,6 +282,7 @@ namespace SandstormModLauncher.Game
                 string exe = null;
                 try { exe = p.MainModule?.FileName; } catch { }
                 if (exe != null && exe.StartsWith(Dir + "\\", StringComparison.OrdinalIgnoreCase)) yield return p;
+                else p.Dispose();
             }
         }
 
@@ -289,10 +290,19 @@ namespace SandstormModLauncher.Game
         public static void StopAll()
         {
             foreach (var p in Running().ToList())
-                try { p.Kill(); p.WaitForExit(5000); } catch (Exception ex) { AppLog.Warn("SteamCMD stop: " + ex.Message); }
+                using (p) try { p.Kill(); p.WaitForExit(5000); } catch (Exception ex) { AppLog.Warn("SteamCMD stop: " + ex.Message); }
         }
 
-        public static bool IsRunning => Running().Any();
+        /// <summary>Asked every half second after a run: the process handles are closed right away.</summary>
+        public static bool IsRunning
+        {
+            get
+            {
+                var list = Running().ToList();
+                foreach (var p in list) p.Dispose();
+                return list.Count > 0;
+            }
+        }
 
         // ------------------------------------------------------------------ getting it
 
