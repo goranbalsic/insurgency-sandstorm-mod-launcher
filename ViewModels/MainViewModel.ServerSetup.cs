@@ -564,17 +564,23 @@ namespace SandstormModLauncher.ViewModels
         }
 
         /// <summary>After a start with mods on: looks at the log a little later, when the server has had time to log in to mod.io.</summary>
+        private int modWatchRun;
+
         private async void WatchServerMods(bool modsOn)
         {
+            int run = ++modWatchRun;
             if (!modsOn) { ServerModText = ""; return; }
             serverStartedUtc = DateTime.UtcNow;
             ServerModText = T("Waiting for the server to report its mods...");
             ServerModKind = "Busy";
             try
             {
+                // A newer start has its own watch: this one stops, or it would judge the new server too early and toast twice.
                 await Task.Delay(TimeSpan.FromSeconds(35));
+                if (run != modWatchRun) return;
                 await CheckServerMods(true);
                 await Task.Delay(TimeSpan.FromSeconds(40));
+                if (run != modWatchRun) return;
                 await CheckServerMods(true);
                 if (lastModVerdict == ModVerdict.NoLogin || lastModVerdict == ModVerdict.LoginFailed || lastModVerdict == ModVerdict.NoMods) ShowToast("The server started, but it has no mods: see the Mods card");
             }

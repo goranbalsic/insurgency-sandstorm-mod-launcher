@@ -114,8 +114,21 @@ namespace SandstormModLauncher.Game
 
         private bool CheckProcess()
         {
+            Process[] all = null;
             Process p = null;
-            try { p = Process.GetProcessesByName(processName).FirstOrDefault(Ours); } catch { }
+            try
+            {
+                all = Process.GetProcessesByName(processName);
+                // The game already found stays ours: Ours reads MainModule, which lists every module of the game, too costly every 400 ms.
+                p = all.FirstOrDefault(x => x.Id == ProcessId) ?? all.FirstOrDefault(Ours);
+            }
+            catch { }
+            try { return CheckProcess(p); }
+            finally { if (all != null) foreach (var x in all) x.Dispose(); }
+        }
+
+        private bool CheckProcess(Process p)
+        {
             if (p == null)
             {
                 if (ProcessId == 0) return false;
