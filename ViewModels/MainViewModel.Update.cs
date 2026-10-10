@@ -51,8 +51,8 @@ namespace SandstormModLauncher.ViewModels
             ? T("Offline mode is on: the launcher only reads this PC. Click to turn it off.")
             : T("Offline mode: turn off everything the launcher would do on the internet (update checks, SteamCMD and mod.io). Click to turn it on.");
 
-        /// <summary>The state the launcher is in, not what a click would do.</summary>
-        public string OfflineModeText => OfflineMode ? T("Offline") : T("Online");
+        /// <summary>What a click does: "Go offline" while online, "Go online" while offline.</summary>
+        public string OfflineModeText => OfflineMode ? T("Go online") : T("Go offline");
 
         /// <summary>What the version button does; it is the only update check left, and it works in offline mode too.</summary>
         public string CheckUpdateTip => updateReady ? UpdateReadyTip
