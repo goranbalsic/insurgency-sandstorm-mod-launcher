@@ -1,6 +1,6 @@
 **1.14.0**
 
-- Offline mode: a switch above the version, and in Settings, showing Online or Offline. It stops the launcher doing anything on the internet (SteamCMD, mod.io, sending a problem report). Your mods, maps and rules are read from this PC either way, so nothing else changes.
+- Offline mode: a switch above the version, and in Settings. It says what a click does ("Go offline" / "Go online"). It stops the launcher doing anything on the internet (SteamCMD, mod.io, sending a problem report). Your mods, maps and rules are read from this PC either way, so nothing else changes.
 - The launcher no longer looks for a new version every 10 minutes. It checks once when it opens, and offline mode skips that too.
 - The version at the bottom left is now a button. Click it to look for a release: it is downloaded and put in place for the next start. It works with offline mode on, and offline mode stays on afterwards.
 
