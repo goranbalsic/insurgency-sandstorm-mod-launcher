@@ -1,3 +1,7 @@
+**1.14.1**
+
+- The offline switch says what a click will do: "Go offline" while the launcher is online, "Go online" while it is offline.
+
 **1.14.0**
 
 - Offline mode: a switch above the version, and in Settings. It says what a click does ("Go offline" / "Go online"). It stops the launcher doing anything on the internet (SteamCMD, mod.io, sending a problem report). Your mods, maps and rules are read from this PC either way, so nothing else changes.
