@@ -51,7 +51,8 @@ namespace SandstormModLauncher.ViewModels
             ? T("Offline mode is on: the launcher only reads this PC. Click to turn it off.")
             : T("Offline mode: turn off everything the launcher would do on the internet (update checks, SteamCMD and mod.io). Click to turn it on.");
 
-        public string OfflineModeText => OfflineMode ? T("Offline") : T("Go offline");
+        /// <summary>The state the launcher is in, not what a click would do.</summary>
+        public string OfflineModeText => OfflineMode ? T("Offline") : T("Online");
 
         /// <summary>What the version button does; it is the only update check left, and it works in offline mode too.</summary>
         public string CheckUpdateTip => updateReady ? UpdateReadyTip
@@ -69,18 +70,20 @@ namespace SandstormModLauncher.ViewModels
         public string UpdateStatus { get => updateStatus; private set => Set(ref updateStatus, value); }
         public string UpdateReadyTip => readyVersion == null ? "" : F("v{0} is installed and starts the next time you open the launcher. Click to restart now.", readyVersion.ToString(3));
         public string AutoUpdateHint => Updater.CanInstall
-            ? T("Click the version at the bottom left to look for a new release: it is downloaded and put in place for the next start.")
-            : T("Built from source: a new release is only reported, never installed. Click the version at the bottom left to look for one.");
+            ? T("Checked once when the launcher opens. Click the version at the bottom left to check again at any time.")
+            : T("Built from source: a new release is only reported, never installed. Checked once when the launcher opens.");
 
         /// <summary>
-        /// Called when the window is up, every start (not for command-line tools or test runs). Only tidies up what an
-        /// earlier update left behind and shows when the last check was: nothing is asked on the internet by itself.
+        /// Called when the window is up, every start (not for command-line tools or test runs): tidies up what an earlier
+        /// update left behind and looks for a release once. Nothing is asked again while the launcher stays open, and
+        /// offline mode skips this check entirely.
         /// </summary>
         public void StartUpdateChecks()
         {
             if (AppPaths.TestRun) return;
             Updater.CleanUp();
             ShowLastUpdateCheck();
+            if (!OfflineMode) _ = CheckForUpdates();
         }
 
         private void ShowLastUpdateCheck()
