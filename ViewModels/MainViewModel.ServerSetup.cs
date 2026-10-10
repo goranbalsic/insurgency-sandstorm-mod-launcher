@@ -50,9 +50,9 @@ namespace SandstormModLauncher.ViewModels
 
         private void InitServerSetupCommands()
         {
-            InstallServerCommand = new AsyncCommand(() => InstallServerFiles(false, false), () => !serverBusy && !ServerRemote && !ServerInstall.Found);
-            UpdateServerFilesCommand = new AsyncCommand(() => InstallServerFiles(true, false), () => !serverBusy && ServerCanUpdate && !ServerRunningHere);
-            RepairServerFilesCommand = new AsyncCommand(() => InstallServerFiles(true, true), () => !serverBusy && ServerCanUpdate && !ServerRunningHere);
+            InstallServerCommand = new AsyncCommand(() => InstallServerFiles(false, false), () => !serverBusy && !ServerRemote && !ServerInstall.Found && !OfflineMode);
+            UpdateServerFilesCommand = new AsyncCommand(() => InstallServerFiles(true, false), () => !serverBusy && ServerCanUpdate && !ServerRunningHere && !OfflineMode);
+            RepairServerFilesCommand = new AsyncCommand(() => InstallServerFiles(true, true), () => !serverBusy && ServerCanUpdate && !ServerRunningHere && !OfflineMode);
             CancelServerInstallCommand = new RelayCommand(() => installCts?.Cancel(), () => serverInstalling);
             ChooseServerInstallDirCommand = new RelayCommand(ChooseServerInstallDir, () => !serverInstalling);
             OpenRuntimeDownloadCommand = new RelayCommand(() => Open(ServerInstall.RuntimeUrl));
@@ -319,10 +319,10 @@ namespace SandstormModLauncher.ViewModels
         private void InitModioCommands()
         {
             ImportServerBatCommand = new RelayCommand(ImportServerBat, () => !serverBusy);
-            SendModioCodeCommand = new AsyncCommand(SendModioCode, () => !modioBusy && ServerModio.IsEmail(State.Settings.ServerModioEmail));
+            SendModioCodeCommand = new AsyncCommand(SendModioCode, () => !modioBusy && !OfflineMode && ServerModio.IsEmail(State.Settings.ServerModioEmail));
             ImportModsTxtCommand = new RelayCommand(ImportModsTxt);
-            SubscribeServerModsCommand = new AsyncCommand(SubscribeServerMods, () => !modioBusy && serverAccount.LoggedIn);
-            UnsubscribeOtherModsCommand = new AsyncCommand(UnsubscribeOtherMods, () => !modioBusy && serverAccount.LoggedIn && otherSubs.Count > 0);
+            SubscribeServerModsCommand = new AsyncCommand(SubscribeServerMods, () => !modioBusy && !OfflineMode && serverAccount.LoggedIn);
+            UnsubscribeOtherModsCommand = new AsyncCommand(UnsubscribeOtherMods, () => !modioBusy && !OfflineMode && serverAccount.LoggedIn && otherSubs.Count > 0);
             OpenModioCommand = new RelayCommand(() => Open("https://mod.io/g/insurgencysandstorm"));
         }
 

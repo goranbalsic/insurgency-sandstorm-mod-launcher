@@ -122,7 +122,6 @@ namespace SandstormModLauncher.ViewModels
 
         public void Dispose()
         {
-            updateTimer?.Stop();
             SaveNow();
             Monitor?.Dispose();
             modWatcher?.Dispose();

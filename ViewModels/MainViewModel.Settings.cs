@@ -90,7 +90,7 @@ namespace SandstormModLauncher.ViewModels
             foreach (var f in State.Settings.ExtraModFolders) ExtraModFolders.Add(f);
             RaiseMany(nameof(GameDir), nameof(GameStore), nameof(GameBuild), nameof(GameFound), nameof(GameDirIsManual), nameof(AutoStartGame), nameof(MinimizeOnLaunch),
                       nameof(SoloGameFlag), nameof(ApplyLiveRules), nameof(OwnRules), nameof(InputMethod), nameof(KeyDelayMs), nameof(RestartPolicy), nameof(LaunchArgs), nameof(StartWith), nameof(StartCommand), nameof(StartWithCommand), nameof(StartWithNote),
-                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(AutoUpdate), nameof(UiScale), nameof(UiScaleText));
+                      nameof(StartTimeoutSec), nameof(AutoConsoleKey), nameof(DataDir), nameof(ModioRoot), nameof(UiScale), nameof(UiScaleText));
         }
 
         // ------------------------------------------------------------------ game install
@@ -430,7 +430,7 @@ namespace SandstormModLauncher.ViewModels
         {
             PrepareShareCommand = new AsyncCommand(PrepareShare);
             SendShareCommand = new RelayCommand(SendShare, () => shareOpen);
-            SendReportCommand = new AsyncCommand(SendReport, () => shareOpen && !sendingReport);
+            SendReportCommand = new AsyncCommand(SendReport, () => shareOpen && !sendingReport && !OfflineMode);
             CancelShareCommand = new RelayCommand(() => ShareReportOpen = false);
             ReportLaunchProblemCommand = new AsyncCommand(async () =>
             {

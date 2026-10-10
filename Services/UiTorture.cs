@@ -396,6 +396,19 @@ namespace SandstormModLauncher.Services
                 vm.ServerGameStats = false;
                 await Pump();
                 CheckServer(vm, state, Fail);
+
+                // Offline mode: it sticks in the settings, says which mode it is in, and leaves the match itself alone.
+                step = "offline mode";
+                string planBefore = vm.PlanCommand, labelBefore = vm.OfflineModeText;
+                vm.OfflineMode = true;
+                await Pump();
+                if (!state.Settings.OfflineMode || !vm.OfflineMode) Fail("offline mode did not stick");
+                if (vm.OfflineModeText == labelBefore) Fail("the offline toggle does not say which mode it is in");
+                if (vm.PlanCommand != planBefore) Fail("offline mode changed the match: " + vm.PlanCommand);
+                if (string.IsNullOrEmpty(vm.UpdateStatus)) Fail("offline mode says nothing about itself");
+                vm.OfflineMode = false;
+                await Pump();
+                if (state.Settings.OfflineMode || vm.OfflineModeText != labelBefore) Fail("offline mode did not turn off again");
                 step = "start";
             }
 
