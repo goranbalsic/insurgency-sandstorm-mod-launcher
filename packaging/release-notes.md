@@ -1,3 +1,9 @@
+**1.14.0**
+
+- Offline mode: a switch above the version, and in Settings. It stops the launcher doing anything on the internet (SteamCMD, mod.io, sending a problem report). Your mods, maps and rules are read from this PC either way, so nothing else changes.
+- The launcher no longer looks for a new version by itself: not when it opens, and not every 10 minutes.
+- The version at the bottom left is now a button. Click it to look for a release: it is downloaded and put in place for the next start. It works with offline mode on, and offline mode stays on afterwards.
+
 **1.13.0**
 
 - Server: restart the server when it closes without Stop (a crash), at most 3 times in 15 minutes.
