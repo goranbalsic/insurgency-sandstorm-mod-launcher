@@ -35,6 +35,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand SaveCustomMapCommand { get; private set; }
         public ICommand DeleteCustomMapCommand { get; private set; }
         public ICommand CancelCustomMapCommand { get; private set; }
+        public ICommand ToggleServerOnlyCommand { get; private set; }
 
         private string consoleKeyStatus = "", consoleKeysText = "";
         private bool consoleKeyOk = true;
@@ -42,6 +43,7 @@ namespace SandstormModLauncher.ViewModels
         private void InitSettingsCommands()
         {
             SetupF10Command = new RelayCommand(SetupF10);
+            ToggleServerOnlyCommand = new RelayCommand(() => ServerOnly = !ServerOnly);
             ChangeGameDirCommand = new AsyncCommand(ChangeGameDir);
             ResetGameDirCommand = new AsyncCommand(async () => { State.Settings.GameDirOverride = ""; await ReloadEverything(T("Looking for the game...")); }, () => !string.IsNullOrEmpty(State.Settings.GameDirOverride));
             AddModFolderCommand = new AsyncCommand(AddModFolder);
@@ -112,10 +114,16 @@ namespace SandstormModLauncher.ViewModels
                 if (State.Settings.ServerOnly == value) return;
                 State.Settings.ServerOnly = value;
                 SaveSettingsSoon();
-                Raise(nameof(ServerOnly));
+                RaiseMany(nameof(ServerOnly), nameof(ServerOnlyText), nameof(ServerOnlyTip));
                 if (value) PlayTarget = "Server";
             }
         }
+
+        /// <summary>What a click does: "Server only" while the game is used, "Full use" while only the server is.</summary>
+        public string ServerOnlyText => ServerOnly ? T("Full use") : T("Server only");
+        public string ServerOnlyTip => ServerOnly
+            ? T("Dedicated server only is on: no game folder is asked for. Click to use the game again.")
+            : T("Dedicated server only: no game folder is asked for, and the big button starts the server. Click to turn it on.");
 
         private async Task ChangeGameDir()
         {

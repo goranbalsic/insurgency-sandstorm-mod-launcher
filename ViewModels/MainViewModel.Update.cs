@@ -40,7 +40,7 @@ namespace SandstormModLauncher.ViewModels
                 if (State.Settings.OfflineMode == value) return;
                 State.Settings.OfflineMode = value;
                 SaveSettingsSoon();
-                RaiseMany(nameof(OfflineMode), nameof(OfflineTip), nameof(OfflineModeText), nameof(CanGoOffline));
+                RaiseMany(nameof(OfflineMode), nameof(OfflineTip), nameof(OfflineModeText));
                 CommandManager.InvalidateRequerySuggested();
                 if (value) UpdateStatus = T("Offline mode. Nothing is sent or downloaded; click the version to check for an update.");
                 else ShowLastUpdateCheck();
@@ -48,12 +48,11 @@ namespace SandstormModLauncher.ViewModels
         }
 
         public string OfflineTip => OfflineMode
-            ? T("Offline mode is on: the launcher only reads this PC. Turn it off in Settings.")
+            ? T("Offline mode is on: the launcher only reads this PC. Click to turn it off.")
             : T("Offline mode: turn off everything the launcher would do on the internet (update checks, SteamCMD and mod.io). Click to turn it on.");
 
-        /// <summary>The button says what it does and is greyed out while offline; the switch in Settings turns it back on.</summary>
-        public string OfflineModeText => T("Go offline");
-        public bool CanGoOffline => !OfflineMode;
+        /// <summary>What a click does: "Go offline" while online, "Go online" while offline.</summary>
+        public string OfflineModeText => OfflineMode ? T("Go online") : T("Go offline");
 
         /// <summary>What the version button does; it is the only update check left, and it works in offline mode too.</summary>
         public string CheckUpdateTip => updateReady ? UpdateReadyTip

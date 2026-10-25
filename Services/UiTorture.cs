@@ -397,19 +397,34 @@ namespace SandstormModLauncher.Services
                 await Pump();
                 CheckServer(vm, state, Fail);
 
-                // Offline mode: it sticks in the settings, greys the button instead of renaming it, and leaves the match alone.
+                // Offline mode: it sticks in the settings, the button flips to "Go online" and back, and the match is untouched.
                 step = "offline mode";
                 string planBefore = vm.PlanCommand, labelBefore = vm.OfflineModeText;
                 vm.OfflineMode = true;
                 await Pump();
                 if (!state.Settings.OfflineMode || !vm.OfflineMode) Fail("offline mode did not stick");
-                if (vm.CanGoOffline) Fail("the offline button is not greyed out while offline");
-                if (vm.OfflineModeText != labelBefore) Fail("the offline button changed its text: " + vm.OfflineModeText);
+                if (vm.OfflineModeText == labelBefore) Fail("the offline button does not say it can turn the mode off again");
                 if (vm.PlanCommand != planBefore) Fail("offline mode changed the match: " + vm.PlanCommand);
                 if (string.IsNullOrEmpty(vm.UpdateStatus)) Fail("offline mode says nothing about itself");
-                vm.OfflineMode = false;
+                vm.ToggleOfflineCommand.Execute(null);
                 await Pump();
-                if (state.Settings.OfflineMode || !vm.CanGoOffline) Fail("offline mode did not turn off again");
+                if (state.Settings.OfflineMode || vm.OfflineMode) Fail("clicking the offline button again did not turn it off");
+                if (vm.OfflineModeText != labelBefore) Fail("the offline button did not go back to its first text");
+
+                // Server-only mode: the same kind of toggle, and it points the big button at the server.
+                step = "server only";
+                string targetBefore = vm.PlayTarget;
+                vm.ServerOnly = true;
+                await Pump();
+                if (!state.Settings.ServerOnly || !vm.ServerOnly) Fail("server-only mode did not stick");
+                if (vm.PlayTarget != "Server") Fail("server-only mode did not aim the big button at the server");
+                string serverLabel = vm.ServerOnlyText;
+                vm.ToggleServerOnlyCommand.Execute(null);
+                await Pump();
+                if (state.Settings.ServerOnly || vm.ServerOnly) Fail("clicking the server-only button again did not turn it off");
+                if (vm.ServerOnlyText == serverLabel) Fail("the server-only button does not change its text");
+                vm.PlayTarget = targetBefore;
+                await Pump();
                 step = "start";
             }
 

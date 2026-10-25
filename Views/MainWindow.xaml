@@ -139,12 +139,30 @@
                             <Button Style="{StaticResource LinkButton}" Content="Update ready" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,4"
                                     Command="{Binding RestartToUpdateCommand}" ToolTip="{Binding UpdateReadyTip}"
                                     Visibility="{Binding UpdateReady, Converter={StaticResource Vis}}" />
-                            <!-- Offline mode, and the version as the one manual update check. -->
-                            <Button HorizontalAlignment="Center" FontSize="11" Margin="0,0,0,4" Content="{Binding OfflineModeText}" Command="{Binding ToggleOfflineCommand}"
-                                    IsEnabled="{Binding CanGoOffline}" ToolTip="{Binding OfflineTip}">
+                            <!-- Offline mode, server-only mode, and the version as the one manual update check. -->
+                            <Button HorizontalAlignment="Center" FontSize="11" Margin="0,0,0,4" Content="{Binding ServerOnlyText}" Command="{Binding ToggleServerOnlyCommand}"
+                                    ToolTip="{Binding ServerOnlyTip}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource LinkButton}">
                                         <Setter Property="Foreground" Value="{StaticResource TextFaint}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ServerOnly}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource Accent}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button HorizontalAlignment="Center" FontSize="11" Margin="0,0,0,4" Content="{Binding OfflineModeText}" Command="{Binding ToggleOfflineCommand}"
+                                    ToolTip="{Binding OfflineTip}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource LinkButton}">
+                                        <Setter Property="Foreground" Value="{StaticResource TextFaint}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OfflineMode}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource Accent}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
                             </Button>

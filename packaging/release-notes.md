@@ -1,3 +1,7 @@
+**1.15.1**
+
+- The offline button is a real toggle again: it says "Go offline" while the launcher is online and "Go online" while it is offline, and it updates at once. 1.15.0 greyed it out while offline, which left no way back from the main window.
+
 **1.15.0**
 
 - Settings > "Dedicated server only": for a PC that only runs the server. The launcher stops looking for the game, the big button starts the server, and maps, scenarios and mutators are read from the server's own files.
