@@ -1,3 +1,11 @@
+**1.15.0**
+
+- Settings > "Dedicated server only": for a PC that only runs the server. The launcher stops looking for the game, the big button starts the server, and maps, scenarios and mutators are read from the server's own files.
+- The offline button at the bottom left keeps its "Go offline" text and greys out while offline; the switch in Settings turns it back on. It now updates the moment the mode changes.
+- Built-in translations: German, French, Turkish and Simplified Chinese (machine translated; corrections welcome).
+- Mods: a launch now says when the game mounted none of the mods in the match. The game itself signs in to mod.io, which no launcher can do for it.
+- Fixes from a full audit: a damaged mod file can no longer hang the launcher at startup, passwords with spaces are hidden in reports, an update can no longer leave the folder without an exe, and smaller hardening fixes.
+
 **1.14.1**
 
 - The offline switch says what a click will do: "Go offline" while the launcher is online, "Go online" while it is offline.
