@@ -88,7 +88,12 @@ namespace SandstormModLauncher.Core
                 {
                     var p = Read(Remaining(until));
                     if (p.Id == marker) return reply.ToString();
-                    if (p.Id == id) reply.Append(p.Body);
+                    if (p.Id == id)
+                    {
+                        reply.Append(p.Body);
+                        // A remote server can stream replies until the timeout: cap what one command can make us hold.
+                        if (reply.Length > 8 * 1024 * 1024) { Close(); throw new RconException(RconError.Protocol, "the reply is too long"); }
+                    }
                     // Anything else (a late reply to an earlier, timed-out command) is skipped.
                 }
             }

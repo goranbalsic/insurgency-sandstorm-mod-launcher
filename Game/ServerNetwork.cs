@@ -85,7 +85,9 @@ namespace SandstormModLauncher.Game
         /// </summary>
         public static bool AllowThroughFirewall(string exe)
         {
-            if (string.IsNullOrEmpty(exe) || exe.IndexOf('"') >= 0) return false;
+            // cmd.exe is the shell here: a path with % ! ^ & | would be expanded or split there (2026-10-25 audit).
+            if (string.IsNullOrEmpty(exe) || !System.IO.File.Exists(exe)) return false;
+            foreach (char c in "\"%!^&|<>()") if (exe.IndexOf(c) >= 0) return false;
             string args = "/c netsh advfirewall firewall delete rule name=all dir=in program=\"" + exe + "\" & "
                         + "netsh advfirewall firewall add rule name=\"Insurgency Sandstorm dedicated server\" dir=in action=allow enable=yes profile=any program=\"" + exe + "\"";
             try

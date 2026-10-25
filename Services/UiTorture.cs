@@ -397,18 +397,19 @@ namespace SandstormModLauncher.Services
                 await Pump();
                 CheckServer(vm, state, Fail);
 
-                // Offline mode: it sticks in the settings, says which mode it is in, and leaves the match itself alone.
+                // Offline mode: it sticks in the settings, greys the button instead of renaming it, and leaves the match alone.
                 step = "offline mode";
                 string planBefore = vm.PlanCommand, labelBefore = vm.OfflineModeText;
                 vm.OfflineMode = true;
                 await Pump();
                 if (!state.Settings.OfflineMode || !vm.OfflineMode) Fail("offline mode did not stick");
-                if (vm.OfflineModeText == labelBefore) Fail("the offline toggle does not say which mode it is in");
+                if (vm.CanGoOffline) Fail("the offline button is not greyed out while offline");
+                if (vm.OfflineModeText != labelBefore) Fail("the offline button changed its text: " + vm.OfflineModeText);
                 if (vm.PlanCommand != planBefore) Fail("offline mode changed the match: " + vm.PlanCommand);
                 if (string.IsNullOrEmpty(vm.UpdateStatus)) Fail("offline mode says nothing about itself");
                 vm.OfflineMode = false;
                 await Pump();
-                if (state.Settings.OfflineMode || vm.OfflineModeText != labelBefore) Fail("offline mode did not turn off again");
+                if (state.Settings.OfflineMode || !vm.CanGoOffline) Fail("offline mode did not turn off again");
                 step = "start";
             }
 

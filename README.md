@@ -64,7 +64,11 @@ Mods (game update 1.20+): the server needs its own mod.io account, separate from
 
 A server on another PC: switch to "On another PC (RCON)" and enter address, port and password.
 
+A PC that only runs the server, with no game installed: turn on Settings > "Dedicated server only". The launcher stops looking for the game and asking for its folder, starts on the server target, and reads the maps, scenarios and mutators from the server's own files.
+
 ## Translations
+
+Built in: German, French, Turkish and Simplified Chinese (machine translations; corrections welcome as pull requests). Settings > Language picks one; every text follows, including the interface.
 
 Settings > Language > "Save a translation file...", fill in the Translation column in a spreadsheet (keep `{0}`, `{1}` and line breaks), save as CSV UTF-8 into the languages folder, press Reload. Send it as a pull request to `Resources/Languages/<code>.csv`. Untranslated texts stay English.
 

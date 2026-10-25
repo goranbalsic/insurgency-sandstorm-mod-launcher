@@ -297,7 +297,7 @@ namespace SandstormModLauncher.Services
         }
 
         private static readonly System.Text.RegularExpressions.Regex PasswordValue =
-            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*(?:Password|Gslt|Token|Email|SecurityCode|ModioCode|RemoteHost)""?\s*[:=]\s*""?)[^""\r\n\s]*", System.Text.RegularExpressions.RegexOptions.Compiled);
+            new System.Text.RegularExpressions.Regex(@"(?i)(""?\w*(?:Password|Gslt|Token|Email|SecurityCode|ModioCode|RemoteHost)""?\s*[:=]\s*)(""(?:[^""\\\r\n]|\\.)*""|[^\s,\r\n]*)", System.Text.RegularExpressions.RegexOptions.Compiled);
         private static readonly System.Text.RegularExpressions.Regex SteamId64 =
             new System.Text.RegularExpressions.Regex(@"\b7656119\d{10}\b", System.Text.RegularExpressions.RegexOptions.Compiled);
 

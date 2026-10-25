@@ -138,9 +138,9 @@ namespace SandstormModLauncher.Services
 
         public Profile Active => Profiles.FirstOrDefault(p => p.Name == Settings.ActiveProfile) ?? Profiles[0];
 
-        public void SaveSettings() => WriteAtomic(AppPaths.SettingsFile, Json.Serialize(Settings));
+        public bool SaveSettings() => WriteAtomic(AppPaths.SettingsFile, Json.Serialize(Settings));
 
-        public void SaveProfile(Profile p) => WriteAtomic(ProfilePath(p.Name), Json.Serialize(p));
+        public bool SaveProfile(Profile p) => WriteAtomic(ProfilePath(p.Name), Json.Serialize(p));
 
         public void DeleteProfile(Profile p)
         {
@@ -190,7 +190,7 @@ namespace SandstormModLauncher.Services
         public bool FileTaken(string name, Profile self) =>
             Profiles.Any(p => p != self && string.Equals(ProfileFileName(p.Name), ProfileFileName(name), StringComparison.OrdinalIgnoreCase));
 
-        private static void WriteAtomic(string path, string text)
+        private static bool WriteAtomic(string path, string text)
         {
             try
             {
@@ -199,8 +199,9 @@ namespace SandstormModLauncher.Services
                 File.WriteAllText(tmp, text, new UTF8Encoding(false));
                 if (File.Exists(path)) File.Replace(tmp, path, null);
                 else File.Move(tmp, path);
+                return true;
             }
-            catch (Exception ex) { AppLog.Error("Could not save " + Path.GetFileName(path), ex); }
+            catch (Exception ex) { AppLog.Error("Could not save " + Path.GetFileName(path), ex); return false; }
         }
 
         private static void TryQuarantine(string path)

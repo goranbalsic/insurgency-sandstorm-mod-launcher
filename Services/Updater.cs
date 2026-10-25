@@ -193,13 +193,21 @@ namespace SandstormModLauncher.Services
 
             // The running exe may already be the .old one (an update was installed earlier in this session).
             if (File.Exists(OldPath) && !IsRunningImage(OldPath)) TryDelete(OldPath);
-            if (File.Exists(OldPath)) File.Delete(ExePath);
-            else File.Move(ExePath, OldPath);
-            try { File.Move(NewPath, ExePath); }
-            catch
+            if (File.Exists(OldPath))
             {
-                if (!File.Exists(ExePath) && File.Exists(OldPath)) File.Move(OldPath, ExePath);
-                throw;
+                // The running image is .old already, so the exe can be swapped in one step: a crash can never leave
+                // the folder without an exe (2026-10-25 audit).
+                File.Replace(NewPath, ExePath, null);
+            }
+            else
+            {
+                File.Move(ExePath, OldPath);
+                try { File.Move(NewPath, ExePath); }
+                catch
+                {
+                    if (!File.Exists(ExePath) && File.Exists(OldPath)) File.Move(OldPath, ExePath);
+                    throw;
+                }
             }
             if (config != null) try { File.WriteAllBytes(ExePath + ".config", config); } catch (Exception ex) { AppLog.Warn("Update: config not replaced: " + ex.Message); }
             AppLog.Info("Update: " + info.Tag + " installed next to " + Current.ToString(3) + ", used from the next start");

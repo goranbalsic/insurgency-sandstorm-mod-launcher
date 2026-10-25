@@ -46,7 +46,10 @@ namespace SandstormModLauncher.Core
             }
 
             int count = r.I32();
-            var list = new List<AssetData>(Math.Max(0, count));
+            // Counts come from the mod's own file: one that cannot fit in what is left is refused instead of
+            // allocating gigabytes (2026-10-25 audit).
+            if (count < 0 || count > r.Remaining / 20) throw new InvalidDataException("Implausible asset count");
+            var list = new List<AssetData>(count);
             for (int i = 0; i < count; i++)
             {
                 var a = new AssetData { ObjectPath = Name(), PackagePath = Name(), AssetClass = Name(), PackageName = Name(), AssetName = Name() };
@@ -128,6 +131,14 @@ namespace SandstormModLauncher.Core
             if (magic != 0x12345679 && magic != 0x12345678) throw new InvalidDataException("Bad asset registry tag store");
             int nNumberlessNames = r.I32(), nNames = r.I32(), nNumberlessExport = r.I32(), nExport = r.I32(), nTexts = r.I32();
             int nAnsiOff = r.I32(), nWideOff = r.I32(), nAnsi = r.I32(), nWide = r.I32(), nNumberlessPairs = r.I32(), nPairs = r.I32();
+            // Every count comes from the mod's file. Each entry needs at least the bytes checked here, so a bogus
+            // count is refused before it becomes an allocation (2026-10-25 audit).
+            if (nNumberlessNames < 0 || nNames < 0 || nNumberlessExport < 0 || nExport < 0 || nTexts < 0
+                || nAnsiOff < 0 || nWideOff < 0 || nAnsi < 0 || nWide < 0 || nNumberlessPairs < 0 || nPairs < 0
+                || nNumberlessNames > r.Remaining / 4 || nNames > r.Remaining / 4 || nNumberlessExport > r.Remaining / 12
+                || nExport > r.Remaining / 12 || nTexts > r.Remaining / 4 || nAnsiOff > r.Remaining / 4 || nWideOff > r.Remaining / 4
+                || nAnsi > r.Remaining || nWide > r.Remaining / 2 || nNumberlessPairs > r.Remaining / 8 || nPairs > r.Remaining / 8)
+                throw new InvalidDataException("Implausible asset registry counts");
 
             var texts = new List<string>();
             if (magic == 0x12345679)
@@ -192,7 +203,8 @@ namespace SandstormModLauncher.Core
             if (r.U32() != 0x87654321) throw new InvalidDataException("Bad asset registry tag store end");
 
             int count = r.I32();
-            var list = new List<AssetData>(Math.Max(0, count));
+            if (count < 0 || count > r.Remaining / 20) throw new InvalidDataException("Implausible asset count");
+            var list = new List<AssetData>(count);
             for (int i = 0; i < count; i++)
             {
                 var a = new AssetData { ObjectPath = FName(), PackagePath = FName(), AssetClass = FName(), PackageName = FName(), AssetName = FName() };

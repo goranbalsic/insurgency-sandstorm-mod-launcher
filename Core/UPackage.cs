@@ -188,6 +188,9 @@ namespace SandstormModLauncher.Core
                 }
                 if (FileVersion >= 503 && r.U8() != 0) r.Skip(16);
                 int start = r.Pos;
+                // A negative or overlong size jumps back to the same byte and loops forever; the rest is skipped instead
+                // (2026-10-25 audit: a crafted mod pak hung the scan at every start).
+                if (size < 0 || size > end - start) { r.Pos = end; break; }
                 object value = null;
                 try
                 {

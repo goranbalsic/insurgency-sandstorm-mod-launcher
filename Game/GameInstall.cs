@@ -43,6 +43,10 @@ namespace SandstormModLauncher.Game
 
         public bool IsValid => Demo || (GameDir != null && Directory.Exists(PaksDir));
 
+        /// <summary>The dedicated server's own paks, so maps, scenarios and mutators can be read on a PC without the game.</summary>
+        public static GameInstall ForCatalog(string root) =>
+            root == null ? null : new GameInstall { GameDir = root, Store = "Dedicated server" };
+
         /// <summary>
         /// Screenshot runs only (--data together with --render-from-cache): the game counts as installed and its maps,
         /// scenarios and mods come from a cached catalog, so the store pictures can be made on a PC without the game.

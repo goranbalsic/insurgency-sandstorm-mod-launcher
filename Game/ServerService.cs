@@ -298,12 +298,28 @@ namespace SandstormModLauncher.Game
         /// <summary>A chat line or reason as the server takes it: one line, no quotes, and no | (the game would run what follows it as a second command).</summary>
         public static string Reason(string text) => (text ?? "").Replace("\"", "'").Replace("|", "/").Replace("\r", " ").Replace("\n", " ").Trim();
 
-        public string Kick(ServerPlayer p, string reason) => Rcon.Run(("kick " + p.Id + " " + Reason(reason)).Trim())[0].Trim();
+        /// <summary>The player id from listplayers, when it is a plain number: a remote server's text is not trusted.</summary>
+        private static string ValidId(ServerPlayer p) =>
+            p?.Id != null && p.Id.Length > 0 && p.Id.Length < 20 && p.Id.All(char.IsDigit) ? p.Id : null;
 
-        public string Ban(ServerPlayer p, int minutes, string reason) =>
-            Rcon.Run(("ban " + p.Id + " " + (minutes > 0 ? minutes.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0") + " " + Reason(reason)).Trim())[0].Trim();
+        public string Kick(ServerPlayer p, string reason)
+        {
+            string id = ValidId(p);
+            return id == null ? T("That player has no valid id: refresh the player list.") : Rcon.Run(("kick " + id + " " + Reason(reason)).Trim())[0].Trim();
+        }
 
-        public string PermBan(ServerPlayer p, string reason) => Rcon.Run(("permban " + p.Id + " " + Reason(reason)).Trim())[0].Trim();
+        public string Ban(ServerPlayer p, int minutes, string reason)
+        {
+            string id = ValidId(p);
+            return id == null ? T("That player has no valid id: refresh the player list.")
+                : Rcon.Run(("ban " + id + " " + (minutes > 0 ? minutes.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0") + " " + Reason(reason)).Trim())[0].Trim();
+        }
+
+        public string PermBan(ServerPlayer p, string reason)
+        {
+            string id = ValidId(p);
+            return id == null ? T("That player has no valid id: refresh the player list.") : Rcon.Run(("permban " + id + " " + Reason(reason)).Trim())[0].Trim();
+        }
 
         public string Say(string message) => Rcon.Run("say " + Reason(message))[0].Trim();
 

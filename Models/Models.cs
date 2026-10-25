@@ -213,6 +213,7 @@ namespace SandstormModLauncher.Models
         public string LastPage { get; set; } = "Play";
         public double UiScale { get; set; } = 1.0;               // size of the whole interface (text and controls), 0.9 - 1.5
         public bool OfflineMode { get; set; }                   // the launcher only reads this PC: nothing is sent or downloaded
+        public bool ServerOnly { get; set; }                    // this PC only runs the dedicated server: no game is looked for at startup
         public DateTime LastUpdateCheckUtc { get; set; }
         public string SkippedUpdateTag { get; set; }             // a release that cannot be installed (its exe is not newer)
         public string StartWith { get; set; } = "Store";        // how the game is started: Store (Steam or Epic), Exe (its own exe), Command

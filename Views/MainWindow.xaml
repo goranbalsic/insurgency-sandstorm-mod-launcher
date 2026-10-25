@@ -141,15 +141,10 @@
                                     Visibility="{Binding UpdateReady, Converter={StaticResource Vis}}" />
                             <!-- Offline mode, and the version as the one manual update check. -->
                             <Button HorizontalAlignment="Center" FontSize="11" Margin="0,0,0,4" Content="{Binding OfflineModeText}" Command="{Binding ToggleOfflineCommand}"
-                                    ToolTip="{Binding OfflineTip}">
+                                    IsEnabled="{Binding CanGoOffline}" ToolTip="{Binding OfflineTip}">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource LinkButton}">
                                         <Setter Property="Foreground" Value="{StaticResource TextFaint}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding OfflineMode}" Value="True">
-                                                <Setter Property="Foreground" Value="{StaticResource Accent}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
                                     </Style>
                                 </Button.Style>
                             </Button>

@@ -68,6 +68,9 @@ namespace SandstormModLauncher.ViewModels
                 SetupEngine.MigrateToSetups(State);
                 State.Install = GameInstall.Detect(State.Settings.GameDirOverride);
                 AppLog.Info($"Game: {State.Install.GameDir ?? "not found"} ({State.Install.Store})");
+                // Without the game, the dedicated server's own paks still name every map, scenario and mutator.
+                var catalogInstall = State.Install.IsValid ? State.Install : GameInstall.ForCatalog(ServerInstall.Detect(State.Settings.ServerDirOverride).Root);
+                if (catalogInstall?.IsValid != true) catalogInstall = State.Install;
                 Monitor = new GameMonitor();
                 Console = new ConsoleBridge(Monitor, () => State.Settings, () => State.Official);
                 Rcon = new GameRcon(() => State.Settings);
@@ -86,7 +89,7 @@ namespace SandstormModLauncher.ViewModels
                 await Task.Run(() =>
                 {
                     KeyBindings.Backup("launcher started");
-                    State.Official = GameCatalog.Load(State.Install, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
+                    State.Official = GameCatalog.Load(catalogInstall, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
                     LoadCommands();
                     State.Mods = ModScanner.Scan(State.Install, State.Settings.ExtraModFolders, AppPaths.CacheDir, t => ui.BeginInvoke(new Action(() => LoadingText = t)));
                     State.Rebuild();
@@ -103,11 +106,12 @@ namespace SandstormModLauncher.ViewModels
                 lastRunning = Monitor.IsRunning;
                 RaiseSettings();
                 BuildLanguages();
+                if (State.Settings.ServerOnly) PlayTarget = "Server";
                 Page = State.Settings.LastPage == "Mods" || State.Settings.LastPage == "Settings" || State.Settings.LastPage == "Playlists" || State.Settings.LastPage == "Server" || State.Settings.LastPage == "Live" ? State.Settings.LastPage : State.Settings.LastPage == "Mutators" ? "Mods" : "Play";
                 Loading = false;
                 OnGameStateChanged();
                 _ = RefreshRconStatus();
-                if (!State.Install.IsValid)
+                if (!State.Install.IsValid && !State.Settings.ServerOnly)
                 {
                     Page = "Settings";
                     await ShowMessage("Game not found", "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains \"Insurgency\" and \"Insurgency.exe\").");
@@ -378,8 +382,11 @@ namespace SandstormModLauncher.ViewModels
         {
             try
             {
-                if (State.Store.Profiles.Count > 0) State.Store.SaveProfile(Profile);
-                State.Store.SaveSettings();
+                bool saved = true;
+                if (State.Store.Profiles.Count > 0) saved = State.Store.SaveProfile(Profile);
+                saved &= State.Store.SaveSettings();
+                // A full disk or a locked file used to lose the change silently (2026-10-25 audit).
+                if (!saved) ShowToast(T("Your settings could not be saved: check that the launcher's folder is writable."));
             }
             catch (Exception ex) { AppLog.Error("Save failed", ex); }
         }
@@ -387,6 +394,9 @@ namespace SandstormModLauncher.ViewModels
         public static void Open(string target)
         {
             if (string.IsNullOrWhiteSpace(target)) return;
+            // Only something that exists, or a web page. A path read from mod metadata must not start a program or
+            // reach a network share (2026-10-25 audit).
+            if (!target.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && !File.Exists(target) && !Directory.Exists(target)) return;
             try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
             catch (Exception ex) { AppLog.Warn("Could not open " + target + ": " + ex.Message); }
         }

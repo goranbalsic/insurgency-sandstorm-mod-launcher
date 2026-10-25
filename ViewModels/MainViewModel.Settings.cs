@@ -103,6 +103,20 @@ namespace SandstormModLauncher.ViewModels
         public string DataDir => AppPaths.DataDir;
         public string ModioRoot => GameInstall.ModioRoot;
 
+        /// <summary>This PC only runs the dedicated server: the game is not looked for at startup, and the big button starts the server.</summary>
+        public bool ServerOnly
+        {
+            get => State.Settings.ServerOnly;
+            set
+            {
+                if (State.Settings.ServerOnly == value) return;
+                State.Settings.ServerOnly = value;
+                SaveSettingsSoon();
+                Raise(nameof(ServerOnly));
+                if (value) PlayTarget = "Server";
+            }
+        }
+
         private async Task ChangeGameDir()
         {
             string dir = FolderPicker.Pick(OwnerHandle, T("Pick the Insurgency: Sandstorm folder (it contains \"Insurgency\" and \"Insurgency.exe\")"), State.Install?.GameDir);

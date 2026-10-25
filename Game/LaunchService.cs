@@ -237,6 +237,10 @@ namespace SandstormModLauncher.Game
                 if (wait.Elapsed > TimeSpan.FromSeconds(2)) await Task.Delay(3000, ct);
                 while (monitor.Window == IntPtr.Zero && wait.Elapsed < TimeSpan.FromSeconds(state.Settings.StartTimeoutSec)) { await Task.Delay(300, ct); monitor.Poll(); }
                 Report(3, StepState.Done, monitor.Phase == GamePhase.InMatch ? T("In a match - it will switch maps") : F("{0} mods mounted", monitor.ModsMounted));
+                // The game signs in to mod.io itself at start and mounts the mods that account subscribed to; the
+                // launcher has no way to mount a pak for it. Offline, the game can therefore start without any mod.
+                if (monitor.ModsMounted == 0 && (plan.Mutators.Count > 0 || plan.Scenario.Source == ContentSource.Mod))
+                    report.Warnings.Add(T("The game mounted no mods. It signs in to mod.io itself when it starts, and the launcher cannot do that for it; without a connection the game can stay vanilla until it signs in again."));
 
                 // 5. Send the match: over RCON (the game's own remote console), the keyboard console only as a fallback
                 current = 4;
