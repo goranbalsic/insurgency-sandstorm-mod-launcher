@@ -30,6 +30,7 @@ namespace SandstormModLauncher.ViewModels
             OpenLanguagesFolderCommand = new RelayCommand(() => { Directory.CreateDirectory(Loc.UserFolder); Open(Loc.UserFolder); });
             ReloadLanguagesCommand = new RelayCommand(() =>
             {
+                Loc.InvalidateCache();
                 BuildLanguages();
                 // The file may have changed: read it again.
                 Loc.Use(State.Settings.Language);

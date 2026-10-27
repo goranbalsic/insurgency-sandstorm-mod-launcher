@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,7 +128,7 @@ namespace SandstormModLauncher.Services
 
             var sb = new StringBuilder();
             sb.AppendLine("Launcher problem report (names, user folders, IDs and account lines removed)");
-            if (!string.IsNullOrWhiteSpace(note)) sb.AppendLine("Note: " + LogSanitizer.Public(note.Trim()));
+            if (!string.IsNullOrWhiteSpace(note)) sb.AppendLine("Note: " + LogSanitizer.Public(note.Trim(), false));
             sb.Append(head);
             sb.AppendLine();
             sb.AppendLine("-- recent warnings and errors");
@@ -150,7 +150,7 @@ namespace SandstormModLauncher.Services
 
             var full = new StringBuilder();
             full.AppendLine("Launcher problem report, full (names, user folders, IDs and account lines removed)");
-            if (!string.IsNullOrWhiteSpace(note)) full.AppendLine("Note: " + LogSanitizer.Public(note.Trim()));
+            if (!string.IsNullOrWhiteSpace(note)) full.AppendLine("Note: " + LogSanitizer.Public(note.Trim(), false));
             full.Append(head);
             if (state?.Store?.IsLoaded == true)
             {
@@ -241,7 +241,7 @@ namespace SandstormModLauncher.Services
             {
                 ["app"] = "SandstormModLauncher",
                 ["version"] = typeof(DebugReport).Assembly.GetName().Version.ToString(3),
-                ["note"] = LogSanitizer.Public(note ?? "") ?? "",
+                ["note"] = LogSanitizer.Public(note ?? "", false) ?? "",
                 ["summary"] = shortText ?? "",
                 ["full"] = (fullText ?? "").Length > 150000 ? fullText.Substring(0, 150000) : fullText ?? "",
             }, false);
@@ -267,10 +267,10 @@ namespace SandstormModLauncher.Services
         /// <summary>The new-issue link with the form filled in (title, note and the short report).</summary>
         public static string IssueUrl(string note, string shortText)
         {
-            string title = "Problem: " + (string.IsNullOrWhiteSpace(note) ? "(describe it)" : Cut(LogSanitizer.Public(note.Trim()) ?? "", 80));
+            string title = "Problem: " + (string.IsNullOrWhiteSpace(note) ? "(describe it)" : Cut(LogSanitizer.Public(note.Trim(), false) ?? "", 80));
             return "https://github.com/" + Updater.Repo + "/issues/new?template=" + IssueForm +
                    "&title=" + Uri.EscapeDataString(title) +
-                   "&what=" + Uri.EscapeDataString(LogSanitizer.Public(note ?? "") ?? "") +
+                   "&what=" + Uri.EscapeDataString(LogSanitizer.Public(note ?? "", false) ?? "") +
                    "&summary=" + Uri.EscapeDataString(shortText);
         }
 

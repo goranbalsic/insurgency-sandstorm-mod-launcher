@@ -23,6 +23,8 @@ namespace SandstormModLauncher.Core
             public string Path { get; set; }
             public bool BuiltIn { get; set; }
             public int Count { get; set; }
+            /// <summary>The rows read with the file, so switching to it does not parse it a second time.</summary>
+            public List<Row> Rows { get; set; }
         }
 
         public sealed class Row
@@ -36,6 +38,7 @@ namespace SandstormModLauncher.Core
         public const string TranslatorKey = "@translator";
         private const string ResourcePrefix = "SandstormModLauncher.Resources.Languages.";
         private static Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.Ordinal);
+        private static List<Language> available;
 
         /// <summary>The language in use: its id, or "" for English.</summary>
         public static string CurrentId { get; private set; } = "";
@@ -70,6 +73,7 @@ namespace SandstormModLauncher.Core
         /// <summary>The languages there are: those that come with the launcher and those in the languages folder (a file there wins).</summary>
         public static List<Language> Available()
         {
+            if (available != null) return available;
             var list = new List<Language>();
             var asm = Assembly.GetExecutingAssembly();
             foreach (var res in asm.GetManifestResourceNames().Where(n => n.StartsWith(ResourcePrefix, StringComparison.Ordinal) && n.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)))
@@ -95,8 +99,12 @@ namespace SandstormModLauncher.Core
                     }
             }
             catch (Exception ex) { AppLog.Warn("Languages folder: " + ex.Message); }
-            return list.OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+            available = list.OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+            return available;
         }
+
+        /// <summary>Forget the parsed language list after a file was added or replaced (the Reload button).</summary>
+        public static void InvalidateCache() => available = null;
 
         private static Language Describe(string id, List<Row> rows, string path, bool builtIn)
         {
@@ -109,6 +117,7 @@ namespace SandstormModLauncher.Core
                 Path = path,
                 BuiltIn = builtIn,
                 Count = rows.Count(r => !r.English.StartsWith("@", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(r.Translation)),
+                Rows = rows,
             };
         }
 
@@ -123,7 +132,7 @@ namespace SandstormModLauncher.Core
                 if (lang != null)
                 {
                     found = true;
-                    rows = ReadCsv(lang.BuiltIn ? ReadResource(lang.Path) : ReadFile(lang.Path));
+                    rows = lang.Rows ?? ReadCsv(lang.BuiltIn ? ReadResource(lang.Path) : ReadFile(lang.Path));
                     AppLog.Info("Language: " + lang.Name);
                 }
                 else AppLog.Warn("Language " + id + " not found, English is used");

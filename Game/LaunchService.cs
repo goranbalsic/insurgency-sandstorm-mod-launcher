@@ -581,6 +581,11 @@ namespace SandstormModLauncher.Game
 
         private string WriteGameIni(LaunchPlan plan)
         {
+            lock (UeIni.WriteGate) return WriteGameIniLocked(plan);
+        }
+
+        private string WriteGameIniLocked(LaunchPlan plan)
+        {
             var p = plan.Profile;
             string path = GameInstall.GameIniPath;
             string current = UeIni.ReadText(path);

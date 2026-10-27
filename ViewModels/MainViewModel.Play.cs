@@ -236,7 +236,7 @@ namespace SandstormModLauncher.ViewModels
                 ProfileChanged();
             }
         }
-        public bool Day { get => !Night; set => Night = !value; }
+        public bool Day { get => !Night; set { if (value) Night = false; } }
 
         public bool Hardcore
         {

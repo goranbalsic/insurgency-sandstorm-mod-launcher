@@ -1,3 +1,15 @@
+**1.15.2**
+
+- Fixes from a full audit of the code.
+- A locked settings file is retried instead of resetting every setting to its default.
+- Game.ini has one writer at a time: rules are no longer lost when the game restarts during a launch.
+- Problem reports keep the text you typed; before, a note with words like "auth" or "token" was dropped.
+- Turning "Dedicated server only" off points the big button back at the game.
+- The rule slider no longer rebuilds the whole plan on every mouse move.
+- The Steam server token and the game stats token are hidden until you press Show.
+- A server whose mods can never load no longer has its whole log read every 10 seconds.
+- Smaller fixes: an unfinished managed block keeps the Game.ini sections below it, a damaged mod file can no longer ask for huge allocations, the window search backs off, and dead code is gone. The update install step now has a test.
+
 **1.15.1**
 
 - The offline button is a real toggle again: it says "Go offline" while the launcher is online and "Go online" while it is offline, and it updates at once. 1.15.0 greyed it out while offline, which left no way back from the main window.

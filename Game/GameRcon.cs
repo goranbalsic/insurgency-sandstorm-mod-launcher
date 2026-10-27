@@ -124,13 +124,16 @@ namespace SandstormModLauncher.Game
             {
                 string path = GameInstall.GameIniPath;
                 if (string.IsNullOrEmpty(path) || !Directory.Exists(Path.GetDirectoryName(path))) return false;
-                string current = File.Exists(path) ? UeIni.ReadText(path) : "";
-                string updated = Apply(current, s);
-                if (Normalize(updated) == Normalize(current)) return false;
-                ConsoleBridge.BackupFile(path);
-                UeIni.WriteText(path, updated);
-                AppLog.Info("Game.ini: RCON set up on " + Address + ":" + s.RconPort);
-                return true;
+                lock (UeIni.WriteGate)
+                {
+                    string current = File.Exists(path) ? UeIni.ReadText(path) : "";
+                    string updated = Apply(current, s);
+                    if (Normalize(updated) == Normalize(current)) return false;
+                    ConsoleBridge.BackupFile(path);
+                    UeIni.WriteText(path, updated);
+                    AppLog.Info("Game.ini: RCON set up on " + Address + ":" + s.RconPort);
+                    return true;
+                }
             }
             catch (Exception ex) { AppLog.Warn("Could not set up RCON in Game.ini: " + ex.Message); return false; }
         }

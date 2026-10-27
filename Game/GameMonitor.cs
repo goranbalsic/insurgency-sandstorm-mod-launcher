@@ -59,6 +59,8 @@ namespace SandstormModLauncher.Game
         public IntPtr Window { get; private set; }
         public bool IsRunning => ProcessId != 0;
 
+        private DateTime lastWindowSearch = DateTime.MinValue;
+
         /// <summary>The game on this PC.</summary>
         public GameMonitor() : this(GameInstall.ClientProcess, () => GameInstall.LogPath, null, true) { }
 
@@ -148,7 +150,12 @@ namespace SandstormModLauncher.Game
             }
             IntPtr w = IntPtr.Zero;
             try { w = p.MainWindowHandle; } catch { }
-            if (w == IntPtr.Zero) w = FindWindow(p.Id);
+            if (w == IntPtr.Zero && (DateTime.UtcNow - lastWindowSearch).TotalSeconds > 10)
+            {
+                // A server started without a window never has one: do not enumerate every window twice a second for it.
+                lastWindowSearch = DateTime.UtcNow;
+                w = FindWindow(p.Id);
+            }
             if (w != Window) { Window = w; changed = true; }
             return changed;
         }

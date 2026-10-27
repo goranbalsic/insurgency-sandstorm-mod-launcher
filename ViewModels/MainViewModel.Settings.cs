@@ -36,6 +36,7 @@ namespace SandstormModLauncher.ViewModels
         public ICommand DeleteCustomMapCommand { get; private set; }
         public ICommand CancelCustomMapCommand { get; private set; }
         public ICommand ToggleServerOnlyCommand { get; private set; }
+        public ICommand ToggleServerSecretsCommand { get; private set; }
 
         private string consoleKeyStatus = "", consoleKeysText = "";
         private bool consoleKeyOk = true;
@@ -44,6 +45,7 @@ namespace SandstormModLauncher.ViewModels
         {
             SetupF10Command = new RelayCommand(SetupF10);
             ToggleServerOnlyCommand = new RelayCommand(() => ServerOnly = !ServerOnly);
+            ToggleServerSecretsCommand = new RelayCommand(() => ServerSecretsHidden = !ServerSecretsHidden);
             ChangeGameDirCommand = new AsyncCommand(ChangeGameDir);
             ResetGameDirCommand = new AsyncCommand(async () => { State.Settings.GameDirOverride = ""; await ReloadEverything(T("Looking for the game...")); }, () => !string.IsNullOrEmpty(State.Settings.GameDirOverride));
             AddModFolderCommand = new AsyncCommand(AddModFolder);
@@ -105,6 +107,22 @@ namespace SandstormModLauncher.ViewModels
         public string DataDir => AppPaths.DataDir;
         public string ModioRoot => GameInstall.ModioRoot;
 
+        private bool serverSecretsHidden = true;
+
+        /// <summary>The Steam server token and the game-stats token are account secrets: hidden until shown.</summary>
+        public bool ServerSecretsHidden
+        {
+            get => serverSecretsHidden;
+            set
+            {
+                if (!Set(ref serverSecretsHidden, value)) return;
+                RaiseMany(nameof(ServerSecretsText), nameof(ServerGsltDisplay), nameof(ServerGameStatsTokenDisplay));
+            }
+        }
+        public string ServerSecretsText => ServerSecretsHidden ? T("Show tokens") : T("Hide tokens");
+        public string ServerGsltDisplay => ServerSecretsHidden && !string.IsNullOrEmpty(State.Settings.ServerGslt) ? "••••••••••" : "";
+        public string ServerGameStatsTokenDisplay => ServerSecretsHidden && !string.IsNullOrEmpty(State.Settings.ServerGameStatsToken) ? "••••••••••" : "";
+
         /// <summary>This PC only runs the dedicated server: the game is not looked for at startup, and the big button starts the server.</summary>
         public bool ServerOnly
         {
@@ -115,7 +133,7 @@ namespace SandstormModLauncher.ViewModels
                 State.Settings.ServerOnly = value;
                 SaveSettingsSoon();
                 RaiseMany(nameof(ServerOnly), nameof(ServerOnlyText), nameof(ServerOnlyTip));
-                if (value) PlayTarget = "Server";
+                if (value) PlayTarget = "Server"; else PlayTarget = "Local";
             }
         }
 

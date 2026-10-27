@@ -40,7 +40,6 @@ namespace SandstormModLauncher.Core
         [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
         [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
         [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
-        [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
         [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);
 
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);

@@ -69,8 +69,6 @@ namespace SandstormModLauncher.Models
         public List<string> Tags { get; set; } = new List<string>();
         public List<string> Paks { get; set; } = new List<string>();
         public string InGameName { get; set; }
-        public string WebsiteUrl { get; set; }
-        public bool RequiredByClients { get; set; }
         public string PackageRoot { get; set; }
         public string State { get; set; }
         public List<MutatorInfo> Mutators { get; set; } = new List<MutatorInfo>();

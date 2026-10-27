@@ -185,6 +185,14 @@ namespace SandstormModLauncher.ViewModels
         {
             // A map that is gone (a custom entry deleted, a mod removed) moves the setup to another one: that is a change.
             string before = SetupEngine.Fingerprint(Profile);
+            RebuildListsFromProfile(false);
+            if (SetupEngine.Fingerprint(Profile) != before) ProfileChanged();
+            else { UpdatePlan(); RaiseSetup(); }
+        }
+
+        /// <summary>The five screen lists, rebuilt from the profile without saving or planning in between.</summary>
+        private void RebuildListsFromProfile(bool raiseFields)
+        {
             suppressProfileSave = true;
             try
             {
@@ -193,10 +201,9 @@ namespace SandstormModLauncher.ViewModels
                 BuildMutatorList();
                 BuildActiveMutators();
                 BuildRules();
+                if (raiseFields) RaiseProfileFields();
             }
             finally { suppressProfileSave = false; }
-            if (SetupEngine.Fingerprint(Profile) != before) ProfileChanged();
-            else { UpdatePlan(); RaiseSetup(); }
         }
 
         // ------------------------------------------------------------------ navigation / status
@@ -347,17 +354,7 @@ namespace SandstormModLauncher.ViewModels
         private void ApplyProfileToUi()
         {
             string before = SetupEngine.Fingerprint(Profile);
-            suppressProfileSave = true;
-            try
-            {
-                BuildMaps();
-                SyncMapSelection();
-                BuildMutatorList();
-                BuildActiveMutators();
-                BuildRules();
-                RaiseProfileFields();
-            }
-            finally { suppressProfileSave = false; }
+            RebuildListsFromProfile(true);
             // The map of the setup may be gone since the last run (a mod removed): the screen moved it to another one.
             if (SetupEngine.Fingerprint(Profile) != before) ProfileChanged();
             else { UpdatePlan(); RaiseSetup(); }

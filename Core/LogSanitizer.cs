@@ -32,9 +32,12 @@ namespace SandstormModLauncher.Core
             line != null && (GameFlow.IsMatch(line) ? UrlSecret.IsMatch(line) : Sensitive.IsMatch(line));
 
         /// <summary>The line with addresses, names and ids masked, or null when the whole line should be dropped.</summary>
-        public static string Clean(string line)
+        public static string Clean(string line) => line == null || IsSensitive(line) ? null : Mask(line);
+
+        /// <summary>The same masking without dropping the line: for text the user typed, where "auth" may be the point.</summary>
+        public static string Mask(string line)
         {
-            if (line == null || IsSensitive(line)) return null;
+            if (line == null) return null;
             line = Ip.Replace(line, "x.x.x.x");
             line = Name.Replace(line, "$1<hidden>");
             line = SteamId.Replace(line, "<id>");
@@ -50,9 +53,9 @@ namespace SandstormModLauncher.Core
         /// Clean, plus everything that could name this PC or person, for text that leaves the PC (a GitHub issue):
         /// the Windows user name and PC name wherever they appear, and user folders on any drive.
         /// </summary>
-        public static string Public(string line)
+        public static string Public(string line, bool dropSensitive = true)
         {
-            line = Clean(line);
+            line = dropSensitive ? Clean(line) : Mask(line);
             if (line == null) return null;
             line = AnyUserPath.Replace(line, "$1<user>");
             if (ownNames == null)

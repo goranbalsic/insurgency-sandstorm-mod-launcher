@@ -252,9 +252,9 @@
                                   VerticalAlignment="Center" HorizontalAlignment="Center" />
                             <Button.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Start and launch on this PC" Command="{Binding SetPlayTargetCommand}" CommandParameter="Local"
+                                    <MenuItem Header="Play on this PC" Command="{Binding SetPlayTargetCommand}" CommandParameter="Local"
                                               IsChecked="{Binding PlayTarget, Converter={StaticResource Eq}, ConverterParameter=Local, Mode=OneWay}" />
-                                    <MenuItem Header="Start the dedicated server with this match" Command="{Binding SetPlayTargetCommand}" CommandParameter="Server"
+                                    <MenuItem Header="Play on the server" Command="{Binding SetPlayTargetCommand}" CommandParameter="Server"
                                               IsChecked="{Binding PlayTarget, Converter={StaticResource Eq}, ConverterParameter=Server, Mode=OneWay}" />
                                 </ContextMenu>
                             </Button.ContextMenu>

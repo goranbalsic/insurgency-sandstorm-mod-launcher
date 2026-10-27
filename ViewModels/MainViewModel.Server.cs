@@ -133,7 +133,9 @@ namespace SandstormModLauncher.ViewModels
                 else if (ServerRunningHere && Server.Monitor?.Phase == GamePhase.InMatch)
                 {
                     await RefreshPlayers(true);
-                    if (ServerModsOn && lastModVerdict != ModVerdict.Loaded) await CheckServerMods(true);
+                    if (ServerModsOn && lastModVerdict != ModVerdict.Loaded && lastModVerdict != ModVerdict.NoLogin
+                        && lastModVerdict != ModVerdict.LoginFailed && lastModVerdict != ModVerdict.NoMods)
+                        await CheckServerMods(true);
                 }
             };
             serverTimer.Start();

@@ -192,26 +192,33 @@ namespace SandstormModLauncher.Services
             }
 
             // The running exe may already be the .old one (an update was installed earlier in this session).
-            if (File.Exists(OldPath) && !IsRunningImage(OldPath)) TryDelete(OldPath);
-            if (File.Exists(OldPath))
-            {
-                // The running image is .old already, so the exe can be swapped in one step: a crash can never leave
-                // the folder without an exe (2026-10-25 audit).
-                File.Replace(NewPath, ExePath, null);
-            }
-            else
-            {
-                File.Move(ExePath, OldPath);
-                try { File.Move(NewPath, ExePath); }
-                catch
-                {
-                    if (!File.Exists(ExePath) && File.Exists(OldPath)) File.Move(OldPath, ExePath);
-                    throw;
-                }
-            }
+            SwapIntoPlace(NewPath, ExePath);
             if (config != null) try { File.WriteAllBytes(ExePath + ".config", config); } catch (Exception ex) { AppLog.Warn("Update: config not replaced: " + ex.Message); }
             AppLog.Info("Update: " + info.Tag + " installed next to " + Current.ToString(3) + ", used from the next start");
             return new InstallResult { Ok = true };
+        }
+
+        /// <summary>Puts the downloaded exe in place. The running image may already be the .old one, so the swap is
+        /// done in one step when it is; a failure puts the old exe back.</summary>
+        internal static void SwapIntoPlace(string newPath, string exePath)
+        {
+            string oldPath = exePath + ".old";
+            if (File.Exists(oldPath) && !IsRunningImage(oldPath)) TryDelete(oldPath);
+            if (File.Exists(oldPath))
+            {
+                // The running image is .old already: replace the exe in one step, so a crash cannot leave none.
+                File.Replace(newPath, exePath, null);
+            }
+            else
+            {
+                File.Move(exePath, oldPath);
+                try { File.Move(newPath, exePath); }
+                catch
+                {
+                    if (!File.Exists(exePath) && File.Exists(oldPath)) File.Move(oldPath, exePath);
+                    throw;
+                }
+            }
         }
 
         private static bool IsRunningImage(string path)

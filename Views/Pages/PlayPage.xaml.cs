@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using SandstormModLauncher.ViewModels;
 
 namespace SandstormModLauncher.Views.Pages
@@ -30,16 +31,38 @@ namespace SandstormModLauncher.Views.Pages
             if (titleBox.DesiredSize.Width + tabsBox.DesiredSize.Width + 16 > w) titleBox.Visibility = Visibility.Collapsed;
         }
 
+        private DispatcherTimer ruleTimer;
+        private RuleItem pendingRule;
+        private double pendingValue;
+
         /// <summary>
         /// The slider is bound one way so range coercion (while rows are created or scrolled) can never
-        /// overwrite a rule. Only real user input is written back.
+        /// overwrite a rule. Only real user input is written back, and only after the drag pauses: every write
+        /// rebuilds the launch plan (and may re-read Game.ini), so one per mouse-move is too much.
         /// </summary>
         private void RuleSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             var slider = (Slider)sender;
             bool user = slider.IsKeyboardFocused || (slider.IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed);
             if (!user || !(slider.DataContext is RuleItem rule)) return;
-            if (Math.Abs(rule.Number - e.NewValue) > 1e-9) rule.Number = e.NewValue;
+            if (Math.Abs(rule.Number - e.NewValue) <= 1e-9) return;
+            pendingRule = rule;
+            pendingValue = e.NewValue;
+            if (ruleTimer == null)
+            {
+                ruleTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+                ruleTimer.Tick += (s, a) => FlushRule();
+            }
+            ruleTimer.Stop();
+            ruleTimer.Start();
+        }
+
+        private void FlushRule()
+        {
+            ruleTimer?.Stop();
+            var rule = pendingRule;
+            pendingRule = null;
+            if (rule != null) rule.Number = pendingValue;
         }
     }
 }

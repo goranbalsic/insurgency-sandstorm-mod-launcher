@@ -167,6 +167,8 @@ namespace SandstormModLauncher.Core
                 if (e.CompressionMethod != 0)
                 {
                     blocks = r.I32();
+                    // The index is untrusted: a hostile pak must not pick the allocation size (2026-10-27 audit).
+                    if (blocks < 0 || blocks > 1_000_000) throw new InvalidDataException("implausible pak block count");
                     e.BlockStarts = new long[blocks];
                     e.BlockEnds = new long[blocks];
                     for (int b = 0; b < blocks; b++) { e.BlockStarts[b] = r.I64(); e.BlockEnds[b] = r.I64(); }
@@ -197,6 +199,7 @@ namespace SandstormModLauncher.Core
             int encodedSize = r.I32();
             byte[] encoded = r.Bytes(encodedSize);
             int nonEncodedCount = r.I32();
+            if (nonEncodedCount < 0 || nonEncodedCount > r.Remaining / 32) throw new InvalidDataException("implausible pak index size");
             var nonEncoded = new List<PakEntry>(nonEncodedCount);
             for (int i = 0; i < nonEncodedCount; i++) nonEncoded.Add(ReadLegacyEntry(r));
 

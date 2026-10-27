@@ -18,7 +18,6 @@ namespace SandstormModLauncher.ViewModels
     {
         public ObservableCollection<LaunchStepItem> LaunchSteps { get; } = new ObservableCollection<LaunchStepItem>();
         public ObservableCollection<string> LaunchWarnings { get; } = new ObservableCollection<string>();
-        public ICommand LaunchCommand { get; private set; }
         public ICommand CancelLaunchCommand { get; private set; }
         public ICommand CloseLaunchCommand { get; private set; }
         public ICommand CopyCommandCommand { get; private set; }
@@ -34,7 +33,6 @@ namespace SandstormModLauncher.ViewModels
 
         private void InitLaunchCommands()
         {
-            LaunchCommand = new AsyncCommand(() => Launch(false), () => CanLaunch);
             RetryLaunchCommand = new AsyncCommand(() => Launch(false), () => !launchRunning);
             CancelLaunchCommand = new RelayCommand(() => launchCts?.Cancel(), () => launchRunning);
             CloseLaunchCommand = new RelayCommand(() => LaunchOverlayOpen = false, () => !launchRunning);

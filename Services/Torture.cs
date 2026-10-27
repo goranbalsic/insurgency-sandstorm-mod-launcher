@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using SandstormModLauncher.Core;
@@ -296,6 +297,35 @@ namespace SandstormModLauncher.Services
             }
         }
 
+        /// <summary>The exe swap of an update, on temp files: the running image may already be the .old one.</summary>
+        private static void UpdaterChecks(Action<string> fail)
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "sml-swap-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(dir);
+                string exe = Path.Combine(dir, "app.exe");
+                string next = Path.Combine(dir, "app.new");
+                File.WriteAllText(exe, "v1");
+                File.WriteAllText(next, "v2");
+                Updater.SwapIntoPlace(next, exe);
+                if (File.ReadAllText(exe) != "v2") fail("update swap: the new exe is not in place");
+                if (!File.Exists(exe + ".old") || File.ReadAllText(exe + ".old") != "v1") fail("update swap: the old exe was not kept");
+                if (File.Exists(next)) fail("update swap: the downloaded file is still there");
+
+                // A second update in the same session: .old is the running image and cannot be touched.
+                using (var hold = new FileStream(exe + ".old", FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                {
+                    File.WriteAllText(next, "v3");
+                    Updater.SwapIntoPlace(next, exe);
+                    if (File.ReadAllText(exe) != "v3") fail("update swap (running image): the new exe is not in place");
+                }
+                if (File.ReadAllText(exe + ".old") != "v1") fail("update swap (running image): the old exe was replaced");
+            }
+            catch (Exception ex) { fail("update swap: " + ex.Message); }
+            finally { try { Directory.Delete(dir, true); } catch { } }
+        }
+
         /// <summary>
         /// Fixed checks for what players reported, run before the random steps (each one failed before its fix):
         /// presets taking the last preset's mutators, day/night and hardcore back out, every pair of presets giving the
@@ -304,6 +334,7 @@ namespace SandstormModLauncher.Services
         /// </summary>
         public static void RegressionChecks(AppState state, Action<string> fail)
         {
+            UpdaterChecks(fail);
             var db = state.Rules;
             var styles = SetupEngine.StylePresets(db);
             var all = styles.Concat(SetupEngine.OfficialPresets(db)).Concat(SetupEngine.PlaylistPresets(state, true)).ToList();

@@ -15,6 +15,9 @@ namespace SandstormModLauncher.Core
         public const string BlockStart = "; >>> Sandstorm Mod Launcher (managed block, edited automatically) >>>";
         public const string BlockEnd = "; <<< Sandstorm Mod Launcher <<<";
 
+        /// <summary>One writer at a time: the launch and the game-exit handler both rewrite Game.ini.</summary>
+        public static readonly object WriteGate = new object();
+
         /// <summary>Reads a config file while other programs may have it open; a file held exclusively is retried for a moment.</summary>
         public static string ReadText(string path)
         {
@@ -125,17 +128,21 @@ namespace SandstormModLauncher.Core
             var lines = Split(text);
             var result = new List<string>();
             bool skipping = false;
+            var skipped = new List<string>();
             foreach (var line in lines)
             {
                 string t = line.Trim();
-                if (!skipping && t == BlockStart) { skipping = true; continue; }
+                if (!skipping && t == BlockStart) { skipping = true; skipped.Clear(); continue; }
                 if (skipping)
                 {
-                    if (t == BlockEnd) skipping = false;
+                    if (t == BlockEnd) { skipping = false; skipped.Clear(); }
+                    else skipped.Add(line);
                     continue;
                 }
                 result.Add(line);
             }
+            // No closing marker: keep what was inside, or the rest of the file would vanish (2026-10-27 audit).
+            if (skipping) result.AddRange(skipped);
             while (result.Count > 0 && result[result.Count - 1].Trim().Length == 0) result.RemoveAt(result.Count - 1);
             return string.Join("\r\n", result);
         }

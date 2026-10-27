@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,7 +69,7 @@ namespace SandstormModLauncher.Services
             try
             {
                 if (File.Exists(AppPaths.SettingsFile))
-                    Settings = Json.Deserialize<AppSettings>(File.ReadAllText(AppPaths.SettingsFile, Encoding.UTF8)) ?? new AppSettings();
+                    Settings = Json.Deserialize<AppSettings>(ReadText(AppPaths.SettingsFile)) ?? new AppSettings();
             }
             catch (Exception ex)
             {
@@ -82,7 +82,7 @@ namespace SandstormModLauncher.Services
             {
                 try
                 {
-                    var p = Json.Deserialize<Profile>(File.ReadAllText(f, Encoding.UTF8));
+                    var p = Json.Deserialize<Profile>(ReadText(f));
                     if (p == null || string.IsNullOrWhiteSpace(p.Name)) continue;
                     Normalize(p);
                     if (Profiles.Any(x => x.Name.Equals(p.Name, StringComparison.OrdinalIgnoreCase))) { AppLog.Warn("Profile " + p.Name + " is in two files; " + Path.GetFileName(f) + " skipped"); continue; }
@@ -91,7 +91,7 @@ namespace SandstormModLauncher.Services
                     string want = ProfilePath(p.Name);
                     if (!string.Equals(Path.GetFullPath(f), Path.GetFullPath(want), StringComparison.OrdinalIgnoreCase) && !File.Exists(want))
                     {
-                        try { WriteAtomic(want, File.ReadAllText(f, Encoding.UTF8)); File.Delete(f); AppLog.Info("Profile file " + Path.GetFileName(f) + " renamed to " + Path.GetFileName(want)); }
+                        try { WriteAtomic(want, ReadText(f)); File.Delete(f); AppLog.Info("Profile file " + Path.GetFileName(f) + " renamed to " + Path.GetFileName(want)); }
                         catch (Exception ex) { AppLog.Warn("Profile file rename: " + ex.Message); }
                     }
                 }
@@ -149,14 +149,6 @@ namespace SandstormModLauncher.Services
             if (Profiles.Count == 0) Profiles.Add(new Profile { Name = "Default" });
         }
 
-        public void RenameProfile(Profile p, string newName)
-        {
-            string old = ProfilePath(p.Name);
-            p.Name = newName;
-            SaveProfile(p);
-            try { if (!string.Equals(old, ProfilePath(newName), StringComparison.OrdinalIgnoreCase)) File.Delete(old); } catch { }
-        }
-
         public static string ProfilePath(string name) => Path.Combine(AppPaths.ProfilesDir, ProfileFileName(name) + ".json");
 
         private static readonly string[] Reserved = { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
@@ -206,7 +198,21 @@ namespace SandstormModLauncher.Services
 
         private static void TryQuarantine(string path)
         {
-            try { File.Copy(path, path + ".broken-" + DateTime.Now.ToString("yyyyMMddHHmmss"), true); } catch { }
+            // Move, not copy: an unreadable file left in place is logged and copied again on every start.
+            string to = path + ".broken-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+            try { File.Move(path, to); }
+            catch (IOException) { try { File.Copy(path, to, true); } catch { } }
+            catch { }
+        }
+
+        /// <summary>A file another program holds for a moment is retried; only a file that stays unreadable is treated as broken.</summary>
+        private static string ReadText(string path)
+        {
+            for (int i = 0; ; i++)
+            {
+                try { return File.ReadAllText(path, Encoding.UTF8); }
+                catch (Exception ex) when (i < 3 && (ex is IOException || ex is UnauthorizedAccessException)) { System.Threading.Thread.Sleep(120); }
+            }
         }
     }
 }

@@ -14,8 +14,6 @@ namespace SandstormModLauncher.Game
         public string Key { get; set; }
         public List<string> Roots { get; set; } = new List<string>();
         public string InGameName { get; set; }
-        public string WebsiteUrl { get; set; }
-        public bool RequiredByClients { get; set; }
         public List<MutatorInfo> Mutators { get; set; } = new List<MutatorInfo>();
         public List<ScenarioInfo> Scenarios { get; set; } = new List<ScenarioInfo>();
         public List<string> Warnings { get; set; } = new List<string>();
@@ -75,7 +73,9 @@ namespace SandstormModLauncher.Game
             // The background scan runs while the game downloads or removes a mod: a folder list that cannot be read is logged, not a crash.
             try { if (Directory.Exists(modsDir)) folders.AddRange(Directory.GetDirectories(modsDir)); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { AppLog.Warn("mod.io mods folder unreadable: " + ex.Message); }
-            foreach (var k in known.Keys) if (!folders.Any(f => Same(f, k))) folders.Add(k);
+            folders = folders.Select(f => { try { return Path.GetFullPath(f).TrimEnd('\\'); } catch { return f; } }).ToList();
+            var folderSet = new HashSet<string>(folders, StringComparer.OrdinalIgnoreCase);
+            foreach (var k in known.Keys) if (folderSet.Add(k)) folders.Add(k);
 
             // 2. legacy layout and user folders
             if (install.LegacyModioDir != null && Directory.Exists(install.LegacyModioDir))
@@ -139,9 +139,6 @@ namespace SandstormModLauncher.Game
             try { Directory.CreateDirectory(cacheDir); File.WriteAllText(cacheFile, Json.Serialize(cache, false)); } catch { }
             return mods.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToList();
         }
-
-        private static bool Same(string a, string b) =>
-            string.Equals(Path.GetFullPath(a).TrimEnd('\\'), Path.GetFullPath(b).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
 
         private static IEnumerable<string> PakFolders(string root)
         {
@@ -266,8 +263,6 @@ namespace SandstormModLauncher.Game
         {
             if (mod.PackageRoot == null && scan.Roots.Count > 0) mod.PackageRoot = scan.Roots[0];
             mod.InGameName = mod.InGameName ?? scan.InGameName;
-            mod.WebsiteUrl = mod.WebsiteUrl ?? scan.WebsiteUrl;
-            mod.RequiredByClients |= scan.RequiredByClients;
             foreach (var m in scan.Mutators)
                 if (!mod.Mutators.Any(x => x.Id.Equals(m.Id, StringComparison.OrdinalIgnoreCase))) mod.Mutators.Add(m);
             foreach (var s in scan.Scenarios)
@@ -327,8 +322,6 @@ namespace SandstormModLauncher.Game
                     if (main == null) continue;
                     var props = pkg.ReadProperties(main);
                     if (props.TryGetValue("InGameName", out var ign) && ign is string s1 && s1.Length > 0) scan.InGameName = UnrealText.Resolve(s1);
-                    if (props.TryGetValue("WebsiteUrl", out var web) && web is string s2) scan.WebsiteUrl = s2;
-                    if (props.TryGetValue("bRequiredByClients", out var req) && req is bool b) scan.RequiredByClients = b;
                     if (props.TryGetValue("PrimaryAssetDirectories", out var dirs) && dirs is List<object> list)
                         foreach (var item in list.OfType<Dictionary<string, object>>())
                         {
