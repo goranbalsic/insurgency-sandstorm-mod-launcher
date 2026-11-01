@@ -1,3 +1,7 @@
+**1.16.0**
+
+- Play > Squad: "AI teammate respawn" (0 = off). Every N seconds the launcher tells the game to bring dead AI teammates back, using the game's own console command over RCON, so it works on your own dedicated server too. It is a launcher feature, not a game rule: it runs only while the launcher is open, and it speeds up reinforcement for the bots without changing your own respawn. Saved with the launcher's settings, not inside a setup.
+
 **1.15.2**
 
 - Fixes from a full audit of the code.

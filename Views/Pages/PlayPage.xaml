@@ -515,6 +515,8 @@
                         <StackPanel Visibility="{Binding IsCoopMode, Converter={StaticResource Vis}}" Margin="0,8,0,0">
                             <c:Stepper Margin="0,10,0,0" Label="AI teammates" Hint="{Binding TeammatesHint}" Value="{Binding Teammates}" Changed="{Binding TeammatesChanged}" Maximum="32"
                                        ToolTip="Bots on your team. Read at game start (the launcher restarts it if needed)." />
+                            <c:Stepper Label="AI teammate respawn" Hint="{Binding BotReinforceHint}" Value="{Binding BotReinforceSeconds}" Changed="{Binding BotReinforceChanged}" Maximum="300"
+                                       ToolTip="Every N seconds the launcher tells the game to bring dead AI teammates back. It is a launcher feature, not a game rule; 0 turns it off." />
                             <c:Stepper Label="Enemies when playing alone" Hint="{Binding SoloEnemiesHint}" Value="{Binding SoloEnemies}" Changed="{Binding SoloEnemiesChanged}"
                                        ToolTip="Enemy bots alive at once when you are the only human player" />
                             <c:Stepper Label="Minimum enemies" Hint="{Binding MinEnemiesHint}" Value="{Binding MinEnemies}" Changed="{Binding MinEnemiesChanged}"
