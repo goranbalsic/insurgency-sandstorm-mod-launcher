@@ -54,7 +54,6 @@ namespace SandstormModLauncher.ViewModels
             InitServerCommands();
             InitServerSetupCommands();
             InitLanguageCommands();
-            InitBotReinforce();
         }
 
         // ------------------------------------------------------------------ startup
