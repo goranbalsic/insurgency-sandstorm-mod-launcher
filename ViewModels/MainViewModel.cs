@@ -116,12 +116,26 @@ namespace SandstormModLauncher.ViewModels
                     Page = "Settings";
                     await ShowMessage("Game not found", "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains \"Insurgency\" and \"Insurgency.exe\").");
                 }
+                await ShowUpdateNotice();
             }
             catch (Exception ex)
             {
                 AppLog.Error("Startup failed", ex);
                 LoadingText = T("Startup failed: ") + ex.Message;
             }
+        }
+
+        /// <summary>The note that ships with this update: once, on the first start, and only during the day after it was published.</summary>
+        private static readonly DateTime NoticeUntil = new DateTime(2026, 11, 4, 14, 0, 0, DateTimeKind.Utc);
+
+        private async Task ShowUpdateNotice()
+        {
+            if (AppPaths.TestRun || State.Settings.UpdateNoticeSeen) return;
+            if (DateTime.UtcNow >= NoticeUntil) return;
+            State.Settings.UpdateNoticeSeen = true;
+            State.Store.SaveSettings();   // before the dialog: a close or crash must not show it twice
+            await ShowMessage("About this update",
+                T("AI teammate respawn is not coming back.\n\nThe game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.\n\nI am done updating the app for the time being. Nothing else has changed."));
         }
 
         public void Dispose()

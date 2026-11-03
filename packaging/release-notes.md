@@ -1,3 +1,7 @@
+**1.16.2**
+
+- A note on the first start about the 1.16.0 revert. It is shown once, and only during the day after this release. No other changes.
+
 **1.16.1**
 
 - Reverts the "AI teammate respawn" setting added in 1.16.0. If you installed 1.16.0, this update puts the previous behaviour back. Nothing else changed.

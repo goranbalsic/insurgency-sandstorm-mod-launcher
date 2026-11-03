@@ -708,6 +708,11 @@ SetRoundTimer 1800","","Play"
 "Starting up...","","Messages"
 "Reading the game and your mods...","","Messages"
 "Startup failed:","","Messages"
+"AI teammate respawn is not coming back.
+
+The game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.
+
+I am done updating the app for the time being. Nothing else has changed.","","Messages"
 "Rescanning mods...","","Messages"
 "Found {0} mods and {1} mutators","","Messages"
 "Checking the game...","","Messages"
@@ -715,6 +720,7 @@ SetRoundTimer 1800","","Play"
 "Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.","","Messages"
 "Game not found","","Messages"
 "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains ""Insurgency"" and ""Insurgency.exe"").","","Messages"
+"About this update","","Messages"
 "OK","","Messages"
 "Languages read again","","Language (messages)"
 "from the languages folder","","Language (messages)"

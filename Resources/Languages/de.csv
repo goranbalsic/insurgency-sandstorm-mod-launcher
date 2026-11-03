@@ -711,6 +711,15 @@ SetRoundTimer 1800","Play"
 "Starting up...","Starten...","Messages"
 "Reading the game and your mods...","Lies das Spiel und deine Mods...","Messages"
 "Startup failed:","Start fehlgeschlagen:","Messages"
+"AI teammate respawn is not coming back.
+
+The game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.
+
+I am done updating the app for the time being. Nothing else has changed.","Der Respawn von KI-Teamkollegen kommt nicht zurück.
+
+Das Spiel hat einen Respawn-Timer für das gesamte Team. Es gibt keinen Timer für KI-Teammitglieder allein und einige Systeme im Spiel können von externen Tools aus nicht erreicht werden. Aus diesem Grund wurde die Einstellung aus 1.16.0 entfernt.
+
+Ich bin vorerst mit der Aktualisierung der App fertig. Sonst hat sich nichts geändert.","Messages"
 "Rescanning mods...","Mods werden erneut gescannt...","Messages"
 "Found {0} mods and {1} mutators","{0} Mods und {1} Mutatoren gefunden","Messages"
 "Checking the game...","Ich schaue mir das Spiel an...","Messages"
@@ -718,6 +727,7 @@ SetRoundTimer 1800","Play"
 "Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.","Ihre Spieltastenbelegung hat sich stark verändert. Eine Kopie von früher finden Sie unter „Einstellungen“ > „Spieltastenbelegung“.","Messages"
 "Game not found","Spiel nicht gefunden","Messages"
 "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains ""Insurgency"" and ""Insurgency.exe"").","Insurgency: Sandstorm wurde nicht automatisch gefunden. Wählen Sie den Spielordner in den Einstellungen aus (den Ordner, der „Insurgency“ und „Insurgency.exe“ enthält).","Messages"
+"About this update","Über dieses Update","Messages"
 "OK","OK","Messages"
 "Languages read again","Sprachen wieder lesen","Language (messages)"
 "from the languages folder","aus dem Sprachenordner","Language (messages)"

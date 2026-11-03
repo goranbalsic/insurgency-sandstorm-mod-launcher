@@ -38,7 +38,7 @@
 "Copy command","复制命令","Main window"
 "Play on this PC or on the dedicated server","在此电脑或专用服务器上玩","Main window"
 "Play on this PC","在这台电脑上玩","Main window"
-"Play on the server","","Main window"
+"Play on the server","在服务器上玩","Main window"
 "Hands off the keyboard for a few seconds.","将手离开键盘几秒钟。","Main window"
 "Cancel","取消","Main window"
 "Report this problem...","报告此问题...","Main window"
@@ -711,6 +711,15 @@ SetRoundTimer 1800","每行一个控制台命令，例如
 "Starting up...","正在启动...","Messages"
 "Reading the game and your mods...","阅读游戏和你的模组...","Messages"
 "Startup failed:","启动失败：","Messages"
+"AI teammate respawn is not coming back.
+
+The game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.
+
+I am done updating the app for the time being. Nothing else has changed.","AI队友重生不会回来。
+
+游戏为整个团队提供了一个重生计时器。它没有为AI队友提供单独的计时器，并且游戏中的某些系统无法从外部工具访问。这就是 1.16.0 中的设置被删除的原因。
+
+我暂时完成了应用程序的更新。其他一切都没有改变。","Messages"
 "Rescanning mods...","正在重新扫描模组...","Messages"
 "Found {0} mods and {1} mutators","找到 {0} 个模组和 {1} 个变异器","Messages"
 "Checking the game...","正在检查游戏...","Messages"
@@ -718,6 +727,7 @@ SetRoundTimer 1800","每行一个控制台命令，例如
 "Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.","您的游戏键绑定发生了很大变化。之前的副本位于“设置”>“游戏键绑定”中。","Messages"
 "Game not found","找不到游戏","Messages"
 "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains ""Insurgency"" and ""Insurgency.exe"").","叛乱：沙尘暴没有自动发现。在“设置”中选择游戏文件夹（包含“Insurgency”和“Insurgency.exe”的文件夹）。","Messages"
+"About this update","关于本次更新","Messages"
 "OK","好的","Messages"
 "Languages read again","再次阅读语言","Language (messages)"
 "from the languages folder","从语言文件夹","Language (messages)"

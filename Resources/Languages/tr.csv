@@ -711,6 +711,15 @@ SetRoundTimer 1800","Play"
 "Starting up...","Başlatılıyor...","Messages"
 "Reading the game and your mods...","Oyunu ve modlarınızı okuyorum...","Messages"
 "Startup failed:","Başlatma başarısız oldu:","Messages"
+"AI teammate respawn is not coming back.
+
+The game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.
+
+I am done updating the app for the time being. Nothing else has changed.","AI takım arkadaşının yeniden doğması geri gelmeyecek.
+
+Oyunda tüm takım için bir yeniden doğma zamanlayıcısı vardır. Kendi başına AI takım arkadaşları için bir zamanlayıcı bulunmuyor ve oyundaki bazı sistemlere dış araçlardan ulaşılamıyor. Bu nedenle 1.16.0'daki ayar kaldırıldı.
+
+Şimdilik uygulamayı güncellemeyi tamamladım. Başka hiçbir şey değişmedi.","Messages"
 "Rescanning mods...","Modlar yeniden taranıyor...","Messages"
 "Found {0} mods and {1} mutators","{0} mod ve {1} değiştirici bulundu","Messages"
 "Checking the game...","Oyunu kontrol ediyorum...","Messages"
@@ -718,6 +727,7 @@ SetRoundTimer 1800","Play"
 "Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.","Oyun tuşu bağlamalarınız çok değişti. Daha önceki bir kopyası Ayarlar > Oyun tuşu bağlamaları'ndadır.","Messages"
 "Game not found","Oyun bulunamadı","Messages"
 "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains ""Insurgency"" and ""Insurgency.exe"").","İsyan: Kum fırtınası otomatik olarak bulunamadı. Ayarlar'dan oyun klasörünü seçin (""Insurgency"" ve ""Insurgency.exe""yi içeren klasör).","Messages"
+"About this update","Bu güncelleme hakkında","Messages"
 "OK","TAMAM","Messages"
 "Languages read again","Diller tekrar okundu","Language (messages)"
 "from the languages folder","diller klasöründen","Language (messages)"

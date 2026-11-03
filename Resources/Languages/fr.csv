@@ -711,6 +711,15 @@ DéfinirRoundTimer 1800","Play"
 "Starting up...","Démarrage...","Messages"
 "Reading the game and your mods...","Lecture du jeu et de vos mods...","Messages"
 "Startup failed:","Échec du démarrage :","Messages"
+"AI teammate respawn is not coming back.
+
+The game has one respawn timer for the whole team. It does not have a timer for AI teammates on their own, and some systems in the game cannot be reached from outside tools. That is why the setting from 1.16.0 was removed.
+
+I am done updating the app for the time being. Nothing else has changed.","La réapparition des coéquipiers IA ne reviendra pas.
+
+Le jeu dispose d'un minuteur de réapparition pour toute l'équipe. Il ne dispose pas de minuterie pour les coéquipiers IA, et certains systèmes du jeu ne sont pas accessibles depuis des outils extérieurs. C'est pourquoi le paramètre de la version 1.16.0 a été supprimé.
+
+J'ai fini de mettre à jour l'application pour le moment. Rien d'autre n'a changé.","Messages"
 "Rescanning mods...","Nouvelle analyse des mods...","Messages"
 "Found {0} mods and {1} mutators","Trouvé {0} mods et {1} mutateurs","Messages"
 "Checking the game...","Vérification du jeu...","Messages"
@@ -718,6 +727,7 @@ DéfinirRoundTimer 1800","Play"
 "Your game key bindings changed a lot. A copy from before is in Settings > Game key bindings.","Les raccourcis clavier de votre jeu ont beaucoup changé. Une copie d'avant se trouve dans Paramètres > Raccourcis de touches de jeu.","Messages"
 "Game not found","Jeu introuvable","Messages"
 "Insurgency: Sandstorm was not found automatically. Pick the game folder in Settings (the folder that contains ""Insurgency"" and ""Insurgency.exe"").","Insurrection : Sandstorm n’a pas été trouvé automatiquement. Choisissez le dossier du jeu dans Paramètres (le dossier qui contient « Insurgency » et « Insurgency.exe »).","Messages"
+"About this update","À propos de cette mise à jour","Messages"
 "OK","D'ACCORD","Messages"
 "Languages read again","Langues relues","Language (messages)"
 "from the languages folder","du dossier des langues","Language (messages)"
