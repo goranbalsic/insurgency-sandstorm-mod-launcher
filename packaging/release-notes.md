@@ -1,3 +1,12 @@
+**1.17.0**
+
+- New look for the whole launcher: graphite surfaces, hairline lines and one amber colour that only marks what is selected, running or about to act. The old black-and-orange boxes are gone.
+- Every control is drawn from the same set now (buttons, tabs, chips, switches, sliders, inputs, scrollbars, menus), so the pages match each other. Corners, spacing and headings are consistent.
+- Each page opens with one line: what the page is, then the setting it changes. No label above the heading.
+- The bottom bar shows the whole setup on one line instead of four boxes. The button says "Launch match" instead of "Start and launch", which said the same thing twice.
+- Clearer wording in a few places: what the launcher types into the game console during a launch, that mutator order is the load order, and what a server start based on your own .bat file keeps or adds.
+- Nothing about how the launcher behaves has changed.
+
 **1.16.2**
 
 - A note on the first start about the 1.16.0 revert. It is shown once, and only during the day after this release. No other changes.

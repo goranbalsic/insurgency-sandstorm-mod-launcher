@@ -9,11 +9,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel>
-            <TextBlock Text="Control the match that is running" Style="{StaticResource Kicker}" />
-            <TextBlock Text="Live" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
+            <TextBlock Text="Live" Style="{StaticResource H1}" />
+            <TextBlock Text="Control the match that is running" Style="{StaticResource Mute}" FontSize="12.5" Margin="0,4,0,0" />
         </StackPanel>
 
-        <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="2" Padding="14,10" BorderThickness="1"
+        <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="6" Padding="14,10" BorderThickness="1"
                 Background="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=bg}"
                 BorderBrush="{Binding GameStatusKind, Converter={StaticResource Status}, ConverterParameter=border}">
             <DockPanel>

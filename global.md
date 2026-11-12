@@ -57,8 +57,18 @@ Tests are headless and need no game. `tests\fixture` is the fake data folder (`-
 - Comments explain `why`, often with the date of an audit and what broke. Keep that voice.
 - Tests are property/fuzz style (`Torture`, `RconTorture`, `UiTorture`, `ProbeTest`) and are part of the contract:
   change a behaviour, change the test that asserts the old one.
-- Release: bump `<Version>`/`<FileVersion>` in the csproj, add a section to `packaging/release-notes.md`,
-  push to `main` (or tag `vX.Y.Z`). Only `-p:OfficialBuild=true` builds self-update.
+
+## Look (redesigned 2026-11-12)
+`Themes/Theme.xaml` is the whole visual system, so restyle there and leave the XAML structure alone where possible.
+Graphite planes (`Bg0` window/chrome, `Bg1` page, `Bg2` panel, `Bg3` raised, `Bg4` hover), hairline `Line` borders,
+one signal amber (`Accent`) that only marks live state, selection and the primary action, 6px `Radius` / 8px `RadiusLg`,
+21px `H1`, 12–13px body. Panels are flat planes: no shadow outside overlays, no nested cards, no label above a page
+heading (page header = H1 + one muted line). Pictures to check a layout change:
+`SandstormModLauncher.exe --data <copy of tests\fixture> --render-from-cache <copy>\cache --render <out dir> Play Mods Settings Server Live`.
+
+## Release
+- Bump `<Version>`/`<FileVersion>` in the csproj, add a section to `packaging/release-notes.md`, push to `main`
+  (or tag `vX.Y.Z`). Only `-p:OfficialBuild=true` builds self-update.
 
 ## Known risks / open items (audit 2026-10-25)
 Fixed: infinite loop on a negative property size (`UPackage.ReadTagged`), unbounded counts in

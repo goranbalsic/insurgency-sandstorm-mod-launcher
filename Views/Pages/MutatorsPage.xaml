@@ -10,7 +10,7 @@
 
         <DockPanel LastChildFill="False">
             <TextBlock DockPanel.Dock="Left" Style="{StaticResource Mute}" FontSize="13" VerticalAlignment="Center"
-                       Text="Tick mutators to load them with the match." />
+                       Text="Tick the mutators to load with this match." />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
                 <Grid Width="260">
                     <TextBox Text="{Binding MutatorSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="Search name, ID, mod or description" Padding="30,6,8,6" />
@@ -79,7 +79,7 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b" CornerRadius="2" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
+                                        <Border x:Name="b" CornerRadius="6" Padding="12,10" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="{StaticResource Bg1}">
                                             <ContentPresenter />
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -145,7 +145,7 @@
                             <ItemsControl ItemsSource="{Binding ActiveMutators}" Margin="0,10,0,0" Focusable="False">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="8,5" Margin="0,0,0,4">
+                                        <Border Background="Transparent" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="0,8" Margin="0,0,0,2">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="26" />
@@ -171,9 +171,9 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Style="{StaticResource Mute}" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource VisNot}}"
-                                       Text="Tick mutators on the left. Order here = load order." />
+                                       Text="Pick mutators on the left. This order is the load order." />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,6,0,0" Visibility="{Binding ActiveMutatorCount, Converter={StaticResource Vis}}"
-                                       Text="Loaded top to bottom." />
+                                       Text="The top of the list loads first." />
                         </StackPanel>
                     </Border>
 

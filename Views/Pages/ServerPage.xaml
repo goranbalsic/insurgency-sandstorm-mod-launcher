@@ -1,4 +1,4 @@
-<UserControl x:Class="SandstormModLauncher.Views.Pages.ServerPage"
+﻿<UserControl x:Class="SandstormModLauncher.Views.Pages.ServerPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
@@ -18,9 +18,9 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <StackPanel Margin="0,0,0,14">
-                <TextBlock Text="Host your match for other players" Style="{StaticResource Kicker}" />
-                <TextBlock Text="Dedicated server" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
+            <StackPanel Margin="0,0,0,18">
+                <TextBlock Text="Dedicated server" Style="{StaticResource H1}" />
+                <TextBlock Text="Host your match for other players" Style="{StaticResource Mute}" FontSize="12.5" Margin="0,4,0,0" />
             </StackPanel>
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
@@ -34,7 +34,7 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <DockPanel>
-                                <Border DockPanel.Dock="Right" CornerRadius="2" Padding="9,2" BorderThickness="1" MaxWidth="330"
+                                <Border DockPanel.Dock="Right" CornerRadius="6" Padding="9,2" BorderThickness="1" MaxWidth="330"
                                         Background="{Binding ServerStatusKind, Converter={StaticResource Status}, ConverterParameter=bg}"
                                         BorderBrush="{Binding ServerStatusKind, Converter={StaticResource Status}, ConverterParameter=border}">
                                     <TextBlock Text="{Binding ServerStatus}" FontSize="11.5" TextTrimming="CharacterEllipsis" Foreground="{Binding ServerStatusKind, Converter={StaticResource Status}}" />
@@ -161,7 +161,7 @@
                             <CheckBox Style="{StaticResource SwitchRow}" IsChecked="{Binding ServerUseOwnArgs}" Margin="0,10,0,6">
                                 <StackPanel>
                                     <TextBlock Text="Start with my own options" FontSize="13.5" />
-                                    <TextBlock Text="The options from your .bat file, used as they are. The launcher adds only a waiting mod.io code, and its RCON to Game.ini when you have none." Style="{StaticResource Mute}" TextWrapping="Wrap" />
+                                    <TextBlock Text="Your .bat file's options, used as they are. The launcher only adds a pending mod.io code, and writes its own RCON setup into Game.ini if you have none." Style="{StaticResource Mute}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </CheckBox>
                             <StackPanel Visibility="{Binding ServerUseOwnArgs, Converter={StaticResource Vis}}">
@@ -242,7 +242,7 @@
                             <Grid>
                                 <TextBox Text="{Binding ServerGslt, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="from steamcommunity.com/dev/managegameservers, app id 581320"
                                          Visibility="{Binding ServerSecretsHidden, Converter={StaticResource VisNot}}" />
-                                <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="6,5"
+                                <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="6,5"
                                         Visibility="{Binding ServerSecretsHidden, Converter={StaticResource Vis}}">
                                     <TextBlock Text="{Binding ServerGsltDisplay}" FontFamily="{StaticResource Mono}" Foreground="{StaticResource TextMute}" />
                                 </Border>
@@ -258,7 +258,7 @@
                                 <Grid>
                                     <TextBox Text="{Binding ServerGameStatsToken, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource Mono}" Tag="from gamestats.sandstorm.game, sign in with Steam"
                                              Visibility="{Binding ServerSecretsHidden, Converter={StaticResource VisNot}}" />
-                                    <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="6,5"
+                                    <Border Background="{StaticResource Bg3}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6" Padding="6,5"
                                             Visibility="{Binding ServerSecretsHidden, Converter={StaticResource Vis}}">
                                         <TextBlock Text="{Binding ServerGameStatsTokenDisplay}" FontFamily="{StaticResource Mono}" Foreground="{StaticResource TextMute}" />
                                     </Border>

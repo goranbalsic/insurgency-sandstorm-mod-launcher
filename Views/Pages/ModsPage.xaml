@@ -75,7 +75,7 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="b" CornerRadius="2" Padding="10,8" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
+                                            <Border x:Name="b" CornerRadius="6" Padding="10,8" Margin="0,0,0,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
                                                 <ContentPresenter />
                                             </Border>
                                             <ControlTemplate.Triggers>
@@ -98,10 +98,10 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Grid Width="64" Height="36" Margin="0,0,12,0" VerticalAlignment="Top">
-                                        <Border CornerRadius="2" Background="{StaticResource Bg4}">
+                                        <Border CornerRadius="6" Background="{StaticResource Bg4}">
                                             <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="16" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <Border CornerRadius="2">
+                                        <Border CornerRadius="6">
                                             <Border.Background>
                                                 <ImageBrush ImageSource="{Binding Logo, Converter={StaticResource ImgSmall}}" Stretch="UniformToFill" />
                                             </Border.Background>
@@ -131,10 +131,10 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid Width="160" Height="90" Margin="0,0,16,0" VerticalAlignment="Top">
-                                    <Border CornerRadius="2" Background="{StaticResource Bg4}">
+                                    <Border CornerRadius="6" Background="{StaticResource Bg4}">
                                         <TextBlock Text="{Binding SelectedMod.Initials}" FontFamily="{StaticResource Display}" FontSize="34" Foreground="{StaticResource TextMute}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <Border CornerRadius="2">
+                                    <Border CornerRadius="6">
                                         <Border.Background>
                                             <ImageBrush ImageSource="{Binding SelectedMod.Logo, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                         </Border.Background>
@@ -157,7 +157,7 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Border Background="{StaticResource BadBg}" CornerRadius="2" Padding="12,8" Margin="0,12,0,0" Visibility="{Binding SelectedMod.HasWarnings, Converter={StaticResource Vis}}">
+                            <Border Background="{StaticResource BadBg}" CornerRadius="6" Padding="12,8" Margin="0,12,0,0" Visibility="{Binding SelectedMod.HasWarnings, Converter={StaticResource Vis}}">
                                 <TextBlock Text="{Binding SelectedMod.WarningText}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" FontSize="12" />
                             </Border>
 
@@ -168,7 +168,7 @@
                                 <ItemsControl ItemsSource="{Binding SelectedMod.Info.Mutators}" Focusable="False">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Background="{StaticResource Bg1}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="2" Padding="10,7" Margin="0,0,0,4">
+                                            <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="0,8,0,8" Margin="0,0,0,2">
                                                 <DockPanel>
                                                     <Button DockPanel.Dock="Right" Content="Add" Padding="12,4" VerticalAlignment="Center"
                                                             Command="{Binding DataContext.AddMutatorByIdCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />

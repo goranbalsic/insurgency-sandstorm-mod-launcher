@@ -126,7 +126,7 @@ namespace SandstormModLauncher.ViewModels
             switch (Monitor.Phase)
             {
                 case GamePhase.NotRunning:
-                    LaunchTitle = State.Settings.AutoStartGame ? T("Start and launch") : T("Launch");
+                    LaunchTitle = State.Settings.AutoStartGame ? T("Launch match") : T("Launch");
                     LaunchSubtitle = State.Settings.AutoStartGame ? T("Starts the game, then loads your match") : T("Start the game first, then press Launch");
                     break;
                 case GamePhase.InMatch:

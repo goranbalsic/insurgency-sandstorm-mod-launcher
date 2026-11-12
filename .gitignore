@@ -17,3 +17,7 @@ publish/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Agent tooling, installed per machine (npx impeccable install)
+.opencode/
+.impeccable/

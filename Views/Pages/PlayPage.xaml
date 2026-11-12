@@ -47,14 +47,18 @@
         </Style>
         <!-- One preset (squad preset, rule style, official ruleset, playlist or saved setup). Co-op = PvE, solo or with AI teammates; Versus = against bots offline. -->
         <DataTemplate x:Key="PresetCard">
-            <Border CornerRadius="2" Padding="11,9" Margin="0,0,8,8" BorderThickness="1">
+            <Border CornerRadius="6" Padding="11,9" Margin="0,0,8,8" BorderThickness="1">
                 <Border.Style>
                     <Style TargetType="Border">
-                        <Setter Property="Background" Value="{StaticResource Bg1}" />
+                        <Setter Property="Background" Value="Transparent" />
                         <Setter Property="BorderBrush" Value="{StaticResource Line}" />
                         <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource Bg3}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource LineStrong}" />
+                            </Trigger>
                             <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBorder}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -68,7 +72,7 @@
                     </StackPanel>
                     <StackPanel>
                         <DockPanel>
-                            <Border DockPanel.Dock="Right" Padding="6,1" Margin="6,2,0,0" VerticalAlignment="Top" CornerRadius="2" BorderThickness="1"
+                            <Border DockPanel.Dock="Right" Padding="6,1" Margin="6,2,0,0" VerticalAlignment="Top" CornerRadius="6" BorderThickness="1"
                                     Visibility="{Binding HasTag, Converter={StaticResource Vis}}">
                                 <Border.Style>
                                     <Style TargetType="Border">
@@ -150,24 +154,24 @@
             <!-- ============================================================ header + tabs (full width, never moves) -->
             <Border Grid.ColumnSpan="3" Style="{StaticResource TabStrip}">
             <DockPanel x:Name="header" LastChildFill="False">
-                <StackPanel x:Name="titleBox" DockPanel.Dock="Left" Margin="0,0,0,8">
-                    <TextBlock Style="{StaticResource Kicker}">
-                        <Run Text="Play · " /><Run Text="{Binding RulesModeTitle, Mode=OneWay}" />
-                    </TextBlock>
-                    <TextBlock FontSize="20" Margin="0,2,0,0">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource H1}">
-                                <Setter Property="Text" Value="{v:Tr 'Map and scenario'}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Squad"><Setter Property="Text" Value="{v:Tr 'Bots and enemies'}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="{v:Tr 'Match rules'}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="{v:Tr 'Live match control'}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="{v:Tr 'Mods and mutators'}" /></DataTrigger>
-                                    <DataTrigger Binding="{Binding PlayTab}" Value="Advanced"><Setter Property="Text" Value="{v:Tr 'Advanced options'}" /></DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                <StackPanel x:Name="titleBox" DockPanel.Dock="Left" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource H1}">
+                                    <Setter Property="Text" Value="{v:Tr 'Map and scenario'}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PlayTab}" Value="Squad"><Setter Property="Text" Value="{v:Tr 'Bots and enemies'}" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding PlayTab}" Value="Rules"><Setter Property="Text" Value="{v:Tr 'Match rules'}" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding PlayTab}" Value="Live"><Setter Property="Text" Value="{v:Tr 'Live match control'}" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding PlayTab}" Value="Mods"><Setter Property="Text" Value="{v:Tr 'Mods and mutators'}" /></DataTrigger>
+                                        <DataTrigger Binding="{Binding PlayTab}" Value="Advanced"><Setter Property="Text" Value="{v:Tr 'Advanced options'}" /></DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding RulesModeTitle}" FontSize="12" Foreground="{StaticResource TextMute}" VerticalAlignment="Bottom" Margin="12,0,0,3" />
+                    </StackPanel>
                 </StackPanel>
                 <Border x:Name="tabsBox" DockPanel.Dock="Right" VerticalAlignment="Bottom">
                     <StackPanel Orientation="Horizontal">
@@ -287,10 +291,10 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b" Height="28" CornerRadius="2" Padding="11,0" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{StaticResource Line}" Background="Transparent">
+                                        <Border x:Name="b" Height="28" CornerRadius="6" Padding="11,0" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{StaticResource Line}" Background="Transparent">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                 <TextBlock x:Name="t" Text="{Binding Label}" FontSize="12" Foreground="{StaticResource TextDim}" />
-                                                <Border x:Name="n" CornerRadius="2" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
+                                                <Border x:Name="n" CornerRadius="6" Padding="5,0" Margin="6,0,0,0" Background="{StaticResource AccentSoftBg}"
                                                         Visibility="{Binding Changes, Converter={StaticResource Vis}}" ToolTip="Changed settings">
                                                     <TextBlock Text="{Binding Changes}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                 </Border>
@@ -337,11 +341,11 @@
                                         ToolTip="{Binding Counts}">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border x:Name="card" CornerRadius="2" BorderThickness="1" BorderBrush="{StaticResource Bg4}" Background="{StaticResource Bg2}">
+                                            <Border x:Name="card" CornerRadius="6" BorderThickness="1" BorderBrush="{StaticResource Bg4}" Background="{StaticResource Bg2}">
                                                 <Grid>
                                                     <TextBlock Text="{Binding Initials}" FontFamily="{StaticResource Display}" FontSize="44" Foreground="{StaticResource Line}"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,26" />
-                                                    <Border CornerRadius="2">
+                                                    <Border CornerRadius="6">
                                                         <Border.Background>
                                                             <ImageBrush ImageSource="{Binding Thumb, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                                         </Border.Background>
@@ -363,7 +367,7 @@
                                                             <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Display}" FontSize="18" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="2" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
+                                                        <Border Grid.Column="1" VerticalAlignment="Bottom" CornerRadius="6" Padding="7,2" Margin="8,0,0,2" Background="{StaticResource AccentSoftBg}"
                                                                 Visibility="{Binding Tag, Converter={StaticResource Vis}}">
                                                             <TextBlock Text="{Binding Tag}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentSoftFg}" />
                                                         </Border>
@@ -372,7 +376,7 @@
                                                             Background="#B0101214" ToolTip="Edit this custom map"
                                                             Visibility="{Binding Custom, Converter={StaticResource Vis}}"
                                                             Command="{Binding DataContext.EditCustomMapCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
-                                                    <Border x:Name="check" Width="22" Height="22" CornerRadius="2" Background="{StaticResource Accent}" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                    <Border x:Name="check" Width="22" Height="22" CornerRadius="6" Background="{StaticResource Accent}" HorizontalAlignment="Left" VerticalAlignment="Top"
                                                             Margin="8" Visibility="Collapsed">
                                                         <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="11" Foreground="{StaticResource AccentText}" HorizontalAlignment="Center" />
                                                     </Border>
@@ -400,7 +404,7 @@
                            Text="No maps yet. Make sure the game folder is set in Settings." />
                 <!-- scenario of the picked map -->
                 <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
-                <Border Style="{StaticResource Card}">
+                <Border Style="{StaticResource Card}" VerticalAlignment="Top">
                     <StackPanel>
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Right" Style="{StaticResource Mute}" VerticalAlignment="Bottom" Text="{Binding SelectedMap.Counts}" />
@@ -568,9 +572,9 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="2,2,0,0" Padding="14,8">
+                        <Border Background="{StaticResource InfoBg}" BorderBrush="{StaticResource InfoBorder}" BorderThickness="0,0,0,1" CornerRadius="8,8,0,0" Padding="14,8">
                             <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource InfoFg}">
-                                <Run Text="Settings of the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode. Gold = changed from the game default. Bots and enemies are on the Squad tab." />
+                                <Run Text="Settings for the" /> <Run Text="{Binding RulesModeTitle, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="mode. Gold marks values you changed. Bots and enemies are on the Squad tab." />
                             </TextBlock>
                         </Border>
                         <ListBox Grid.Row="1" Style="{StaticResource PlainList}" ItemsSource="{Binding RuleItemsView}" Margin="0,0,0,6"
@@ -728,11 +732,11 @@
 
         <!-- ============================================================ your match: the same summary on every tab (click a line to change it) -->
         <ScrollViewer x:Name="summary" Grid.Row="1" Grid.Column="2" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="0,0,4,0">
-            <Border Style="{StaticResource Card}" Padding="0">
+            <Border Style="{StaticResource Card}" Padding="0" VerticalAlignment="Top">
                 <StackPanel>
-                    <Border x:Name="summaryThumb" Height="130" CornerRadius="2,2,0,0" Background="{StaticResource Bg3}">
+                    <Border x:Name="summaryThumb" Height="130" CornerRadius="8,8,0,0" Background="{StaticResource Bg3}">
                         <Grid>
-                            <Border CornerRadius="2,2,0,0">
+                            <Border CornerRadius="8,8,0,0">
                                 <Border.Background>
                                     <ImageBrush ImageSource="{Binding SelectedMap.Thumb, Converter={StaticResource Img}}" Stretch="UniformToFill" />
                                 </Border.Background>

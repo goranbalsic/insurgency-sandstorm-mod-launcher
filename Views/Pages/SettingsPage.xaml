@@ -18,9 +18,9 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <StackPanel Margin="0,0,0,14">
-                <TextBlock Text="Game folder, game connection and launch options" Style="{StaticResource Kicker}" />
-                <TextBlock Text="Settings" Style="{StaticResource H1}" FontSize="20" Margin="0,2,0,0" />
+            <StackPanel Margin="0,0,0,18">
+                <TextBlock Text="Settings" Style="{StaticResource H1}" />
+                <TextBlock Text="Game folder, game connection and launch options" Style="{StaticResource Mute}" FontSize="12.5" Margin="0,4,0,0" />
             </StackPanel>
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
@@ -34,7 +34,7 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <DockPanel>
-                                <Border DockPanel.Dock="Right" CornerRadius="2" Padding="9,2" BorderThickness="1"
+                                <Border DockPanel.Dock="Right" CornerRadius="6" Padding="9,2" BorderThickness="1"
                                         Background="{Binding GameFound, Converter={StaticResource Status}, ConverterParameter=bg}"
                                         BorderBrush="{Binding GameFound, Converter={StaticResource Status}, ConverterParameter=border}">
                                     <TextBlock FontSize="11" Foreground="{Binding GameFound, Converter={StaticResource Status}}">
@@ -65,7 +65,7 @@
                             </DockPanel>
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Text="The launcher loads maps, changes rules and sends console commands (cheats too) through the game's own remote console, on this PC only (127.0.0.1, random password). No keys are pressed and the game does not need to be in front." />
-                            <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
+                            <Border CornerRadius="6" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding RconState, Converter={StaticResource Status}, ConverterParameter=border}">
                                 <TextBlock Text="{Binding RconStatus}" Foreground="{Binding RconState, Converter={StaticResource Status}}" TextWrapping="Wrap" />
@@ -88,7 +88,7 @@
                             <TextBlock Text="Console key" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Text="Only used when the game cannot be reached over RCON (see above). Nothing is typed unless the console is seen open." />
-                            <Border CornerRadius="2" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
+                            <Border CornerRadius="6" Padding="12,9" Margin="0,12,0,0" BorderThickness="1"
                                     Background="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=bg}"
                                     BorderBrush="{Binding ConsoleKeyOk, Converter={StaticResource Status}, ConverterParameter=border}">
                                 <TextBlock Text="{Binding ConsoleKeyStatus}" Foreground="{Binding ConsoleKeyOk, Converter={StaticResource Status}}" TextWrapping="Wrap" />
@@ -128,7 +128,7 @@
                             <TextBlock Text="Game key bindings" Style="{StaticResource H2}" />
                             <TextBlock Style="{StaticResource Mute}" Margin="0,2,0,0" TextWrapping="Wrap"
                                        Text="Never edited. Copies are kept, so you can put them back if they are lost." />
-                            <Border Background="{StaticResource BadBg}" CornerRadius="2" Padding="12,9" Margin="0,10,0,0" Visibility="{Binding KeyBindingsWarning, Converter={StaticResource Vis}}">
+                            <Border Background="{StaticResource BadBg}" CornerRadius="6" Padding="12,9" Margin="0,10,0,0" Visibility="{Binding KeyBindingsWarning, Converter={StaticResource Vis}}">
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Dismiss" Command="{Binding DismissKeyWarningCommand}" VerticalAlignment="Top" />
                                     <TextBlock Text="{Binding KeyBindingsWarning}" Foreground="{StaticResource BadFg}" TextWrapping="Wrap" />
