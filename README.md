@@ -1,6 +1,6 @@
 # Sandstorm Local, Server & Mod Manager
 
-Set up an Insurgency: Sandstorm match once (map, bots, rules, mutators) and play it offline or run it on a dedicated server. No console typing.
+Set up an Insurgency: Sandstorm match once (map, bots, rules, mutators) and play it offline or run it on a dedicated server. You don't type console commands.
 
 [![Build](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml/badge.svg)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/goranbalsic/insurgency-sandstorm-mod-launcher)](https://github.com/goranbalsic/insurgency-sandstorm-mod-launcher/releases/latest)
@@ -10,13 +10,13 @@ Set up an Insurgency: Sandstorm match once (map, bots, rules, mutators) and play
 
 ## Features
 
-- Every official map and scenario plus mod maps, day or night, Hardcore Checkpoint
+- Every official map and scenario, plus mod maps; day or night; Hardcore Checkpoint
 - Squad, enemy counts and AI difficulty; 100+ rules per mode; all official and mod mutators
 - Presets: play styles, official rulesets and the official online playlists
 - Saved setups: the whole match in one file
 - Live page: restart rounds, change rules mid-match, any console command
 - Dedicated server: install with SteamCMD, server types (Co-op, Hardcore, Frenzy, Push, Competitive), map cycle, mods, RCON player control, join info, or your own .bat options
-- Any language, from a CSV table
+- Interface in any language, from a CSV table
 - Offline except the update check and the buttons that call Valve or mod.io
 
 | Rules | Playlists | Live |

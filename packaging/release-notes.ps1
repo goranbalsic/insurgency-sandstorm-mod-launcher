@@ -16,7 +16,7 @@ function Get-Notes([string]$tag, [string]$run, [string]$sums) {
     $keep = $true
     $lines = foreach ($line in $template.Split("`n")) {
         if ($line -match '^\*\*Download\*\*') { $keep = $true }
-        elseif ($line -match '^\*\*(\d+\.\d+(?:\.\d+)?)\*\*\s*$') { $keep = (Get-Version $Matches[1]) -le $version }
+        elseif ($line -match '^\*\*(\d+\.\d+(?:\.\d+)?)\*\*\s*$') { $keep = (Get-Version $Matches[1]) -eq $version }
         if ($keep) { $line }
     }
     ($lines -join "`n").Replace('{VERSION}', $tag).Replace('{REPO}', $Repo).Replace('{RUN_URL}', $run).Replace('{SHA256}', $sums).Trim() + "`n"
